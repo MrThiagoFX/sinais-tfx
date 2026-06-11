@@ -1470,18 +1470,26 @@ export default function App() {
     }
   };
 
-  /* ── MODO CELULAR: app em tela cheia (produção/PWA) ── */
-  if (isMobile) {
+  const isDev = import.meta.env.DEV;
+
+  /* ── APP REAL: produção (celular ou desktop) e também o celular em dev.
+     Celular → tela cheia. Desktop em produção → coluna centralizada estilo app mobile. ── */
+  if (!isDev || isMobile) {
     return (
-      <div style={{ height: "100vh", display: "flex", flexDirection: "column",
-        background: t.bg0, fontFamily: FONT, overflow: "hidden", transition: "background .3s" }}>
+      <div style={{ height: "100vh", display: "flex", justifyContent: "center", fontFamily: FONT,
+        background: isMobile ? t.bg0 : (themeId === "dark" ? "#000" : "#DDE8F2"),
+        transition: "background .3s" }}>
         <GlobalStyle t={t} />
-        {render()}
+        <div style={{ width: "100%", maxWidth: isMobile ? "100%" : 460, height: "100%",
+          display: "flex", flexDirection: "column", overflow: "hidden", background: t.bg0,
+          boxShadow: isMobile ? "none" : "0 0 60px rgba(0,0,0,.45)" }}>
+          {render()}
+        </div>
       </div>
     );
   }
 
-  /* ── MODO DESKTOP: frame de celular + painel dev ── */
+  /* ── DEV (npm run dev) no desktop: frame de celular + painel de telas/planos ── */
   return (
     <div className="scrollarea" style={{
       height: "100vh", background: themeId === "dark" ? "#000" : "#DDE8F2",
