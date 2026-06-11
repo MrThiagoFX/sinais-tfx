@@ -25,10 +25,27 @@ export async function signIn(email, password) {
   return { ok: true, session: data.session };
 }
 
+// Código de indicação do usuário = primeiros 8 caracteres hex do id (uuid).
+export function refCode(userId) {
+  return userId ? userId.replace(/-/g, "").slice(0, 8) : "";
+}
+
+// Captura ?ref=CODE da URL e guarda para usar no cadastro.
+export function captureRefFromUrl() {
+  try {
+    const ref = new URLSearchParams(window.location.search).get("ref");
+    if (ref) localStorage.setItem("tfx_ref", ref.replace(/-/g, "").slice(0, 8).toLowerCase());
+  } catch { /* ignore */ }
+}
+function storedRef() {
+  try { return localStorage.getItem("tfx_ref") || null; } catch { return null; }
+}
+
 export async function signUp(email, password, name) {
   if (!supabase) return { ok: true, demo: true };
+  const referred_by = storedRef();
   const { data, error } = await supabase.auth.signUp({
-    email, password, options: { data: { name } },
+    email, password, options: { data: { name, referred_by } },
   });
   if (error) return { ok: false, error: error.message };
   return { ok: true, session: data.session };

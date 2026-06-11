@@ -297,6 +297,11 @@ const PLAN_INFO = {
   anual:  { name: "Premium Anual",   price: "R$ 79/mês" },
 };
 
+// Plano Free tem horário FIXO (não personalizável). Premium escolhe a janela.
+const FREE_SCHEDULE = { start: "08:00", end: "18:00", allDay: false };
+// Comissão de indicação: o indicador ganha 30% sobre o que o indicado pagar.
+const REFERRAL_RATE = 0.30;
+
 const dailyQuota = (plan, selectedAssets, tfPerAsset) => {
   if (plan === "free") return 4;
   const sum = selectedAssets.reduce((acc, a) => acc + 4 * (tfPerAsset[a]?.length || 1), 0);
@@ -1185,14 +1190,20 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule }) => {
   );
 };
 
-const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onLogout, userEmail, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
+const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onLogout, userEmail, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
   const [expanded, setExpanded] = useState(null);
+  const [copied, setCopied] = useState(false);
+  const refCode = referral?.code || "SEUCODIGO";
+  const refLink = `https://sinais-tfx.vercel.app/?ref=${refCode}`;
+  const copyRef = () => {
+    try { navigator.clipboard.writeText(refLink); } catch { /* ignore */ }
+    setCopied(true); setTimeout(() => setCopied(false), 1500);
+  };
   const info = PLAN_INFO[plan];
   const quota = dailyQuota(plan, selectedAssets, tfPerAsset);
   const isAnual = plan === "anual";
+  const isFree = plan === "free";
   const items = [
-    { id: "convide", icon: "🎁", label: "Convide e ganhe",
-      body: "Indique amigos e ganhe 15 dias de Premium por cada assinatura confirmada. Seu código: INF-JOAO23." },
     { id: "termos",  icon: "📄", label: "Termos de uso",
       body: "Os sinais são estudos operacionais gerados por indicadores MT4. Não constituem recomendação de investimento. Versão 1.2 — atualizada em 2026." },
     { id: "priv",    icon: "🔒", label: "Política de privacidade",
@@ -1257,6 +1268,22 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onLogout, userE
                 <span style={{ fontWeight: 800, color: t.accent }}>Desbloqueado:</span> você recebe
                 todos os sinais, 24 horas por dia — exclusivo do Premium Anual.
               </p>
+            ) : isFree ? (
+              <>
+                <p style={{ fontSize: 12, color: t.sub, margin: "0 0 12px", lineHeight: 1.55, fontFamily: FONT }}>
+                  No plano Free os sinais chegam em <span style={{ fontWeight: 800, color: t.text }}>horário fixo</span>.
+                </p>
+                <div style={{ display: "flex", gap: 10, alignItems: "center",
+                  background: t.bg2, border: `1.5px solid ${t.bdr}`, borderRadius: 12, padding: "12px 16px" }}>
+                  <span style={{ fontSize: 16 }}>🔒</span>
+                  <span style={{ fontWeight: 800, fontSize: 16, color: t.text, fontFamily: FONT, letterSpacing: 0.5 }}>
+                    {FREE_SCHEDULE.start} → {FREE_SCHEDULE.end}
+                  </span>
+                </div>
+                <p style={{ fontSize: 11, color: t.muted, margin: "10px 0 0", fontFamily: FONT }}>
+                  💡 Faça upgrade para o Premium e escolha o seu próprio horário.
+                </p>
+              </>
             ) : (
               <>
                 <p style={{ fontSize: 12, color: t.sub, margin: "0 0 12px", lineHeight: 1.55, fontFamily: FONT }}>
@@ -1288,6 +1315,42 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onLogout, userE
           <Btn t={t} variant="secondary" style={{ marginBottom: 20 }} onClick={onOpenNotifications}>
             🔔 Notificações
           </Btn>
+
+          <Card t={t} accent style={{ marginBottom: 20 }}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
+              <Label t={t}>🎁 Convide e ganhe</Label>
+              <span style={{ fontSize: 18, fontWeight: 900, color: t.accent, fontFamily: FONT }}>30%</span>
+            </div>
+            <p style={{ fontSize: 12, color: t.sub, margin: "0 0 14px", lineHeight: 1.55, fontFamily: FONT }}>
+              Ganhe <span style={{ fontWeight: 800, color: t.text }}>30% de comissão</span> sobre tudo que cada
+              indicado pagar — pelo tempo que ele continuar assinante.
+            </p>
+
+            <Label t={t} style={{ marginBottom: 6, fontSize: 10 }}>Seu link de convite</Label>
+            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14 }}>
+              <div style={{ flex: 1, minWidth: 0, background: t.bg2, border: `1.5px solid ${t.bdr}`,
+                borderRadius: 12, padding: "11px 14px", fontSize: 12, color: t.text, fontFamily: FONT,
+                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{refLink}</div>
+              <button onClick={copyRef} style={{
+                flexShrink: 0, height: 42, padding: "0 16px", borderRadius: 12, cursor: "pointer",
+                fontWeight: 800, fontSize: 13, fontFamily: FONT, border: "none",
+                background: t.accent, color: t.activeText }}>{copied ? "✓ Copiado" : "Copiar"}</button>
+            </div>
+
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+              <div style={{ background: t.card, border: `1px solid ${t.bdr}`, borderRadius: 12, padding: "10px 14px" }}>
+                <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>Indicados</div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: t.text, fontFamily: FONT }}>{referral?.count ?? 0}</div>
+              </div>
+              <div style={{ background: t.card, border: `1px solid ${t.bdr}`, borderRadius: 12, padding: "10px 14px" }}>
+                <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>Comissão</div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: t.accent, fontFamily: FONT }}>30%</div>
+              </div>
+            </div>
+            <p style={{ fontSize: 10, color: t.muted, margin: "10px 0 0", lineHeight: 1.5, fontFamily: FONT }}>
+              A comissão é creditada quando o indicado assina um plano pago (ativa junto com o pagamento).
+            </p>
+          </Card>
 
           <Label t={t} style={{ marginBottom: 12 }}>Conta</Label>
           {items.map(({ id, icon, label, body }) => {
@@ -1374,6 +1437,10 @@ export default function App() {
   const [profileLoaded, setProfileLoaded] = useState(false);
   const [live, setLive] = useState(null);    // resposta de GET /api/signals
   const [stats, setStats] = useState(null);  // resposta de GET /api/stats
+  const [referralCount, setReferralCount] = useState(0);
+
+  // Captura ?ref=CODE da URL (link de indicação) ao abrir o app.
+  useEffect(() => { api.captureRefFromUrl(); }, []);
 
   // Restaura a sessão salva ao abrir o app.
   useEffect(() => {
@@ -1396,6 +1463,7 @@ export default function App() {
           end: p.schedule_end || "18:00",
           allDay: !!p.schedule_all_day,
         });
+        setReferralCount(p.referral_count || 0);
       }
       if (alive) setProfileLoaded(true);
       api.registerPush();
@@ -1406,7 +1474,8 @@ export default function App() {
   // Persiste preferências no Supabase sempre que mudarem (após carregar o perfil).
   useEffect(() => {
     if (!hasSupabase || !session || !profileLoaded) return;
-    api.saveProfile({ plan, selectedAssets, tfPerAsset, schedule });
+    api.saveProfile({ plan, selectedAssets, tfPerAsset,
+      schedule: plan === "free" ? FREE_SCHEDULE : schedule });
   }, [plan, selectedAssets, tfPerAsset, schedule, session, profileLoaded]);
 
   // Busca dados reais nas telas de dados e atualiza a cada 30s (polling do feed).
@@ -1447,7 +1516,9 @@ export default function App() {
   }, []);
 
   const common = { t, onToggleTheme: toggleTheme };
-  const bizState = { plan, selectedAssets, tfPerAsset, schedule };
+  // Free usa horário fixo; Premium usa a janela escolhida.
+  const effSchedule = plan === "free" ? FREE_SCHEDULE : schedule;
+  const bizState = { plan, selectedAssets, tfPerAsset, schedule: effSchedule };
 
   const render = () => {
     switch (screen) {
@@ -1465,7 +1536,7 @@ export default function App() {
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} />;
       case "history":       return <History {...common} onNav={nav} {...bizState} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={schedule} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onLogout={handleLogout} userEmail={session?.user?.email} {...bizState} setSchedule={setSchedule} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onLogout={handleLogout} userEmail={session?.user?.email} referral={{ code: api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;
     }
   };

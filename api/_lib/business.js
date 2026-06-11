@@ -20,12 +20,16 @@ function hourOf(hhmm) {
   return parseInt(String(hhmm || "0").slice(0, 2), 10) || 0;
 }
 
+// Plano Free tem janela FIXA (não personalizável) — espelha FREE_SCHEDULE do front.
+export const FREE_WINDOW = { start: 8, end: 18 };
+
 // O instante `date` está dentro da janela de horário do usuário?
-// Anual com schedule_all_day = true recebe 24h.
+// Free → janela fixa. Anual com schedule_all_day = true → 24h. Demais → janela escolhida.
 export function inWindow(date, profile) {
   if (!profile) return true;
   if (profile.plan === "anual" && profile.schedule_all_day) return true;
   const h = date.getHours();
+  if (profile.plan === "free") return h >= FREE_WINDOW.start && h < FREE_WINDOW.end;
   const start = hourOf(profile.schedule_start || "08:00");
   const end = hourOf(profile.schedule_end || "18:00");
   return h >= start && h < end;
