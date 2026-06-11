@@ -1,0 +1,8 @@
+{
+  "appId": "app.infinitysignals.mobile",
+  "appName": "Infinity Signals",
+  "webDir": "dist",
+  "server": { "androidScheme": "https" },
+  "android": { "backgroundColor": "#05070A" },
+  "ios": { "backgroundColor": "#05070A" }
+}

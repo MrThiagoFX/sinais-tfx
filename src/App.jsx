@@ -1,0 +1,1553 @@
+import { useState, useCallback, useEffect } from "react";
+import * as api from "./lib/api.js";
+import { hasSupabase } from "./lib/supabase.js";
+
+/* ════════════════════════════════════════════════════════════
+   INFINITY SIGNALS · v4.1 — Vercel/PWA ready
+   • Scroll suave com barra fina em todas as telas
+   • Navegação inferior presente também no Detalhe do Sinal
+   • Responsivo: celular = app em tela cheia · desktop = frame + painel dev
+════════════════════════════════════════════════════════════ */
+
+const FONT = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, Helvetica, sans-serif";
+
+const THEMES = {
+  dark: {
+    id: "dark",
+    bg0: "#05070A", bg1: "#0B0F14", bg2: "#121820",
+    card: "#151C24", card2: "#1A2230",
+    bdr: "#2A313A", bdrMid: "#3A4450",
+    accent: "#C6FF00", accentSoft: "#C6FF0018", accentBdr: "#C6FF0040",
+    activeText: "#2F3741",
+    blue: "#7DDCFF",
+    text: "#FFFFFF", sub: "#A8B5C4", muted: "#6B7A8D", dim: "#384250",
+    buy: "#7CFF6B", sell: "#FF5A5F", warn: "#FFD84D",
+  },
+  light: {
+    id: "light",
+    bg0: "#F4F8FC", bg1: "#FFFFFF", bg2: "#E8F0F8",
+    card: "#FFFFFF", card2: "#F0F6FC",
+    bdr: "#D5E2EE", bdrMid: "#B8CCDE",
+    accent: "#2196D9", accentSoft: "#2196D915", accentBdr: "#2196D940",
+    activeText: "#FFFFFF",
+    blue: "#1976B8",
+    text: "#1A2B3C", sub: "#4A6075", muted: "#7A91A6", dim: "#A8BDD0",
+    buy: "#1FA855", sell: "#E03E43", warn: "#C98A00",
+  },
+};
+
+/* CSS global: scroll fino + reset */
+const GlobalStyle = ({ t }) => (
+  <style>{`
+    html, body, #root { height: 100%; margin: 0; }
+    * { box-sizing: border-box; }
+    .scrollarea {
+      overflow-y: auto; overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+      scrollbar-width: thin;
+      scrollbar-color: ${t.bdrMid} transparent;
+      overscroll-behavior: contain;
+    }
+    .scrollarea::-webkit-scrollbar { width: 4px; }
+    .scrollarea::-webkit-scrollbar-track { background: transparent; }
+    .scrollarea::-webkit-scrollbar-thumb { background: ${t.bdrMid}; border-radius: 99px; }
+    .scrollarea::-webkit-scrollbar-thumb:hover { background: ${t.muted}; }
+    select option { background: ${t.card}; color: ${t.text}; }
+  `}</style>
+);
+
+/* ════════════════════════════════════════════════════════════
+   BANDEIRAS SVG — estilo TradingView
+════════════════════════════════════════════════════════════ */
+const FlagEU = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
+    <defs><clipPath id="cEU"><circle cx="12" cy="12" r="12" /></clipPath></defs>
+    <g clipPath="url(#cEU)">
+      <rect width="24" height="24" fill="#003399" />
+      {[0,30,60,90,120,150,180,210,240,270,300,330].map(a => {
+        const r = 7.2, cx = 12 + r * Math.sin(a * Math.PI / 180), cy = 12 - r * Math.cos(a * Math.PI / 180);
+        return <circle key={a} cx={cx} cy={cy} r="1.1" fill="#FFCC00" />;
+      })}
+    </g>
+  </svg>
+);
+
+const FlagUS = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
+    <defs><clipPath id="cUS"><circle cx="12" cy="12" r="12" /></clipPath></defs>
+    <g clipPath="url(#cUS)">
+      <rect width="24" height="24" fill="#FFFFFF" />
+      {[0,2,4,6,8,10,12].map(i => (
+        <rect key={i} y={i * 24 / 13} width="24" height={24 / 13} fill="#B22234" />
+      ))}
+      <rect width="11" height="9.2" fill="#3C3B6E" />
+      {[2,5,8].map(x => [1.5,4,6.5].map(y => (
+        <circle key={`${x}-${y}`} cx={x} cy={y} r="0.7" fill="#FFFFFF" />
+      )))}
+    </g>
+  </svg>
+);
+
+const FlagGB = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
+    <defs><clipPath id="cGB"><circle cx="12" cy="12" r="12" /></clipPath></defs>
+    <g clipPath="url(#cGB)">
+      <rect width="24" height="24" fill="#012169" />
+      <path d="M0,0 L24,24 M24,0 L0,24" stroke="#FFFFFF" strokeWidth="4.5" />
+      <path d="M0,0 L24,24 M24,0 L0,24" stroke="#C8102E" strokeWidth="2" />
+      <path d="M12,0 V24 M0,12 H24" stroke="#FFFFFF" strokeWidth="7" />
+      <path d="M12,0 V24 M0,12 H24" stroke="#C8102E" strokeWidth="4" />
+    </g>
+  </svg>
+);
+
+const FlagGold = ({ size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
+    <defs>
+      <radialGradient id="gAu" cx="35%" cy="30%">
+        <stop offset="0%" stopColor="#FFE680" /><stop offset="100%" stopColor="#D4A017" />
+      </radialGradient>
+    </defs>
+    <circle cx="12" cy="12" r="11.5" fill="url(#gAu)" stroke="#B8860B" strokeWidth="1" />
+    <text x="12" y="15.5" textAnchor="middle" fontSize="9" fontWeight="900"
+      fill="#6B4E00" fontFamily={FONT}>AU</text>
+  </svg>
+);
+
+const IndexBadge = ({ txt, bg, size = 24 }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
+    <circle cx="12" cy="12" r="12" fill={bg} />
+    <text x="12" y="15.5" textAnchor="middle" fontSize="8.5" fontWeight="900"
+      fill="#FFFFFF" fontFamily={FONT}>{txt}</text>
+  </svg>
+);
+
+const FlagPair = ({ A, B, size = 38 }) => {
+  const s = size * 0.68;
+  return (
+    <div style={{ position: "relative", width: size, height: size, flexShrink: 0 }}>
+      <div style={{ position: "absolute", top: 0, left: 0 }}><A size={s} /></div>
+      <div style={{ position: "absolute", bottom: 0, right: 0 }}><B size={s} /></div>
+    </div>
+  );
+};
+
+const AssetIcon = ({ asset, size = 38 }) => {
+  switch (asset) {
+    case "EURUSD": return <FlagPair A={FlagEU} B={FlagUS} size={size} />;
+    case "GBPUSD": return <FlagPair A={FlagGB} B={FlagUS} size={size} />;
+    case "XAUUSD": return <FlagPair A={FlagGold} B={FlagUS} size={size} />;
+    case "NAS100": return <div style={{ width: size, height: size, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><IndexBadge txt="NQ" bg="#0B5CAB" size={size * 0.85} /></div>;
+    case "US30":   return <div style={{ width: size, height: size, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><IndexBadge txt="DJ" bg="#1B3A6B" size={size * 0.85} /></div>;
+    default:       return <div style={{ width: size, height: size }} />;
+  }
+};
+
+/* ════════════════════════════════════════════════════════════
+   ÁTOMOS
+════════════════════════════════════════════════════════════ */
+const BoltLogo = ({ t, size = 40 }) => (
+  <svg width={size} height={size} viewBox="0 0 48 48" fill="none">
+    <path d="M27 4 L12 27 H22 L19 44 L36 19 H25 L27 4 Z" fill={t.accent}
+      stroke={t.id === "dark" ? "#000" : "#FFF"} strokeWidth="1" strokeLinejoin="round" />
+  </svg>
+);
+
+const ThemeToggle = ({ t, onToggle }) => (
+  <button onClick={onToggle} aria-label="Alternar tema" style={{
+    width: 38, height: 38, borderRadius: 12, cursor: "pointer",
+    background: t.card, border: `1.5px solid ${t.bdr}`,
+    display: "flex", alignItems: "center", justifyContent: "center",
+    fontSize: 17, lineHeight: 1, flexShrink: 0, padding: 0,
+  }}>{t.id === "dark" ? "☀️" : "🌙"}</button>
+);
+
+const Label = ({ children, t, color, style = {} }) => (
+  <p style={{ margin: 0, fontSize: 11, fontWeight: 700, letterSpacing: 1.2,
+    textTransform: "uppercase", color: color || t.muted, fontFamily: FONT, ...style }}>{children}</p>
+);
+
+const Badge = ({ text, color }) => (
+  <span style={{ fontSize: 11, fontWeight: 800, padding: "3px 9px", borderRadius: 7,
+    background: `${color}1C`, color, border: `1px solid ${color}38`,
+    whiteSpace: "nowrap", fontFamily: FONT }}>{text}</span>
+);
+
+const Bar = ({ pct, color, t, h = 5 }) => (
+  <div style={{ background: t.bg2, borderRadius: 99, height: h, overflow: "hidden" }}>
+    <div style={{ width: `${Math.min(100, Math.max(0, pct))}%`, height: "100%",
+      borderRadius: 99, background: color || t.accent, transition: "width .4s" }} />
+  </div>
+);
+
+const Chip = ({ label, active, onClick, t, disabled }) => (
+  <button onClick={disabled ? undefined : onClick} style={{
+    borderRadius: 10, padding: "8px 16px", fontSize: 13, fontWeight: 700,
+    cursor: disabled ? "not-allowed" : "pointer", transition: "all .15s", fontFamily: FONT,
+    border: `1.5px solid ${active ? t.accent : t.bdr}`,
+    background: active ? t.accent : t.card,
+    color: active ? t.activeText : (disabled ? t.dim : t.text),
+    opacity: disabled ? 0.5 : 1,
+  }}>{label}</button>
+);
+
+const Btn = ({ children, t, variant = "primary", onClick, disabled, style = {} }) => {
+  const v = {
+    primary:   { background: t.accent, color: t.activeText, border: "none" },
+    secondary: { background: "transparent", border: `1.5px solid ${t.bdr}`, color: t.text },
+    danger:    { background: `${t.sell}14`, border: `1.5px solid ${t.sell}38`, color: t.sell },
+  }[variant];
+  return (
+    <button onClick={disabled ? undefined : onClick} style={{
+      height: 52, borderRadius: 16, cursor: disabled ? "not-allowed" : "pointer",
+      fontWeight: 800, fontSize: 15, width: "100%", fontFamily: FONT,
+      opacity: disabled ? 0.4 : 1, ...v, ...style,
+    }}>{children}</button>
+  );
+};
+
+const Card = ({ children, t, style = {}, onClick, accent = false }) => (
+  <div onClick={onClick} style={{
+    background: t.card, borderRadius: 18, padding: "16px 18px",
+    border: `1px solid ${accent ? t.accentBdr : t.bdr}`,
+    position: "relative", overflow: "hidden",
+    cursor: onClick ? "pointer" : "default",
+    boxShadow: t.id === "light" ? "0 1px 4px rgba(26,43,60,0.06)" : "none",
+    ...style,
+  }}>{children}</div>
+);
+
+const Toggle = ({ on, onChange, t }) => (
+  <div onClick={() => onChange(!on)} style={{
+    width: 48, height: 26, borderRadius: 99,
+    background: on ? t.accent : t.bg2,
+    border: `1.5px solid ${on ? t.accent : t.bdr}`,
+    cursor: "pointer", position: "relative", flexShrink: 0,
+    transition: "background .2s",
+  }}>
+    <div style={{ position: "absolute", top: 3, left: on ? 24 : 3,
+      width: 17, height: 17, borderRadius: "50%",
+      background: on ? t.activeText : t.muted, transition: "left .2s" }} />
+  </div>
+);
+
+const BackBtn = ({ onClick, t }) => (
+  <button onClick={onClick} style={{
+    background: "none", border: "none", color: t.accent,
+    cursor: "pointer", fontSize: 14, fontWeight: 800, padding: 0,
+    display: "flex", alignItems: "center", gap: 4, fontFamily: FONT,
+  }}>← Voltar</button>
+);
+
+const ScreenHeader = ({ title, t, onToggleTheme, right }) => (
+  <div style={{ padding: "16px 24px 0", flexShrink: 0 }}>
+    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+      <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, letterSpacing: -0.5,
+        color: t.text, fontFamily: FONT }}>{title}</h1>
+      <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+        {right}
+        <ThemeToggle t={t} onToggle={onToggleTheme} />
+      </div>
+    </div>
+  </div>
+);
+
+const NAV = [
+  { id: "home",        label: "Início",     icon: "⌂" },
+  { id: "signals",     label: "Sinais",     icon: "◈" },
+  { id: "performance", label: "Desempenho", icon: "◉" },
+  { id: "history",     label: "Histórico",  icon: "◷" },
+  { id: "profile",     label: "Mais",       icon: "≡" },
+];
+
+const BottomNav = ({ active, onNav, t }) => (
+  <div style={{ background: t.bg1, borderTop: `1px solid ${t.bdr}`,
+    display: "flex", paddingBottom: 8, paddingTop: 6, flexShrink: 0 }}>
+    {NAV.map(({ id, label, icon }) => (
+      <button key={id} onClick={() => onNav(id)} style={{
+        flex: 1, background: "none", border: "none", cursor: "pointer",
+        display: "flex", flexDirection: "column", alignItems: "center",
+        gap: 3, padding: "4px 0", fontFamily: FONT,
+      }}>
+        <span style={{ fontSize: 22, lineHeight: 1, color: active === id ? t.accent : t.muted }}>{icon}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: active === id ? t.accent : t.muted }}>{label}</span>
+      </button>
+    ))}
+  </div>
+);
+
+const Scroll = ({ children, style = {} }) => (
+  <div className="scrollarea" style={{ flex: 1, minHeight: 0, ...style }}>{children}</div>
+);
+
+/* ════════════════════════════════════════════════════════════
+   DADOS + REGRAS
+════════════════════════════════════════════════════════════ */
+const ASSETS = ["EURUSD", "GBPUSD", "XAUUSD", "NAS100", "US30"];
+const ASSET_NAMES = {
+  EURUSD: "Euro / Dólar", GBPUSD: "Libra / Dólar",
+  XAUUSD: "Ouro / Dólar", NAS100: "Nasdaq 100", US30: "Dow Jones 30",
+};
+const TIMEFRAMES = ["M5", "M15", "H1"];
+const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
+
+const PLAN_INFO = {
+  free:   { name: "Free",            price: "Grátis" },
+  mensal: { name: "Premium Mensal",  price: "R$ 99/mês" },
+  anual:  { name: "Premium Anual",   price: "R$ 79/mês" },
+};
+
+const dailyQuota = (plan, selectedAssets, tfPerAsset) => {
+  if (plan === "free") return 4;
+  const sum = selectedAssets.reduce((acc, a) => acc + 4 * (tfPerAsset[a]?.length || 1), 0);
+  return Math.min(20, sum);
+};
+
+const maxTfPerAsset = (numAssets) => (numAssets <= 3 ? 3 : 1);
+
+const SIGNALS_DATA = [
+  { id: 1, asset: "XAUUSD", dir: "Compra", tf: "M5",  time: "14:32", hour: 14, entry: "2.365,40", sl: "2.360,00", tp: "2.373,00", est: "+76 pips", perf: 82 },
+  { id: 2, asset: "EURUSD", dir: "Venda",  tf: "M15", time: "13:15", hour: 13, entry: "1,0842",   sl: "1,0858",   tp: "1,0810",   est: "+32 pips", perf: 64 },
+  { id: 3, asset: "NAS100", dir: "Compra", tf: "H1",  time: "12:00", hour: 12, entry: "18.420",   sl: "18.380",   tp: "18.510",   est: "+90 pts",  perf: 77 },
+  { id: 4, asset: "GBPUSD", dir: "Venda",  tf: "M15", time: "11:45", hour: 11, entry: "1,2710",   sl: "1,2728",   tp: "1,2675",   est: "+35 pips", perf: 55 },
+  { id: 5, asset: "US30",   dir: "Compra", tf: "H1",  time: "10:10", hour: 10, entry: "39.180",   sl: "39.120",   tp: "39.310",   est: "+130 pts", perf: 70 },
+  { id: 6, asset: "XAUUSD", dir: "Venda",  tf: "M15", time: "07:40", hour: 7,  entry: "2.358,00", sl: "2.363,00", tp: "2.349,00", est: "+90 pips", perf: 68 },
+];
+
+const HISTORY_DATA = [
+  { asset: "XAUUSD", dir: "Compra", tf: "M5",  time: "14:32", hour: 14, pips: 80  },
+  { asset: "EURUSD", dir: "Venda",  tf: "M15", time: "11:15", hour: 11, pips: -25 },
+  { asset: "NAS100", dir: "Compra", tf: "H1",  time: "09:00", hour: 9,  pips: 55  },
+  { asset: "US30",   dir: "Compra", tf: "H1",  time: "Ontem 16:20", hour: 16, pips: 120 },
+  { asset: "GBPUSD", dir: "Venda",  tf: "M15", time: "Ontem 10:05", hour: 10, pips: -18 },
+  { asset: "XAUUSD", dir: "Compra", tf: "M5",  time: "Seg 06:30",   hour: 6,  pips: 40  },
+  { asset: "EURUSD", dir: "Compra", tf: "M15", time: "Seg 12:10",   hour: 12, pips: 28  },
+  { asset: "NAS100", dir: "Venda",  tf: "H1",  time: "Sex 19:45",   hour: 19, pips: -32 },
+  { asset: "US30",   dir: "Compra", tf: "H1",  time: "Sex 15:00",   hour: 15, pips: 65  },
+];
+
+// Converte um sinal vindo do /api (números crus + created_at) para o formato
+// de exibição usado pelas telas (mesmo shape de SIGNALS_DATA).
+const mapSignal = (s) => {
+  const d = new Date(s.created_at || Date.now());
+  const pad = (n) => String(n).padStart(2, "0");
+  return {
+    id: s.id, asset: s.asset, dir: s.dir, tf: s.tf,
+    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`, hour: d.getHours(),
+    entry: String(s.entry), sl: String(s.sl), tp: String(s.tp),
+    est: s.result_pips != null ? `${s.result_pips >= 0 ? "+" : ""}${s.result_pips} pips` : "—",
+    perf: 70,
+  };
+};
+
+const SignalRow = ({ s, t, onClick, pips }) => {
+  const buy = s.dir === "Compra";
+  const ac = buy ? t.buy : t.sell;
+  return (
+    <Card t={t} onClick={onClick} style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+        marginBottom: pips !== undefined ? 10 : 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+          <AssetIcon asset={s.asset} />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 16, color: t.text, fontFamily: FONT }}>{s.asset}</div>
+            <div style={{ fontSize: 12, color: t.sub, marginTop: 2, fontFamily: FONT }}>{s.time}</div>
+          </div>
+        </div>
+        <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+          <Badge text={s.tf} color={t.blue} />
+          <Badge text={s.dir} color={ac} />
+        </div>
+      </div>
+      {pips !== undefined ? (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>Resultado</span>
+          <span style={{ fontWeight: 800, fontSize: 15, color: pips >= 0 ? t.buy : t.sell, fontFamily: FONT }}>
+            {pips >= 0 ? "+" : ""}{pips} pips
+          </span>
+        </div>
+      ) : (
+        <Bar pct={s.perf} color={ac} t={t} />
+      )}
+    </Card>
+  );
+};
+
+const HourSelect = ({ value, onChange, t }) => (
+  <select value={value} onChange={e => onChange(e.target.value)} style={{
+    background: t.card, color: t.text, border: `1.5px solid ${t.bdr}`,
+    borderRadius: 12, padding: "10px 12px", fontSize: 14, fontWeight: 700,
+    fontFamily: FONT, cursor: "pointer", outline: "none", width: "100%",
+  }}>
+    {HOURS.map(h => <option key={h} value={h}>{h}</option>)}
+  </select>
+);
+
+/* ════════════════════════════════════════════════════════════
+   TELAS
+════════════════════════════════════════════════════════════ */
+
+const Splash = ({ t, onNext, onToggleTheme }) => (
+  <div onClick={onNext} style={{ flex: 1, background: t.bg0, display: "flex",
+    flexDirection: "column", alignItems: "center", justifyContent: "center",
+    position: "relative", cursor: "pointer", minHeight: 0 }}>
+    <div style={{ position: "absolute", top: 14, right: 18 }} onClick={e => e.stopPropagation()}>
+      <ThemeToggle t={t} onToggle={onToggleTheme} />
+    </div>
+    <svg style={{ position: "absolute", bottom: 48, opacity: t.id === "dark" ? 0.06 : 0.1 }}
+      width="380" height="180" viewBox="0 0 380 180">
+      {[28,70,112,154,196,238,280,322].map((x,i)=>{
+        const h=[50,95,42,72,115,52,84,68][i], up=[1,0,1,1,0,1,0,1][i];
+        const col=up?t.buy:t.sell;
+        return <g key={x}>
+          <rect x={x-1} y={90-h/2-18} width={2} height={h+36} fill={col}/>
+          <rect x={x-11} y={90-h/2} width={22} height={h} fill={col} rx={3}/>
+        </g>;
+      })}
+    </svg>
+    <div style={{ textAlign: "center", zIndex: 1 }}>
+      <div style={{ width: 88, height: 88, borderRadius: 28, margin: "0 auto 22px",
+        background: t.accentSoft, border: `2px solid ${t.accentBdr}`,
+        display: "flex", alignItems: "center", justifyContent: "center" }}>
+        <BoltLogo t={t} size={52} />
+      </div>
+      <div style={{ fontSize: 34, fontWeight: 900, letterSpacing: -1.5, color: t.text,
+        marginBottom: 8, fontFamily: FONT }}>
+        Infinity <span style={{ color: t.accent }}>Signals</span>
+      </div>
+      <div style={{ fontSize: 12, color: t.muted, letterSpacing: 3, fontWeight: 700, fontFamily: FONT }}>
+        SINAIS INTELIGENTES
+      </div>
+    </div>
+    <div style={{ position: "absolute", bottom: 28, fontSize: 11, color: t.dim,
+      letterSpacing: 1.5, fontWeight: 600, fontFamily: FONT }}>TOQUE PARA CONTINUAR</div>
+  </div>
+);
+
+const Welcome = ({ t, onNext, onLogin, onToggleTheme }) => (
+  <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+    <div style={{ display: "flex", justifyContent: "flex-end", padding: "14px 18px 0", flexShrink: 0 }}>
+      <ThemeToggle t={t} onToggle={onToggleTheme} />
+    </div>
+    <Scroll>
+      <div style={{ display: "flex", flexDirection: "column", alignItems: "center",
+        justifyContent: "center", padding: "20px 24px", gap: 26, minHeight: "100%" }}>
+        <div style={{ width: 220, height: 200, background: t.card2, border: `1px solid ${t.bdr}`,
+          borderRadius: 32, display: "flex", alignItems: "center", justifyContent: "center",
+          position: "relative", overflow: "hidden", flexShrink: 0 }}>
+          <BoltLogo t={t} size={84} />
+          <div style={{ position: "absolute", bottom: 14, right: 12,
+            background: `${t.buy}1C`, border: `1px solid ${t.buy}40`,
+            borderRadius: 10, padding: "5px 12px", fontSize: 12, fontWeight: 800,
+            color: t.buy, fontFamily: FONT }}>▲ XAUUSD +80p</div>
+          <div style={{ position: "absolute", top: 14, left: 12,
+            background: `${t.blue}16`, border: `1px solid ${t.blue}35`,
+            borderRadius: 10, padding: "4px 10px", fontSize: 11, fontWeight: 700,
+            color: t.blue, fontFamily: FONT }}>M5 · M15 · H1</div>
+        </div>
+        <div style={{ textAlign: "center" }}>
+          <h1 style={{ fontSize: 27, fontWeight: 900, lineHeight: 1.2, margin: "0 0 12px",
+            letterSpacing: -0.5, color: t.text, fontFamily: FONT }}>
+            Alertas operacionais<br /><span style={{ color: t.accent }}>em tempo real</span>
+          </h1>
+          <p style={{ fontSize: 14, color: t.sub, lineHeight: 1.65, margin: 0, fontFamily: FONT }}>
+            Receba sinais de Forex, índices e metais<br />no horário que você escolher.
+          </p>
+        </div>
+      </div>
+    </Scroll>
+    <div style={{ padding: "12px 24px 32px", display: "flex", flexDirection: "column", gap: 10, flexShrink: 0 }}>
+      <Btn t={t} onClick={onNext}>Começar agora</Btn>
+      <Btn t={t} variant="secondary" onClick={onLogin}>Já tenho conta</Btn>
+    </div>
+  </div>
+);
+
+const RiskWarning = ({ t, onNext, onToggleTheme }) => {
+  const [ok, setOk] = useState(false);
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Antes de continuar" t={t} onToggleTheme={onToggleTheme} />
+      <div style={{ padding: "0 24px", marginTop: -6, marginBottom: 14, flexShrink: 0 }}>
+        <Label t={t} color={t.warn}>⚠ Aviso importante</Label>
+      </div>
+      <Scroll style={{ padding: "0 24px" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+          {[
+            "Os alertas apoiam suas decisões com base em indicadores do MT4.",
+            "São estudos operacionais — não garantem resultados nem substituem recomendações financeiras individuais.",
+            "Resultados passados não garantem resultados futuros.",
+            "Opere de acordo com seu perfil e gerencie posições com responsabilidade.",
+          ].map((txt, i) => (
+            <Card key={i} t={t} style={{ display: "flex", gap: 12, alignItems: "flex-start" }}>
+              <span style={{ color: t.warn, fontSize: 14, marginTop: 1, flexShrink: 0 }}>◆</span>
+              <span style={{ fontSize: 13, color: t.text, lineHeight: 1.6, fontFamily: FONT }}>{txt}</span>
+            </Card>
+          ))}
+        </div>
+      </Scroll>
+      <div style={{ padding: "16px 24px 28px", flexShrink: 0 }}>
+        <div onClick={() => setOk(!ok)} style={{ display: "flex", alignItems: "center",
+          gap: 12, cursor: "pointer", marginBottom: 16 }}>
+          <div style={{ width: 22, height: 22, borderRadius: 7, flexShrink: 0,
+            border: `1.5px solid ${ok ? t.accent : t.bdr}`,
+            background: ok ? t.accent : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center" }}>
+            {ok && <span style={{ color: t.activeText, fontSize: 13, fontWeight: 900 }}>✓</span>}
+          </div>
+          <span style={{ fontSize: 14, color: t.text, fontFamily: FONT }}>Li e concordo com os termos de uso</span>
+        </div>
+        <Btn t={t} onClick={onNext} disabled={!ok}>Continuar</Btn>
+      </div>
+    </div>
+  );
+};
+
+const Login = ({ t, onNext, onToggleTheme, onAuth }) => {
+  const [email, setEmail] = useState("");
+  const [pass, setPass] = useState("");
+  const [err, setErr] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  // Sem backend (modo demo) → apenas avança. Com backend → autentica de verdade.
+  const handle = async (isSignup) => {
+    if (!onAuth) return onNext();
+    setErr(""); setBusy(true);
+    const r = await onAuth(email.trim(), pass, isSignup);
+    setBusy(false);
+    if (r?.ok) onNext();
+    else setErr(r?.error || "Não foi possível entrar. Verifique os dados.");
+  };
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "14px 18px 0", flexShrink: 0 }}>
+        <ThemeToggle t={t} onToggle={onToggleTheme} />
+      </div>
+      <Scroll style={{ padding: "8px 24px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <BoltLogo t={t} size={28} />
+          <Label t={t}>Bem-vindo de volta</Label>
+        </div>
+        <h1 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 28px", letterSpacing: -0.5,
+          lineHeight: 1.2, color: t.text, fontFamily: FONT }}>
+          Entrar no<br /><span style={{ color: t.accent }}>Infinity Signals</span>
+        </h1>
+        {[
+          { lbl: "E-mail", val: email, set: setEmail, ph: "seu@email.com", type: "email" },
+          { lbl: "Senha",  val: pass,  set: setPass,  ph: "••••••••",     type: "password" },
+        ].map(({ lbl, val, set, ph, type }) => (
+          <div key={lbl} style={{ marginBottom: 14 }}>
+            <Label t={t} style={{ marginBottom: 6 }}>{lbl}</Label>
+            <input type={type} value={val} placeholder={ph} onChange={e => set(e.target.value)}
+              style={{ width: "100%", height: 52,
+                background: t.card, border: `1.5px solid ${t.bdr}`,
+                borderRadius: 14, padding: "0 16px", color: t.text,
+                fontSize: 14, fontFamily: FONT, outline: "none" }} />
+          </div>
+        ))}
+        <div style={{ textAlign: "right", marginTop: 6 }}>
+          <span style={{ color: t.accent, fontSize: 13, fontWeight: 700, cursor: "pointer",
+            fontFamily: FONT }}>Esqueci minha senha</span>
+        </div>
+      </Scroll>
+      <div style={{ padding: "12px 24px 32px", display: "flex", flexDirection: "column", gap: 10, flexShrink: 0 }}>
+        {err && (
+          <p style={{ margin: 0, fontSize: 12, color: t.sell, textAlign: "center", fontFamily: FONT }}>{err}</p>
+        )}
+        <Btn t={t} onClick={() => handle(false)} disabled={busy}>{busy ? "Entrando…" : "Entrar"}</Btn>
+        <Btn t={t} variant="secondary" onClick={() => handle(true)} disabled={busy}>Criar conta</Btn>
+      </div>
+    </div>
+  );
+};
+
+const Plans = ({ t, onNext, onToggleTheme, plan, setPlan }) => {
+  const plans = [
+    { id: "free", name: "Free", price: "Grátis", sub: "Para conhecer",
+      items: ["4 sinais aleatórios por dia", "Dentro do seu horário configurado", "Histórico de 7 dias"] },
+    { id: "mensal", name: "Premium Mensal", price: "R$ 99/mês", sub: "Cobrança mensal",
+      items: ["4 sinais por ativo e timeframe", "Máximo de 20 sinais/dia", "Escolha seus ativos e horário", "Histórico completo"] },
+    { id: "anual", name: "Premium Anual", price: "R$ 79/mês", sub: "Equivalente — cobrado anualmente", badge: "Mais popular",
+      items: ["Tudo do plano mensal", "Sinais desbloqueados o dia todo", "Ou delimite seu horário", "Suporte prioritário"] },
+  ];
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Escolha seu plano" t={t} onToggleTheme={onToggleTheme} />
+      <Scroll style={{ padding: "0 24px" }}>
+        <p style={{ fontSize: 14, color: t.sub, margin: "0 0 18px", fontFamily: FONT }}>
+          Altere quando quiser nas configurações.
+        </p>
+        <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 12 }}>
+          {plans.map(p => (
+            <div key={p.id} onClick={() => setPlan(p.id)} style={{
+              background: t.card, borderRadius: 20, padding: 18,
+              border: `1.5px solid ${plan === p.id ? t.accent : t.bdr}`,
+              cursor: "pointer", position: "relative", overflow: "hidden" }}>
+              {p.badge && (
+                <div style={{ position: "absolute", top: 0, right: 18,
+                  background: t.accent, color: t.activeText, fontSize: 10, fontWeight: 800,
+                  padding: "3px 10px", borderRadius: "0 0 8px 8px", fontFamily: FONT }}>{p.badge}</div>
+              )}
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: 17, color: t.text, fontFamily: FONT }}>{p.name}</div>
+                  <div style={{ color: t.accent, fontWeight: 800, fontSize: 16, marginTop: 2, fontFamily: FONT }}>{p.price}</div>
+                  <div style={{ color: t.muted, fontSize: 11, marginTop: 2, fontFamily: FONT }}>{p.sub}</div>
+                </div>
+                <div style={{ width: 24, height: 24, borderRadius: "50%",
+                  border: `2px solid ${plan === p.id ? t.accent : t.bdr}`,
+                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                  {plan === p.id && <div style={{ width: 12, height: 12, borderRadius: "50%", background: t.accent }} />}
+                </div>
+              </div>
+              {p.items.map(item => (
+                <div key={item} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
+                  <span style={{ color: t.accent, fontSize: 12, fontWeight: 800 }}>✓</span>
+                  <span style={{ fontSize: 13, color: t.text, fontFamily: FONT }}>{item}</span>
+                </div>
+              ))}
+            </div>
+          ))}
+        </div>
+      </Scroll>
+      <div style={{ padding: "12px 24px 28px", flexShrink: 0 }}>
+        <Btn t={t} onClick={onNext}>Continuar</Btn>
+      </div>
+    </div>
+  );
+};
+
+const Assets = ({ t, onNext, onToggleTheme, selected, setSelected }) => {
+  const toggle = a => setSelected(s => s.includes(a) ? s.filter(x => x !== a) : [...s, a]);
+  const n = selected.length;
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Seus ativos" t={t} onToggleTheme={onToggleTheme} />
+      <Scroll style={{ padding: "0 24px" }}>
+        <p style={{ fontSize: 13, color: t.sub, margin: "0 0 14px", fontFamily: FONT }}>
+          Os sinais exibidos serão apenas dos ativos que você escolher aqui.
+        </p>
+        <Card t={t} accent style={{ marginBottom: 14, padding: "12px 16px" }}>
+          <p style={{ fontSize: 12, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
+            <span style={{ fontWeight: 800, color: t.accent }}>Regra de timeframes:</span> até 3 ativos
+            → escolha até 3 timeframes por ativo. Mais de 3 ativos → 1 timeframe por ativo.
+          </p>
+        </Card>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
+          {ASSETS.map(a => {
+            const on = selected.includes(a);
+            return (
+              <div key={a} onClick={() => toggle(a)} style={{
+                background: t.card, borderRadius: 16, padding: "14px 16px",
+                border: `1.5px solid ${on ? t.accent : t.bdr}`,
+                display: "flex", alignItems: "center", justifyContent: "space-between",
+                cursor: "pointer" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                  <AssetIcon asset={a} />
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 15, color: t.text, fontFamily: FONT }}>{a}</div>
+                    <div style={{ fontSize: 11, color: t.sub, marginTop: 2, fontFamily: FONT }}>{ASSET_NAMES[a]}</div>
+                  </div>
+                </div>
+                <div style={{ width: 24, height: 24, borderRadius: 8, flexShrink: 0,
+                  border: `1.5px solid ${on ? t.accent : t.bdr}`,
+                  background: on ? t.accent : "transparent",
+                  display: "flex", alignItems: "center", justifyContent: "center" }}>
+                  {on && <span style={{ color: t.activeText, fontSize: 13, fontWeight: 900 }}>✓</span>}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </Scroll>
+      <div style={{ padding: "14px 24px 28px", flexShrink: 0 }}>
+        <p style={{ fontSize: 12, color: t.sub, textAlign: "center", margin: "0 0 12px", fontFamily: FONT }}>
+          {n} ativo{n !== 1 ? "s" : ""} · {n <= 3 ? "até 3 timeframes por ativo" : "1 timeframe por ativo"}
+        </p>
+        <Btn t={t} onClick={onNext} disabled={n === 0}>Continuar</Btn>
+      </div>
+    </div>
+  );
+};
+
+const Timeframes = ({ t, onNext, onToggleTheme, selectedAssets, tfPerAsset, setTfPerAsset }) => {
+  const maxTf = maxTfPerAsset(selectedAssets.length);
+  const toggleTf = (a, tf) => {
+    setTfPerAsset(cfg => {
+      const cur = cfg[a] || [];
+      if (maxTf === 1) return { ...cfg, [a]: [tf] };
+      if (cur.includes(tf)) {
+        const next = cur.filter(x => x !== tf);
+        return { ...cfg, [a]: next.length ? next : cur };
+      }
+      if (cur.length >= maxTf) return cfg;
+      return { ...cfg, [a]: [...cur, tf] };
+    });
+  };
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Tempos gráficos" t={t} onToggleTheme={onToggleTheme} />
+      <Scroll style={{ padding: "0 24px" }}>
+        <Card t={t} accent style={{ marginBottom: 14, padding: "12px 16px" }}>
+          <p style={{ fontSize: 12, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
+            Você escolheu <span style={{ fontWeight: 800, color: t.accent }}>{selectedAssets.length} ativo{selectedAssets.length !== 1 ? "s" : ""}</span> —
+            {maxTf === 3 ? " selecione até 3 timeframes por ativo." : " selecione 1 timeframe por ativo."}
+          </p>
+        </Card>
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
+          {selectedAssets.map(a => {
+            const cur = tfPerAsset[a] || [];
+            return (
+              <Card key={a} t={t}>
+                <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <AssetIcon asset={a} size={30} />
+                    <span style={{ fontWeight: 800, fontSize: 14, color: t.text, fontFamily: FONT }}>{a}</span>
+                  </div>
+                  <span style={{ fontSize: 11, color: t.muted, fontFamily: FONT }}>{cur.length}/{maxTf}</span>
+                </div>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {TIMEFRAMES.map(tf => {
+                    const active = cur.includes(tf);
+                    const blocked = !active && cur.length >= maxTf && maxTf > 1;
+                    return (
+                      <Chip key={tf} label={tf} active={active} disabled={blocked}
+                        onClick={() => toggleTf(a, tf)} t={t} />
+                    );
+                  })}
+                </div>
+              </Card>
+            );
+          })}
+        </div>
+      </Scroll>
+      <div style={{ padding: "14px 24px 28px", flexShrink: 0 }}>
+        <Btn t={t} onClick={onNext}>Salvar preferências</Btn>
+      </div>
+    </div>
+  );
+};
+
+const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats }) => {
+  const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
+  const quota = live?.quota ?? dailyQuota(plan, selectedAssets, tfPerAsset);
+  const used = live?.delivered ?? Math.min(3, quota);
+  const info = PLAN_INFO[plan];
+  const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
+  const last = liveSignals?.[0]
+    || SIGNALS_DATA.find(s => selectedAssets.includes(s.asset)) || SIGNALS_DATA[0];
+  const assertTxt = stats ? `${Math.round((stats.assertividade || 0) * 100)}%` : "71%";
+  const acumTxt = stats ? `${stats.acumulado_pips >= 0 ? "+" : ""}${stats.acumulado_pips} pips` : "+313 pips";
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <Scroll>
+        <div style={{ padding: "16px 24px 28px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 22 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <BoltLogo t={t} size={32} />
+              <div>
+                <div style={{ fontSize: 13, color: t.sub, fontFamily: FONT }}>Olá, Trader 👋</div>
+                <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5, color: t.text, fontFamily: FONT }}>Dashboard</div>
+              </div>
+            </div>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <div style={{ background: t.accentSoft, border: `1.5px solid ${t.accentBdr}`,
+                borderRadius: 12, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6 }}>
+                <div style={{ width: 7, height: 7, borderRadius: "50%", background: t.accent }} />
+                <span style={{ color: t.accent, fontSize: 11, fontWeight: 800, fontFamily: FONT }}>
+                  {plan === "free" ? "FREE" : plan === "mensal" ? "PREMIUM" : "ANUAL"}
+                </span>
+              </div>
+              <ThemeToggle t={t} onToggle={onToggleTheme} />
+            </div>
+          </div>
+
+          <div style={{ background: t.card2, border: `1.5px solid ${t.accentBdr}`,
+            borderRadius: 22, padding: "20px 20px 18px", marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+              <Label t={t}>Sinais hoje</Label>
+              <span style={{ fontSize: 11, color: t.blue, fontWeight: 700, fontFamily: FONT }}>🕐 {schedTxt}</span>
+            </div>
+            <div style={{ fontSize: 44, fontWeight: 900, color: t.accent, lineHeight: 1, marginBottom: 8, fontFamily: FONT }}>
+              {used} <span style={{ fontSize: 20, color: t.muted, fontWeight: 400 }}>/ {quota}</span>
+            </div>
+            <Bar pct={(used / quota) * 100} t={t} />
+            <p style={{ fontSize: 12, color: t.sub, margin: "8px 0 0", fontFamily: FONT }}>
+              {plan === "free"
+                ? "Plano Free — 4 sinais aleatórios por dia"
+                : `${info.name} — 4 sinais por ativo e timeframe (máx. 20/dia)`}
+            </p>
+          </div>
+
+          <Card t={t} style={{ marginBottom: 14 }}>
+            <Label t={t} style={{ marginBottom: 12 }}>Último sinal</Label>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+                <AssetIcon asset={last.asset} size={44} />
+                <div>
+                  <div style={{ fontWeight: 900, fontSize: 18, color: t.text, fontFamily: FONT }}>{last.asset}</div>
+                  <div style={{ fontSize: 12, color: t.sub, marginTop: 2, fontFamily: FONT }}>{last.time}</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: 5, alignItems: "flex-end" }}>
+                <Badge text={last.dir} color={last.dir === "Compra" ? t.buy : t.sell} />
+                <span style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>{last.tf}</span>
+              </div>
+            </div>
+            <div style={{ marginTop: 14 }}>
+              <Btn t={t} style={{ height: 44, fontSize: 14 }}
+                onClick={() => { onOpenSignal(last); onNav("signal-detail"); }}>Ver detalhes</Btn>
+            </div>
+          </Card>
+
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+            <Card t={t}>
+              <div style={{ fontSize: 11, color: t.sub, marginBottom: 4, fontFamily: FONT }}>Assertividade</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: t.accent, fontFamily: FONT }}>{assertTxt}</div>
+            </Card>
+            <Card t={t}>
+              <div style={{ fontSize: 11, color: t.sub, marginBottom: 4, fontFamily: FONT }}>Resultado do mês</div>
+              <div style={{ fontSize: 22, fontWeight: 900, color: t.buy, fontFamily: FONT }}>{acumTxt}</div>
+            </Card>
+          </div>
+
+          <Label t={t} style={{ marginBottom: 10 }}>Ativos monitorados</Label>
+          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
+            {selectedAssets.map(a => (
+              <div key={a} style={{ background: t.card, border: `1px solid ${t.bdr}`,
+                borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8 }}>
+                <AssetIcon asset={a} size={24} />
+                <span style={{ fontSize: 12, fontWeight: 800, color: t.text, fontFamily: FONT }}>{a}</span>
+                <span style={{ fontSize: 10, color: t.muted, fontFamily: FONT }}>
+                  {(tfPerAsset[a] || []).join(" · ")}
+                </span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </Scroll>
+      <BottomNav active="home" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
+const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live }) => {
+  const [filter, setFilter] = useState("Todos");
+  const inWindow = h => schedule.allDay || (h >= parseInt(schedule.start) && h < parseInt(schedule.end));
+  // Com backend, o /api já devolve os sinais filtrados por plano/ativos/janela/cota.
+  const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
+  const base = liveSignals || (plan === "free"
+    ? SIGNALS_DATA.filter(s => inWindow(s.hour)).slice(0, 4)
+    : SIGNALS_DATA.filter(s =>
+        selectedAssets.includes(s.asset) &&
+        (tfPerAsset[s.asset] || []).includes(s.tf) &&
+        inWindow(s.hour)
+      ));
+  const shown = base.filter(s =>
+    filter === "Todos" || (filter === "Compras" ? s.dir === "Compra" : s.dir === "Venda"));
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Sinais" t={t} onToggleTheme={onToggleTheme}
+        right={
+          <button onClick={onOpenFilters} aria-label="Abrir filtros" style={{
+            width: 38, height: 38, borderRadius: 12, cursor: "pointer",
+            background: t.card, border: `1.5px solid ${t.bdr}`,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 16, color: t.accent, padding: 0 }}>⚙</button>
+        } />
+      <div style={{ padding: "0 24px", marginBottom: 10, flexShrink: 0 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          {["Todos", "Compras", "Vendas"].map(f => (
+            <Chip key={f} label={f} active={filter === f} onClick={() => setFilter(f)} t={t} />
+          ))}
+        </div>
+        {plan === "free" && (
+          <div style={{ background: `${t.warn}10`, border: `1px solid ${t.warn}30`,
+            borderRadius: 12, padding: "8px 12px", marginBottom: 4 }}>
+            <p style={{ fontSize: 11, color: t.warn, margin: 0, fontFamily: FONT }}>
+              Plano Free: 4 sinais aleatórios por dia. Faça upgrade para escolher ativos.
+            </p>
+          </div>
+        )}
+      </div>
+      <Scroll style={{ padding: "0 24px" }}>
+        {shown.length === 0 ? (
+          <Card t={t} style={{ textAlign: "center", padding: "28px 18px" }}>
+            <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
+              Nenhum sinal no seu horário e filtros atuais.<br />Ajuste nos Filtros ou no Perfil.
+            </p>
+          </Card>
+        ) : shown.map(s => (
+          <SignalRow key={s.id} s={s} t={t}
+            onClick={() => { onOpenSignal(s); onNav("signal-detail"); }} />
+        ))}
+        <div style={{ height: 16 }} />
+      </Scroll>
+      <BottomNav active="signals" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
+/* DETALHE — agora com navegação inferior */
+const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme }) => {
+  const s = signal || SIGNALS_DATA[0];
+  const buy = s.dir === "Compra";
+  const ac = buy ? t.buy : t.sell;
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <Scroll>
+        <div style={{ padding: "16px 24px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+            <BackBtn onClick={onBack} t={t} />
+            <ThemeToggle t={t} onToggle={onToggleTheme} />
+          </div>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 22 }}>
+            <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+              <AssetIcon asset={s.asset} size={52} />
+              <div>
+                <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: -1, color: t.text, fontFamily: FONT }}>{s.asset}</div>
+                <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
+                  <Badge text={s.dir} color={ac} />
+                  <Badge text={s.tf} color={t.blue} />
+                </div>
+              </div>
+            </div>
+            <div style={{ width: 52, height: 52, borderRadius: 16, flexShrink: 0,
+              background: `${ac}18`, border: `2px solid ${ac}40`,
+              display: "flex", alignItems: "center", justifyContent: "center",
+              fontSize: 24, color: ac }}>{buy ? "▲" : "▼"}</div>
+          </div>
+          {[
+            { label: "Entrada",            value: s.entry, color: t.text },
+            { label: "Take Profit (TP)",   value: s.tp,    color: t.buy  },
+            { label: "Stop Loss (SL)",     value: s.sl,    color: t.sell },
+            { label: "Resultado estimado", value: s.est,   color: t.blue },
+            { label: "Horário do sinal",   value: s.time,  color: t.text },
+          ].map(r => (
+            <Card key={r.label} t={t} style={{ display: "flex", justifyContent: "space-between",
+              alignItems: "center", marginBottom: 10 }}>
+              <span style={{ fontSize: 13, color: t.sub, fontFamily: FONT }}>{r.label}</span>
+              <span style={{ fontWeight: 800, fontSize: 16, color: r.color, fontFamily: FONT }}>{r.value}</span>
+            </Card>
+          ))}
+          <div style={{ background: `${t.warn}0E`, border: `1px solid ${t.warn}30`,
+            borderRadius: 14, padding: "12px 16px", margin: "12px 0 22px",
+            display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <span style={{ color: t.warn, fontSize: 16 }}>⚠</span>
+            <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.6, fontFamily: FONT }}>
+              Este é um estudo operacional, não uma recomendação financeira. Avalie o risco antes de operar.
+            </span>
+          </div>
+          <div style={{ display: "flex", gap: 10 }}>
+            <Btn t={t} style={{ flex: 1, height: 50 }}>Copiar sinal</Btn>
+            <Btn t={t} variant="secondary" style={{ flex: 1, height: 50 }}
+              onClick={() => onNav("history")}>Histórico</Btn>
+          </div>
+        </div>
+      </Scroll>
+      <BottomNav active="signals" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
+const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets }) => {
+  const [asset, setAsset] = useState("Todos");
+  const [tf, setTf] = useState("Todos");
+  const [type, setType] = useState("Todos");
+  const [saved, setSaved] = useState(false);
+  const save = () => { setSaved(true); setTimeout(() => { setSaved(false); onBack(); }, 700); };
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <Scroll>
+        <div style={{ padding: "16px 24px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <BackBtn onClick={onBack} t={t} />
+            <ThemeToggle t={t} onToggle={onToggleTheme} />
+          </div>
+          <div style={{ marginBottom: 6 }}><Badge text="PREMIUM" color={t.accent} /></div>
+          <h1 style={{ fontSize: 26, fontWeight: 900, margin: "8px 0 22px", letterSpacing: -0.5,
+            color: t.text, fontFamily: FONT }}>Filtros de sinais</h1>
+          <div style={{ marginBottom: 22 }}>
+            <Label t={t} style={{ marginBottom: 10 }}>Ativo (somente os seus)</Label>
+            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
+              {["Todos", ...selectedAssets].map(a => (
+                <Chip key={a} label={a} active={asset === a} onClick={() => setAsset(a)} t={t} />
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: 22 }}>
+            <Label t={t} style={{ marginBottom: 10 }}>Timeframe</Label>
+            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
+              {["Todos", ...TIMEFRAMES].map(x => (
+                <Chip key={x} label={x} active={tf === x} onClick={() => setTf(x)} t={t} />
+              ))}
+            </div>
+          </div>
+          <div style={{ marginBottom: 28 }}>
+            <Label t={t} style={{ marginBottom: 10 }}>Tipo de sinal</Label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["Compra", "Venda", "Todos"].map(x => (
+                <Chip key={x} label={x} active={type === x} onClick={() => setType(x)} t={t} />
+              ))}
+            </div>
+          </div>
+          <Btn t={t} onClick={save}>{saved ? "✓ Filtros salvos" : "Salvar filtros"}</Btn>
+        </div>
+      </Scroll>
+      <BottomNav active="signals" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
+const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats }) => {
+  const lineData = [38,52,45,68,62,78,72,88,82,91,85,94];
+  const metrics = stats ? [
+    { label: "Assertividade",       value: `${Math.round((stats.assertividade || 0) * 100)}%`, color: t.accent },
+    { label: "Ganhos",              value: String(stats.ganhos ?? 0),  color: t.buy  },
+    { label: "Perdas",              value: String(stats.perdas ?? 0),  color: t.sell },
+    { label: "Resultado acumulado", value: `${stats.acumulado_pips >= 0 ? "+" : ""}${stats.acumulado_pips} pips`, color: t.buy },
+  ] : [
+    { label: "Assertividade",       value: "71%",       color: t.accent },
+    { label: "Ganhos",              value: "142",       color: t.buy    },
+    { label: "Perdas",              value: "58",        color: t.sell   },
+    { label: "Resultado acumulado", value: "+313 pips", color: t.buy    },
+  ];
+  const maxV = Math.max(...lineData);
+  const W = 300, H = 80;
+  const pts = lineData.map((v,i)=>`${(i/(lineData.length-1))*W},${H-(v/maxV)*(H-8)}`).join(" ");
+  const perAsset = { XAUUSD: 88, NAS100: 74, EURUSD: 65, GBPUSD: 58, US30: 70 };
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Desempenho" t={t} onToggleTheme={onToggleTheme} />
+      <Scroll>
+        <div style={{ padding: "0 24px 24px" }}>
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
+            {metrics.map(m => (
+              <Card key={m.label} t={t}>
+                <div style={{ fontSize: 11, color: t.sub, marginBottom: 6, fontFamily: FONT }}>{m.label}</div>
+                <div style={{ fontSize: 23, fontWeight: 900, color: m.color, fontFamily: FONT }}>{m.value}</div>
+              </Card>
+            ))}
+          </div>
+          <Card t={t} style={{ marginBottom: 12 }}>
+            <Label t={t} style={{ marginBottom: 14 }}>Evolução — últimos 30 dias</Label>
+            <svg width="100%" height={H+10} viewBox={`0 0 ${W} ${H+10}`} style={{ overflow: "visible" }}>
+              <defs>
+                <linearGradient id="perfGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={t.blue} stopOpacity=".22" />
+                  <stop offset="100%" stopColor={t.blue} stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <polygon points={`0,${H} ${pts} ${W},${H}`} fill="url(#perfGrad)" />
+              <polyline points={pts} fill="none" stroke={t.blue} strokeWidth="2.5" strokeLinejoin="round" />
+              {[0, lineData.length-1].map(i => {
+                const x=(i/(lineData.length-1))*W, y=H-(lineData[i]/maxV)*(H-8);
+                return <circle key={i} cx={x} cy={y} r={4} fill={t.blue} />;
+              })}
+            </svg>
+            <div style={{ display: "flex", justifyContent: "space-between", marginTop: 6 }}>
+              {["Jan","Fev","Mar","Abr","Mai","Jun"].map(m => (
+                <span key={m} style={{ fontSize: 10, color: t.muted, fontFamily: FONT }}>{m}</span>
+              ))}
+            </div>
+          </Card>
+          <Card t={t}>
+            <Label t={t} style={{ marginBottom: 14 }}>Assertividade por ativo</Label>
+            {selectedAssets.map(a => {
+              const v = perAsset[a] || 60;
+              return (
+                <div key={a} style={{ marginBottom: 14 }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                      <AssetIcon asset={a} size={22} />
+                      <span style={{ fontSize: 13, fontWeight: 700, color: t.text, fontFamily: FONT }}>{a}</span>
+                    </div>
+                    <span style={{ fontSize: 13, fontWeight: 800, fontFamily: FONT,
+                      color: v>=75 ? t.accent : v>=65 ? t.blue : t.warn }}>{v}%</span>
+                  </div>
+                  <Bar pct={v} color={v>=75 ? t.accent : v>=65 ? t.blue : t.warn} t={t} />
+                </div>
+              );
+            })}
+          </Card>
+        </div>
+      </Scroll>
+      <BottomNav active="performance" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
+const History = ({ t, onNav, onToggleTheme, schedule, selectedAssets, plan }) => {
+  const [tab, setTab] = useState("Todos");
+  const inWindow = h => schedule.allDay || (h >= parseInt(schedule.start) && h < parseInt(schedule.end));
+  const base = HISTORY_DATA.filter(s =>
+    inWindow(s.hour) && (plan === "free" || selectedAssets.includes(s.asset)));
+  const shown = base.filter(s =>
+    tab === "Todos" || (tab === "Ganhos" ? s.pips >= 0 : s.pips < 0));
+  const total = shown.reduce((a,s) => a + s.pips, 0);
+  const schedTxt = schedule.allDay ? "dia todo" : `${schedule.start}–${schedule.end}`;
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Histórico" t={t} onToggleTheme={onToggleTheme} />
+      <div style={{ padding: "0 24px", flexShrink: 0 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          {["Todos","Ganhos","Perdas"].map(x => (
+            <Chip key={x} label={x} active={tab === x} onClick={() => setTab(x)} t={t} />
+          ))}
+        </div>
+        <Card t={t} style={{ marginBottom: 12, padding: "10px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+            <span style={{ fontSize: 13, color: t.sub, fontFamily: FONT }}>
+              Total · {shown.length} operações
+            </span>
+            <span style={{ fontSize: 15, fontWeight: 800,
+              color: total >= 0 ? t.buy : t.sell, fontFamily: FONT }}>
+              {total >= 0 ? "+" : ""}{total} pips
+            </span>
+          </div>
+          <p style={{ fontSize: 11, color: t.muted, margin: 0, fontFamily: FONT }}>
+            🕐 Contabilizado no seu horário: {schedTxt}
+          </p>
+        </Card>
+      </div>
+      <Scroll style={{ padding: "0 24px" }}>
+        {shown.map((s,i) => <SignalRow key={i} s={s} t={t} pips={s.pips} />)}
+        <div style={{ height: 16 }} />
+      </Scroll>
+      <BottomNav active="history" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
+const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule }) => {
+  const [tog, setTog] = useState({ rt: true, daily: false, fav: true, sound: true });
+  const [expanded, setExpanded] = useState(null);
+  const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
+  const toggles = [
+    { id: "rt",    label: "Sinais em tempo real", sub: "Alerta assim que o sinal for detectado" },
+    { id: "daily", label: "Boletim diário",        sub: "Resumo de desempenho do dia" },
+    { id: "fav",   label: "Sinais favoritos",       sub: "Notificações dos ativos preferidos" },
+    { id: "sound", label: "Som e vibração",         sub: "Feedback tátil ao receber alertas" },
+  ];
+  const expandables = [
+    { id: "horario", label: "Horário de envio",
+      body: `Janela atual: ${schedTxt}. Para alterar, acesse Perfil → Horário de sinais.` },
+    { id: "fav2",    label: "Gerenciar favoritos",
+      body: "Favoritos atuais: XAUUSD, NAS100. Toque em um ativo na tela Sinais para favoritar." },
+    { id: "ativos",  label: "Gerenciar ativos",
+      body: "Para alterar os ativos monitorados, acesse Perfil → Ativos monitorados." },
+  ];
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <Scroll>
+        <div style={{ padding: "16px 24px 24px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 14 }}>
+            <BackBtn onClick={onBack} t={t} />
+            <ThemeToggle t={t} onToggle={onToggleTheme} />
+          </div>
+          <h1 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 20px", letterSpacing: -0.5,
+            color: t.text, fontFamily: FONT }}>Notificações</h1>
+          {toggles.map(({ id, label, sub }) => (
+            <Card key={id} t={t} style={{ display: "flex", justifyContent: "space-between",
+              alignItems: "center", marginBottom: 10 }}>
+              <div style={{ flex: 1, marginRight: 12 }}>
+                <div style={{ fontWeight: 700, fontSize: 14, color: t.text, marginBottom: 3, fontFamily: FONT }}>{label}</div>
+                <div style={{ fontSize: 11, color: t.sub, lineHeight: 1.45, fontFamily: FONT }}>{sub}</div>
+              </div>
+              <Toggle on={tog[id]} onChange={v => setTog(s => ({ ...s, [id]: v }))} t={t} />
+            </Card>
+          ))}
+          <Label t={t} style={{ marginTop: 22, marginBottom: 12 }}>Mais opções</Label>
+          {expandables.map(({ id, label, body }) => {
+            const open = expanded === id;
+            return (
+              <div key={id} style={{ marginBottom: 8 }}>
+                <Card t={t} onClick={() => setExpanded(open ? null : id)}
+                  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <span style={{ fontSize: 14, color: t.text, fontWeight: 600, fontFamily: FONT }}>{label}</span>
+                  <span style={{ color: t.sub, fontSize: 18, transition: "transform .2s",
+                    transform: open ? "rotate(90deg)" : "none" }}>›</span>
+                </Card>
+                {open && (
+                  <div style={{ background: t.bg2, border: `1px solid ${t.bdr}`, borderTop: "none",
+                    borderRadius: "0 0 14px 14px", padding: "12px 16px", marginTop: -6 }}>
+                    <p style={{ fontSize: 12, color: t.sub, lineHeight: 1.6, margin: 0, fontFamily: FONT }}>{body}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </Scroll>
+      <BottomNav active="profile" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
+const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onLogout, userEmail, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
+  const [expanded, setExpanded] = useState(null);
+  const info = PLAN_INFO[plan];
+  const quota = dailyQuota(plan, selectedAssets, tfPerAsset);
+  const isAnual = plan === "anual";
+  const items = [
+    { id: "convide", icon: "🎁", label: "Convide e ganhe",
+      body: "Indique amigos e ganhe 15 dias de Premium por cada assinatura confirmada. Seu código: INF-JOAO23." },
+    { id: "termos",  icon: "📄", label: "Termos de uso",
+      body: "Os sinais são estudos operacionais gerados por indicadores MT4. Não constituem recomendação de investimento. Versão 1.2 — atualizada em 2026." },
+    { id: "priv",    icon: "🔒", label: "Política de privacidade",
+      body: "Seus dados são usados apenas para autenticação e envio de alertas. Não compartilhamos informações com terceiros." },
+    { id: "suporte", icon: "💬", label: "Suporte",
+      body: "Atendimento via e-mail: suporte@infinitysignals.app — resposta em até 24h úteis." },
+  ];
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <Scroll>
+        <div style={{ padding: "16px 24px 32px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+            <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, letterSpacing: -0.5,
+              color: t.text, fontFamily: FONT }}>Meu perfil</h1>
+            <ThemeToggle t={t} onToggle={onToggleTheme} />
+          </div>
+
+          <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 22 }}>
+            <div style={{ width: 62, height: 62, borderRadius: 20, flexShrink: 0,
+              background: t.accentSoft, border: `2px solid ${t.accentBdr}`,
+              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30 }}>👤</div>
+            <div>
+              <div style={{ fontWeight: 900, fontSize: 18, color: t.text, fontFamily: FONT }}>
+                {userEmail ? userEmail.split("@")[0] : "João Trader"}
+              </div>
+              <div style={{ fontSize: 13, color: t.sub, marginTop: 3, fontFamily: FONT }}>{userEmail || "joao@email.com"}</div>
+            </div>
+          </div>
+
+          <div style={{ background: t.card2, border: `1.5px solid ${t.accentBdr}`,
+            borderRadius: 22, padding: 20, marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
+              <div>
+                <Label t={t} style={{ marginBottom: 4 }}>Plano atual</Label>
+                <div style={{ fontSize: 22, fontWeight: 900, color: t.accent, fontFamily: FONT }}>{info.name}</div>
+                <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: FONT }}>{info.price}</div>
+              </div>
+              <div style={{ background: t.accentSoft, border: `1px solid ${t.accentBdr}`,
+                borderRadius: 10, padding: "5px 12px", height: "fit-content",
+                fontSize: 11, fontWeight: 800, color: t.accent, fontFamily: FONT }}>ATIVO</div>
+            </div>
+            <Label t={t} style={{ marginBottom: 8 }}>Sinais usados hoje</Label>
+            <Bar pct={(3 / quota) * 100} t={t} />
+            <p style={{ fontSize: 12, color: t.sub, margin: "7px 0 0", fontFamily: FONT }}>
+              3 de {quota} sinais
+            </p>
+          </div>
+
+          <Card t={t} accent style={{ marginBottom: 14 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+              <Label t={t}>🕐 Horário de sinais</Label>
+              {isAnual && (
+                <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                  <span style={{ fontSize: 11, color: t.sub, fontWeight: 700, fontFamily: FONT }}>Dia todo</span>
+                  <Toggle on={schedule.allDay}
+                    onChange={v => setSchedule(s => ({ ...s, allDay: v }))} t={t} />
+                </div>
+              )}
+            </div>
+            {schedule.allDay && isAnual ? (
+              <p style={{ fontSize: 13, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
+                <span style={{ fontWeight: 800, color: t.accent }}>Desbloqueado:</span> você recebe
+                todos os sinais, 24 horas por dia — exclusivo do Premium Anual.
+              </p>
+            ) : (
+              <>
+                <p style={{ fontSize: 12, color: t.sub, margin: "0 0 12px", lineHeight: 1.55, fontFamily: FONT }}>
+                  Receba sinais apenas no período que você definir. O histórico contabiliza dentro desta janela.
+                </p>
+                <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
+                  <div style={{ flex: 1 }}>
+                    <Label t={t} style={{ marginBottom: 6, fontSize: 10 }}>Início</Label>
+                    <HourSelect value={schedule.start}
+                      onChange={v => setSchedule(s => ({ ...s, start: v }))} t={t} />
+                  </div>
+                  <span style={{ color: t.muted, fontSize: 16, paddingBottom: 12 }}>→</span>
+                  <div style={{ flex: 1 }}>
+                    <Label t={t} style={{ marginBottom: 6, fontSize: 10 }}>Fim</Label>
+                    <HourSelect value={schedule.end}
+                      onChange={v => setSchedule(s => ({ ...s, end: v }))} t={t} />
+                  </div>
+                </div>
+                {!isAnual && (
+                  <p style={{ fontSize: 11, color: t.muted, margin: "10px 0 0", fontFamily: FONT }}>
+                    💡 No Premium Anual você desbloqueia sinais o dia todo.
+                  </p>
+                )}
+              </>
+            )}
+          </Card>
+
+          <Btn t={t} style={{ marginBottom: 10 }}>Upgrade de plano</Btn>
+          <Btn t={t} variant="secondary" style={{ marginBottom: 20 }} onClick={onOpenNotifications}>
+            🔔 Notificações
+          </Btn>
+
+          <Label t={t} style={{ marginBottom: 12 }}>Conta</Label>
+          {items.map(({ id, icon, label, body }) => {
+            const open = expanded === id;
+            return (
+              <div key={id} style={{ marginBottom: 8 }}>
+                <div onClick={() => setExpanded(open ? null : id)} style={{
+                  background: t.card, border: `1px solid ${open ? t.accentBdr : t.bdr}`,
+                  borderRadius: open ? "16px 16px 0 0" : 16,
+                  padding: "14px 16px", cursor: "pointer",
+                  display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                  <div style={{ display: "flex", gap: 12, alignItems: "center" }}>
+                    <span style={{ fontSize: 18 }}>{icon}</span>
+                    <span style={{ fontSize: 15, fontWeight: 600, color: t.text, fontFamily: FONT }}>{label}</span>
+                  </div>
+                  <span style={{ color: t.sub, fontSize: 18, lineHeight: 1,
+                    transition: "transform .2s", transform: open ? "rotate(90deg)" : "none" }}>›</span>
+                </div>
+                {open && (
+                  <div style={{ background: t.bg2, border: `1px solid ${t.accentBdr}`, borderTop: "none",
+                    borderRadius: "0 0 16px 16px", padding: "12px 16px" }}>
+                    <p style={{ fontSize: 12, color: t.sub, lineHeight: 1.65, margin: 0, fontFamily: FONT }}>{body}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+
+          <div style={{ marginTop: 16 }}>
+            <Btn t={t} variant="danger" onClick={onLogout}>Sair da conta</Btn>
+          </div>
+        </div>
+      </Scroll>
+      <BottomNav active="profile" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
+/* ════════════════════════════════════════════════════════════
+   ROOT — responsivo (celular = tela cheia · desktop = frame)
+════════════════════════════════════════════════════════════ */
+const SCREENS = [
+  { id: "splash",        label: "1 · Splash"        },
+  { id: "welcome",       label: "2 · Boas-vindas"   },
+  { id: "risk",          label: "3 · Aviso"         },
+  { id: "login",         label: "4 · Login"         },
+  { id: "plans",         label: "5 · Planos"        },
+  { id: "assets",        label: "6 · Ativos"        },
+  { id: "timeframes",    label: "7 · Timeframes"    },
+  { id: "home",          label: "8 · Home"          },
+  { id: "signals",       label: "9 · Sinais"        },
+  { id: "signal-detail", label: "10 · Detalhe"      },
+  { id: "filters",       label: "11 · Filtros"      },
+  { id: "performance",   label: "12 · Desempenho"   },
+  { id: "history",       label: "13 · Histórico"    },
+  { id: "notifications", label: "14 · Notificações" },
+  { id: "profile",       label: "15 · Perfil"       },
+];
+
+export default function App() {
+  const [themeId, setThemeId] = useState("dark");
+  const [screen, setScreen] = useState("splash");
+  const [signal, setSignal] = useState(null);
+  const [plan, setPlan] = useState("anual");
+  const [selectedAssets, setSelectedAssets] = useState(["XAUUSD", "NAS100", "US30"]);
+  const [tfPerAsset, setTfPerAsset] = useState({
+    EURUSD: ["M15"], GBPUSD: ["M15"],
+    XAUUSD: ["M5", "M15"], NAS100: ["H1"], US30: ["H1"],
+  });
+  const [schedule, setSchedule] = useState({ start: "08:00", end: "18:00", allDay: false });
+  const [isMobile, setIsMobile] = useState(
+    typeof window !== "undefined" ? window.innerWidth < 520 : false
+  );
+
+  useEffect(() => {
+    const onResize = () => setIsMobile(window.innerWidth < 520);
+    window.addEventListener("resize", onResize);
+    return () => window.removeEventListener("resize", onResize);
+  }, []);
+
+  // ── Integração com backend (Fase 5) — ativa só quando o Supabase está configurado.
+  // Sem credenciais (hasSupabase=false), tudo abaixo é no-op e o app roda em modo demo.
+  const [session, setSession] = useState(null);
+  const [profileLoaded, setProfileLoaded] = useState(false);
+  const [live, setLive] = useState(null);    // resposta de GET /api/signals
+  const [stats, setStats] = useState(null);  // resposta de GET /api/stats
+
+  // Restaura a sessão salva ao abrir o app.
+  useEffect(() => {
+    if (!hasSupabase) return;
+    api.getSession().then(setSession);
+  }, []);
+
+  // Ao autenticar: hidrata as preferências do perfil e registra o push.
+  useEffect(() => {
+    if (!hasSupabase || !session) return;
+    let alive = true;
+    (async () => {
+      const p = await api.loadProfile();
+      if (alive && p) {
+        if (p.plan) setPlan(p.plan);
+        if (Array.isArray(p.assets) && p.assets.length) setSelectedAssets(p.assets);
+        if (p.tf_per_asset && Object.keys(p.tf_per_asset).length) setTfPerAsset(p.tf_per_asset);
+        setSchedule({
+          start: p.schedule_start || "08:00",
+          end: p.schedule_end || "18:00",
+          allDay: !!p.schedule_all_day,
+        });
+      }
+      if (alive) setProfileLoaded(true);
+      api.registerPush();
+    })();
+    return () => { alive = false; };
+  }, [session]);
+
+  // Persiste preferências no Supabase sempre que mudarem (após carregar o perfil).
+  useEffect(() => {
+    if (!hasSupabase || !session || !profileLoaded) return;
+    api.saveProfile({ plan, selectedAssets, tfPerAsset, schedule });
+  }, [plan, selectedAssets, tfPerAsset, schedule, session, profileLoaded]);
+
+  // Busca dados reais nas telas de dados e atualiza a cada 30s (polling do feed).
+  useEffect(() => {
+    if (!hasSupabase || !session) return;
+    if (!["home", "signals", "performance", "history"].includes(screen)) return;
+    let alive = true;
+    const pull = async () => {
+      const [s, st] = await Promise.all([api.fetchSignals(), api.fetchStats()]);
+      if (!alive) return;
+      if (s) setLive(s);
+      if (st) setStats(st);
+    };
+    pull();
+    const id = setInterval(pull, 30000);
+    return () => { alive = false; clearInterval(id); };
+  }, [screen, session]);
+
+  const handleAuth = useCallback(async (email, pass, isSignup) => {
+    const r = isSignup ? await api.signUp(email, pass) : await api.signIn(email, pass);
+    if (r.ok && !r.demo) setSession(await api.getSession());
+    return r;
+  }, []);
+
+  const handleLogout = useCallback(async () => {
+    await api.signOut();
+    setSession(null); setProfileLoaded(false); setLive(null); setStats(null);
+    setScreen("login");
+  }, []);
+
+  const t = THEMES[themeId];
+  const toggleTheme = useCallback(() => setThemeId(x => x === "dark" ? "light" : "dark"), []);
+  const go = useCallback(id => setScreen(id), []);
+  const nav = useCallback(id => {
+    const map = { home: "home", signals: "signals", performance: "performance",
+      history: "history", profile: "profile", "signal-detail": "signal-detail" };
+    if (map[id]) setScreen(map[id]);
+  }, []);
+
+  const common = { t, onToggleTheme: toggleTheme };
+  const bizState = { plan, selectedAssets, tfPerAsset, schedule };
+
+  const render = () => {
+    switch (screen) {
+      case "splash":        return <Splash {...common} onNext={() => go("welcome")} />;
+      case "welcome":       return <Welcome {...common} onNext={() => go("risk")} onLogin={() => go("login")} />;
+      case "risk":          return <RiskWarning {...common} onNext={() => go("login")} />;
+      case "login":         return <Login {...common} onNext={() => go("plans")} onAuth={hasSupabase ? handleAuth : undefined} />;
+      case "plans":         return <Plans {...common} onNext={() => go("assets")} plan={plan} setPlan={setPlan} />;
+      case "assets":        return <Assets {...common} onNext={() => go("timeframes")} selected={selectedAssets} setSelected={setSelectedAssets} />;
+      case "timeframes":    return <Timeframes {...common} onNext={() => go("home")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} />;
+      case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
+      case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} />;
+      case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} />;
+      case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} />;
+      case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} />;
+      case "history":       return <History {...common} onNav={nav} {...bizState} />;
+      case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={schedule} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onLogout={handleLogout} userEmail={session?.user?.email} {...bizState} setSchedule={setSchedule} />;
+      default:              return <Splash {...common} onNext={() => go("welcome")} />;
+    }
+  };
+
+  /* ── MODO CELULAR: app em tela cheia (produção/PWA) ── */
+  if (isMobile) {
+    return (
+      <div style={{ height: "100vh", display: "flex", flexDirection: "column",
+        background: t.bg0, fontFamily: FONT, overflow: "hidden", transition: "background .3s" }}>
+        <GlobalStyle t={t} />
+        {render()}
+      </div>
+    );
+  }
+
+  /* ── MODO DESKTOP: frame de celular + painel dev ── */
+  return (
+    <div className="scrollarea" style={{
+      height: "100vh", background: themeId === "dark" ? "#000" : "#DDE8F2",
+      display: "flex", flexDirection: "column", alignItems: "center",
+      padding: "24px 16px 48px", fontFamily: FONT, transition: "background .3s",
+    }}>
+      <GlobalStyle t={t} />
+      <div style={{ width: "100%", maxWidth: 420, marginBottom: 20, flexShrink: 0,
+        background: themeId === "dark" ? "#0A0A0A" : "#FFFFFF",
+        border: `1px solid ${t.bdr}`, borderRadius: 18, padding: "14px 16px" }}>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 10 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <BoltLogo t={t} size={18} />
+            <Label t={t} color={t.muted}>Infinity Signals · telas (dev)</Label>
+          </div>
+          <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
+            {["free", "mensal", "anual"].map(p => (
+              <button key={p} onClick={() => setPlan(p)} style={{
+                padding: "3px 8px", borderRadius: 8, fontSize: 10, fontWeight: 800,
+                cursor: "pointer", fontFamily: FONT,
+                border: `1px solid ${plan === p ? t.accent : t.bdr}`,
+                background: plan === p ? t.accent : "transparent",
+                color: plan === p ? t.activeText : t.muted,
+              }}>{p.toUpperCase()}</button>
+            ))}
+            <ThemeToggle t={t} onToggle={toggleTheme} />
+          </div>
+        </div>
+        <div style={{ display: "flex", flexWrap: "wrap", gap: 6 }}>
+          {SCREENS.map(({ id, label }) => (
+            <button key={id} onClick={() => go(id)} style={{
+              padding: "5px 11px", borderRadius: 20, fontSize: 11, fontWeight: 700,
+              cursor: "pointer", fontFamily: FONT,
+              border: `1px solid ${screen === id ? t.accent : t.bdr}`,
+              background: screen === id ? t.accent : (themeId === "dark" ? "#111" : "#F0F6FC"),
+              color: screen === id ? t.activeText : t.muted,
+              whiteSpace: "nowrap",
+            }}>{label}</button>
+          ))}
+        </div>
+      </div>
+
+      <div style={{
+        width: 390, height: 780, maxHeight: "calc(100vh - 180px)", minHeight: 560,
+        background: t.bg0, borderRadius: 50, overflow: "hidden",
+        display: "flex", flexDirection: "column", flexShrink: 0,
+        boxShadow: `0 0 0 2px ${t.bdr}, 0 0 0 10px ${themeId === "dark" ? "#080808" : "#C5D5E5"},
+          0 0 0 12px ${t.bdrMid}, 0 40px 100px rgba(0,0,0,${themeId === "dark" ? 0.95 : 0.25})`,
+        position: "relative", transition: "background .3s",
+      }}>
+        <div style={{ height: 40, background: t.bg0, flexShrink: 0,
+          display: "flex", alignItems: "flex-end", justifyContent: "center",
+          paddingBottom: 4, transition: "background .3s" }}>
+          <div style={{ width: 120, height: 28,
+            background: themeId === "dark" ? "#000" : "#1A2B3C",
+            borderRadius: "0 0 20px 20px" }} />
+        </div>
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minHeight: 0 }}>
+          {render()}
+        </div>
+      </div>
+
+      <p style={{ marginTop: 14, fontSize: 11, color: themeId === "dark" ? "#2A2A2A" : "#8AA0B5",
+        textAlign: "center", fontFamily: FONT, flexShrink: 0 }}>
+        Infinity Signals · v4.1 · PWA · Vercel ready
+      </p>
+    </div>
+  );
+}
