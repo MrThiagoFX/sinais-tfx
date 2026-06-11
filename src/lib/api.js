@@ -55,6 +55,23 @@ export async function signOut() {
   if (supabase) await supabase.auth.signOut();
 }
 
+// Troca a senha do usuário logado.
+export async function updatePassword(newPassword) {
+  if (!supabase) return { ok: false, error: "sem backend" };
+  const { error } = await supabase.auth.updateUser({ password: newPassword });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// Envia e-mail de redefinição de senha (esqueci minha senha).
+export async function resetPassword(email) {
+  if (!supabase) return { ok: false, error: "sem backend" };
+  const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
+  const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
 /* ── Perfil / preferências ── */
 export async function loadProfile() {
   if (!supabase) return null;

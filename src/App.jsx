@@ -508,20 +508,30 @@ const RiskWarning = ({ t, onNext, onToggleTheme }) => {
   );
 };
 
-const Login = ({ t, onNext, onToggleTheme, onAuth }) => {
+const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot }) => {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
+  const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
   // Sem backend (modo demo) → apenas avança. Com backend → autentica de verdade.
   const handle = async (isSignup) => {
     if (!onAuth) return onNext();
-    setErr(""); setBusy(true);
+    setErr(""); setNotice(""); setBusy(true);
     const r = await onAuth(email.trim(), pass, isSignup);
     setBusy(false);
     if (r?.ok) onNext();
     else setErr(r?.error || "Não foi possível entrar. Verifique os dados.");
+  };
+
+  const forgot = async () => {
+    if (!onForgot) return;
+    setErr(""); setNotice("");
+    if (!email.trim()) { setErr("Digite seu e-mail acima para receber o link."); return; }
+    const r = await onForgot(email.trim());
+    if (r?.ok) setNotice("Enviamos um link de redefinição para o seu e-mail.");
+    else setErr(r?.error || "Não foi possível enviar o link.");
   };
 
   return (
@@ -552,9 +562,12 @@ const Login = ({ t, onNext, onToggleTheme, onAuth }) => {
           </div>
         ))}
         <div style={{ textAlign: "right", marginTop: 6 }}>
-          <span style={{ color: t.accent, fontSize: 13, fontWeight: 700, cursor: "pointer",
+          <span onClick={forgot} style={{ color: t.accent, fontSize: 13, fontWeight: 700, cursor: "pointer",
             fontFamily: FONT }}>Esqueci minha senha</span>
         </div>
+        {notice && (
+          <p style={{ marginTop: 12, fontSize: 12, color: t.buy, textAlign: "center", fontFamily: FONT }}>{notice}</p>
+        )}
       </Scroll>
       <div style={{ padding: "12px 24px 32px", display: "flex", flexDirection: "column", gap: 10, flexShrink: 0 }}>
         {err && (
@@ -1193,6 +1206,17 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule }) => {
 const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onLogout, userEmail, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [newPass, setNewPass] = useState("");
+  const [pwMsg, setPwMsg] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const changePass = async () => {
+    if (newPass.length < 6) { setPwMsg("A senha precisa de ao menos 6 caracteres."); return; }
+    setPwBusy(true); setPwMsg("");
+    const r = await api.updatePassword(newPass);
+    setPwBusy(false);
+    setPwMsg(r.ok ? "✓ Senha alterada com sucesso." : (r.error || "Não foi possível alterar."));
+    if (r.ok) setNewPass("");
+  };
   const refCode = referral?.code || "SEUCODIGO";
   const refLink = `https://sinais-tfx.vercel.app/?ref=${refCode}`;
   const copyRef = () => {
@@ -1379,6 +1403,28 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onLogout, userE
             );
           })}
 
+          {userEmail && (
+            <Card t={t} style={{ marginTop: 16 }}>
+              <Label t={t} style={{ marginBottom: 10 }}>🔑 Trocar senha</Label>
+              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+                <input type="password" value={newPass} placeholder="Nova senha (mín. 6)"
+                  onChange={e => setNewPass(e.target.value)}
+                  style={{ flex: 1, minWidth: 0, height: 46, background: t.bg2,
+                    border: `1.5px solid ${t.bdr}`, borderRadius: 12, padding: "0 14px",
+                    color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
+                <button onClick={changePass} disabled={pwBusy} style={{
+                  flexShrink: 0, height: 46, padding: "0 16px", borderRadius: 12,
+                  cursor: pwBusy ? "default" : "pointer", fontWeight: 800, fontSize: 13,
+                  fontFamily: FONT, border: "none", background: t.accent, color: t.activeText,
+                  opacity: pwBusy ? 0.5 : 1 }}>{pwBusy ? "..." : "Salvar"}</button>
+              </div>
+              {pwMsg && (
+                <p style={{ margin: "10px 0 0", fontSize: 12, fontFamily: FONT,
+                  color: pwMsg.startsWith("✓") ? t.buy : t.sell }}>{pwMsg}</p>
+              )}
+            </Card>
+          )}
+
           <div style={{ marginTop: 16 }}>
             <Btn t={t} variant="danger" onClick={onLogout}>Sair da conta</Btn>
           </div>
@@ -1525,7 +1571,7 @@ export default function App() {
       case "splash":        return <Splash {...common} onNext={() => go("welcome")} />;
       case "welcome":       return <Welcome {...common} onNext={() => go("risk")} onLogin={() => go("login")} />;
       case "risk":          return <RiskWarning {...common} onNext={() => go("login")} />;
-      case "login":         return <Login {...common} onNext={() => go("plans")} onAuth={hasSupabase ? handleAuth : undefined} />;
+      case "login":         return <Login {...common} onNext={() => go("plans")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} />;
       case "plans":         return <Plans {...common} onNext={() => go("assets")} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} selected={selectedAssets} setSelected={setSelectedAssets} />;
       case "timeframes":    return <Timeframes {...common} onNext={() => go("home")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} />;
