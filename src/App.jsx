@@ -1476,13 +1476,19 @@ export default function App() {
      Celular → tela cheia. Desktop em produção → coluna centralizada estilo app mobile. ── */
   if (!isDev || isMobile) {
     return (
-      <div style={{ height: "100vh", display: "flex", justifyContent: "center", fontFamily: FONT,
-        background: isMobile ? t.bg0 : (themeId === "dark" ? "#000" : "#DDE8F2"),
+      <div style={{ height: "100vh", display: "flex", justifyContent: "center",
+        alignItems: isMobile ? "stretch" : "center", fontFamily: FONT,
+        background: isMobile ? t.bg0 : (themeId === "dark"
+          ? "radial-gradient(circle at 50% 30%, #11161f 0%, #03050a 78%)"
+          : "radial-gradient(circle at 50% 30%, #FFFFFF 0%, #D2E0ED 80%)"),
         transition: "background .3s" }}>
         <GlobalStyle t={t} />
-        <div style={{ width: "100%", maxWidth: isMobile ? "100%" : 460, height: "100%",
+        <div style={{ width: "100%", maxWidth: isMobile ? "100%" : 460,
+          height: isMobile ? "100%" : "min(calc(100vh - 40px), 880px)",
           display: "flex", flexDirection: "column", overflow: "hidden", background: t.bg0,
-          boxShadow: isMobile ? "none" : "0 0 60px rgba(0,0,0,.45)" }}>
+          borderRadius: isMobile ? 0 : 28,
+          border: isMobile ? "none" : `1px solid ${t.bdr}`,
+          boxShadow: isMobile ? "none" : "0 24px 80px rgba(0,0,0,.45)" }}>
           {render()}
         </div>
       </div>
