@@ -239,8 +239,11 @@ const BackBtn = ({ onClick, t }) => (
   }}>← Voltar</button>
 );
 
-const ScreenHeader = ({ title, t, onToggleTheme, right }) => (
+const ScreenHeader = ({ title, t, onToggleTheme, right, onBack }) => (
   <div style={{ padding: "16px 24px 0", flexShrink: 0 }}>
+    {onBack && (
+      <div style={{ marginBottom: 10 }}><BackBtn onClick={onBack} t={t} /></div>
+    )}
     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
       <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, letterSpacing: -0.5,
         color: t.text, fontFamily: FONT }}>{title}</h1>
@@ -636,12 +639,12 @@ const Plans = ({ t, onNext, onToggleTheme, plan, setPlan }) => {
   );
 };
 
-const Assets = ({ t, onNext, onToggleTheme, selected, setSelected }) => {
+const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected }) => {
   const toggle = a => setSelected(s => s.includes(a) ? s.filter(x => x !== a) : [...s, a]);
   const n = selected.length;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Seus ativos" t={t} onToggleTheme={onToggleTheme} />
+      <ScreenHeader title="Seus ativos" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
         <p style={{ fontSize: 13, color: t.sub, margin: "0 0 14px", fontFamily: FONT }}>
           Os sinais exibidos serão apenas dos ativos que você escolher aqui.
@@ -689,7 +692,7 @@ const Assets = ({ t, onNext, onToggleTheme, selected, setSelected }) => {
   );
 };
 
-const Timeframes = ({ t, onNext, onToggleTheme, selectedAssets, tfPerAsset, setTfPerAsset }) => {
+const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAsset, setTfPerAsset }) => {
   const maxTf = maxTfPerAsset(selectedAssets.length);
   const toggleTf = (a, tf) => {
     setTfPerAsset(cfg => {
@@ -705,7 +708,7 @@ const Timeframes = ({ t, onNext, onToggleTheme, selectedAssets, tfPerAsset, setT
   };
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Tempos gráficos" t={t} onToggleTheme={onToggleTheme} />
+      <ScreenHeader title="Tempos gráficos" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
         <Card t={t} accent style={{ marginBottom: 14, padding: "12px 16px" }}>
           <p style={{ fontSize: 12, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
@@ -1573,8 +1576,8 @@ export default function App() {
       case "risk":          return <RiskWarning {...common} onNext={() => go("login")} />;
       case "login":         return <Login {...common} onNext={() => go("plans")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} />;
       case "plans":         return <Plans {...common} onNext={() => go("assets")} plan={plan} setPlan={setPlan} />;
-      case "assets":        return <Assets {...common} onNext={() => go("timeframes")} selected={selectedAssets} setSelected={setSelectedAssets} />;
-      case "timeframes":    return <Timeframes {...common} onNext={() => go("home")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} />;
+      case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
+      case "timeframes":    return <Timeframes {...common} onNext={() => go("home")} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} />;
       case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
       case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} />;
