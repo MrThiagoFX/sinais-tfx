@@ -299,7 +299,9 @@ const ASSET_NAMES = {
   EURUSD: "Euro / Dólar", GBPUSD: "Libra / Dólar",
   XAUUSD: "Ouro / Dólar", NAS100: "Nasdaq 100", US30: "Dow Jones 30",
 };
-const TIMEFRAMES = ["M5", "M15", "H1"];
+// Timeframes: base M5/M15 (mensal e free). M1 é exclusivo do plano Anual. H1 removido.
+const TIMEFRAMES = ["M5", "M15"];
+const tfOptionsForPlan = (plan) => (plan === "anual" ? ["M1", "M5", "M15"] : ["M5", "M15"]);
 const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
 
 const PLAN_INFO = {
@@ -310,36 +312,35 @@ const PLAN_INFO = {
 
 // Plano Free tem horário FIXO (não personalizável). Premium escolhe a janela.
 const FREE_SCHEDULE = { start: "08:00", end: "18:00", allDay: false };
+// Free: 4 sinais por dia (M5/M15 sortidos) em horários fixos.
+const FREE_SLOTS = ["04:00", "10:30", "15:00", "21:00"];
 // Comissão de indicação: o indicador ganha 30% sobre o que o indicado pagar.
 const REFERRAL_RATE = 0.30;
 
-const dailyQuota = (plan, selectedAssets, tfPerAsset) => {
-  if (plan === "free") return 4;
-  const sum = selectedAssets.reduce((acc, a) => acc + 4 * (tfPerAsset[a]?.length || 1), 0);
-  return Math.min(20, sum);
-};
+// Cota diária: Free = 4 sinais/dia. Premium (mensal/anual) = até 20 operações/dia.
+const dailyQuota = (plan) => (plan === "free" ? 4 : 20);
 
 const maxTfPerAsset = (numAssets) => (numAssets <= 3 ? 3 : 1);
 
 const SIGNALS_DATA = [
   { id: 1, asset: "XAUUSD", dir: "Compra", tf: "M5",  time: "14:32", hour: 14, ageMin: 3,   entry: "2.365,40", sl: "2.360,00", tp: "2.373,00", est: "+76 pips", perf: 82 },
   { id: 2, asset: "EURUSD", dir: "Venda",  tf: "M15", time: "13:15", hour: 13, ageMin: 78,  entry: "1,0842",   sl: "1,0858",   tp: "1,0810",   est: "+32 pips", perf: 64 },
-  { id: 3, asset: "NAS100", dir: "Compra", tf: "H1",  time: "12:00", hour: 12, ageMin: 140, entry: "18.420",   sl: "18.380",   tp: "18.510",   est: "+90 pts",  perf: 77 },
+  { id: 3, asset: "NAS100", dir: "Compra", tf: "M15",  time: "12:00", hour: 12, ageMin: 140, entry: "18.420",   sl: "18.380",   tp: "18.510",   est: "+90 pts",  perf: 77 },
   { id: 4, asset: "GBPUSD", dir: "Venda",  tf: "M15", time: "11:45", hour: 11, ageMin: 200, entry: "1,2710",   sl: "1,2728",   tp: "1,2675",   est: "+35 pips", perf: 55 },
-  { id: 5, asset: "US30",   dir: "Compra", tf: "H1",  time: "10:10", hour: 10, ageMin: 320, entry: "39.180",   sl: "39.120",   tp: "39.310",   est: "+130 pts", perf: 70 },
+  { id: 5, asset: "US30",   dir: "Compra", tf: "M15",  time: "10:10", hour: 10, ageMin: 320, entry: "39.180",   sl: "39.120",   tp: "39.310",   est: "+130 pts", perf: 70 },
   { id: 6, asset: "XAUUSD", dir: "Venda",  tf: "M15", time: "07:40", hour: 7,  ageMin: 420, entry: "2.358,00", sl: "2.363,00", tp: "2.349,00", est: "+90 pips", perf: 68 },
 ];
 
 const HISTORY_DATA = [
   { asset: "XAUUSD", dir: "Compra", tf: "M5",  time: "14:32", hour: 14, pips: 80  },
   { asset: "EURUSD", dir: "Venda",  tf: "M15", time: "11:15", hour: 11, pips: -25 },
-  { asset: "NAS100", dir: "Compra", tf: "H1",  time: "09:00", hour: 9,  pips: 55  },
-  { asset: "US30",   dir: "Compra", tf: "H1",  time: "Ontem 16:20", hour: 16, pips: 120 },
+  { asset: "NAS100", dir: "Compra", tf: "M15",  time: "09:00", hour: 9,  pips: 55  },
+  { asset: "US30",   dir: "Compra", tf: "M15",  time: "Ontem 16:20", hour: 16, pips: 120 },
   { asset: "GBPUSD", dir: "Venda",  tf: "M15", time: "Ontem 10:05", hour: 10, pips: -18 },
   { asset: "XAUUSD", dir: "Compra", tf: "M5",  time: "Seg 06:30",   hour: 6,  pips: 40  },
   { asset: "EURUSD", dir: "Compra", tf: "M15", time: "Seg 12:10",   hour: 12, pips: 28  },
-  { asset: "NAS100", dir: "Venda",  tf: "H1",  time: "Sex 19:45",   hour: 19, pips: -32 },
-  { asset: "US30",   dir: "Compra", tf: "H1",  time: "Sex 15:00",   hour: 15, pips: 65  },
+  { asset: "NAS100", dir: "Venda",  tf: "M15",  time: "Sex 19:45",   hour: 19, pips: -32 },
+  { asset: "US30",   dir: "Compra", tf: "M15",  time: "Sex 15:00",   hour: 15, pips: 65  },
 ];
 
 // Converte um sinal vindo do /api (números crus + created_at) para o formato
@@ -611,11 +612,11 @@ const Plans = ({ t, onNext, onBack, onToggleTheme, plan, setPlan, currentPlan })
   const upgrade = !!currentPlan;
   const plans = [
     { id: "free", name: "Free", price: "Grátis", sub: "Para conhecer",
-      items: ["4 sinais aleatórios por dia", "Dentro do seu horário configurado", "Histórico de 7 dias"] },
+      items: ["4 sinais por dia (M5/M15 sortidos)", "Em horários fixos", "Histórico de 7 dias"] },
     { id: "mensal", name: "Premium Mensal", price: "R$ 99/mês", sub: "Cobrança mensal",
-      items: ["4 sinais por ativo e timeframe", "Máximo de 20 sinais/dia", "Escolha seus ativos e horário", "Histórico completo"] },
+      items: ["Até 20 operações por dia", "Timeframes M5 e M15", "Escolha seus ativos e horário", "Histórico completo"] },
     { id: "anual", name: "Premium Anual", price: "R$ 79/mês", sub: "Equivalente — cobrado anualmente", badge: "Mais popular",
-      items: ["Tudo do plano mensal", "Sinais desbloqueados o dia todo", "Ou delimite seu horário", "Suporte prioritário"] },
+      items: ["Tudo do mensal + timeframe M1", "Até 20 operações por dia", "Sinais o dia todo (ou delimite)", "Suporte prioritário"] },
   ];
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -726,8 +727,9 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected }) => 
   );
 };
 
-const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAsset, setTfPerAsset }) => {
+const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAsset, setTfPerAsset, plan }) => {
   const maxTf = maxTfPerAsset(selectedAssets.length);
+  const tfs = tfOptionsForPlan(plan);
   const toggleTf = (a, tf) => {
     setTfPerAsset(cfg => {
       const cur = cfg[a] || [];
@@ -748,6 +750,9 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
           <p style={{ fontSize: 12, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
             Você escolheu <span style={{ fontWeight: 800, color: t.accent }}>{selectedAssets.length} ativo{selectedAssets.length !== 1 ? "s" : ""}</span> —
             {maxTf === 3 ? " selecione até 3 timeframes por ativo." : " selecione 1 timeframe por ativo."}
+            {plan === "anual"
+              ? <span style={{ color: t.accent, fontWeight: 700 }}> O M1 é exclusivo do seu plano Anual.</span>
+              : <span style={{ color: t.muted }}> O M1 é exclusivo do Premium Anual.</span>}
           </p>
         </Card>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
@@ -763,7 +768,7 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
                   <span style={{ fontSize: 11, color: t.muted, fontFamily: FONT }}>{cur.length}/{maxTf}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  {TIMEFRAMES.map(tf => {
+                  {tfs.map(tf => {
                     const active = cur.includes(tf);
                     const blocked = !active && cur.length >= maxTf && maxTf > 1;
                     return (
@@ -786,7 +791,7 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
 
 const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats }) => {
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
-  const quota = live?.quota ?? dailyQuota(plan, selectedAssets, tfPerAsset);
+  const quota = live?.quota ?? dailyQuota(plan);
   const used = live?.delivered ?? Math.min(3, quota);
   const info = PLAN_INFO[plan];
   const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
@@ -830,8 +835,8 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
             <Bar pct={(used / quota) * 100} t={t} />
             <p style={{ fontSize: 12, color: t.sub, margin: "8px 0 0", fontFamily: FONT }}>
               {plan === "free"
-                ? "Plano Free — 4 sinais aleatórios por dia"
-                : `${info.name} — 4 sinais por ativo e timeframe (máx. 20/dia)`}
+                ? "Plano Free — 4 sinais por dia (M5/M15 sortidos)"
+                : `${info.name} — até 20 operações por dia`}
             </p>
           </div>
 
@@ -921,7 +926,7 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
           <div style={{ background: `${t.warn}10`, border: `1px solid ${t.warn}30`,
             borderRadius: 12, padding: "8px 12px", marginBottom: 4 }}>
             <p style={{ fontSize: 11, color: t.warn, margin: 0, fontFamily: FONT }}>
-              Plano Free: 4 sinais aleatórios por dia. Faça upgrade para escolher ativos.
+              Plano Free: 4 sinais por dia (M5/M15 sortidos) em horários fixos. Faça upgrade para escolher ativos.
             </p>
           </div>
         )}
@@ -1024,7 +1029,7 @@ const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme }) => {
   );
 };
 
-const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets }) => {
+const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan }) => {
   const [asset, setAsset] = useState("Todos");
   const [tf, setTf] = useState("Todos");
   const [type, setType] = useState("Todos");
@@ -1052,7 +1057,7 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets }) => {
           <div style={{ marginBottom: 22 }}>
             <Label t={t} style={{ marginBottom: 10 }}>Timeframe</Label>
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {["Todos", ...TIMEFRAMES].map(x => (
+              {["Todos", ...tfOptionsForPlan(plan)].map(x => (
                 <Chip key={x} label={x} active={tf === x} onClick={() => setTf(x)} t={t} />
               ))}
             </div>
@@ -1410,7 +1415,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   };
   const info = PLAN_INFO[plan];
-  const quota = dailyQuota(plan, selectedAssets, tfPerAsset);
+  const quota = dailyQuota(plan);
   const isAnual = plan === "anual";
   const isFree = plan === "free";
   const items = [
@@ -1491,14 +1496,15 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
             ) : isFree ? (
               <>
                 <p style={{ fontSize: 12, color: t.sub, margin: "0 0 12px", lineHeight: 1.55, fontFamily: FONT }}>
-                  No plano Free os sinais chegam em <span style={{ fontWeight: 800, color: t.text }}>horário fixo</span>.
+                  No plano Free os <span style={{ fontWeight: 800, color: t.text }}>4 sinais do dia</span> (M5/M15 sortidos) chegam em <span style={{ fontWeight: 800, color: t.text }}>horários fixos</span>:
                 </p>
-                <div style={{ display: "flex", gap: 10, alignItems: "center",
-                  background: t.bg2, border: `1.5px solid ${t.bdr}`, borderRadius: 12, padding: "12px 16px" }}>
-                  <span style={{ fontSize: 16 }}>🔒</span>
-                  <span style={{ fontWeight: 800, fontSize: 16, color: t.text, fontFamily: FONT, letterSpacing: 0.5 }}>
-                    {FREE_SCHEDULE.start} → {FREE_SCHEDULE.end}
-                  </span>
+                <div style={{ display: "flex", gap: 8 }}>
+                  {FREE_SLOTS.map(h => (
+                    <div key={h} style={{ flex: 1, textAlign: "center",
+                      background: t.bg2, border: `1.5px solid ${t.bdr}`, borderRadius: 12, padding: "10px 4px" }}>
+                      <span style={{ fontWeight: 800, fontSize: 14, color: t.text, fontFamily: FONT }}>🔒 {h}</span>
+                    </div>
+                  ))}
                 </div>
                 <p style={{ fontSize: 11, color: t.muted, margin: "10px 0 0", fontFamily: FONT }}>
                   💡 Faça upgrade para o Premium e escolha o seu próprio horário.
@@ -1660,7 +1666,7 @@ export default function App() {
   const [selectedAssets, setSelectedAssets] = useState(["XAUUSD", "NAS100", "US30"]);
   const [tfPerAsset, setTfPerAsset] = useState({
     EURUSD: ["M15"], GBPUSD: ["M15"],
-    XAUUSD: ["M5", "M15"], NAS100: ["H1"], US30: ["H1"],
+    XAUUSD: ["M5", "M15"], NAS100: ["M15"], US30: ["M15"],
   });
   const [schedule, setSchedule] = useState({ start: "08:00", end: "18:00", allDay: false });
   const [isMobile, setIsMobile] = useState(
@@ -1781,11 +1787,11 @@ export default function App() {
       case "login":         return <Login {...common} onNext={() => go("plans")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} />;
       case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
-      case "timeframes":    return <Timeframes {...common} onNext={() => go("home")} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} />;
+      case "timeframes":    return <Timeframes {...common} onNext={() => go("home")} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} />;
       case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
       case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} />;
-      case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} />;
+      case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} />;
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} />;
       case "history":       return <History {...common} onNav={nav} {...bizState} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={schedule} />;

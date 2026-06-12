@@ -2,7 +2,8 @@
 // Reutilizadas por signals.js (filtro/cota/elegibilidade) e stats.js.
 
 export const ASSETS = ["EURUSD", "GBPUSD", "XAUUSD", "NAS100", "US30"];
-export const TFS = ["M5", "M15", "H1"];
+// M5/M15 para todos; M1 é exclusivo do plano Anual. H1 removido.
+export const TFS = ["M1", "M5", "M15"];
 export const DIRS = ["Compra", "Venda"];
 
 // Tamanho do "pip"/ponto por ativo, para calcular result_pips no fechamento.
@@ -40,14 +41,9 @@ export function computePips(asset, dir, entry, exit) {
   return Math.round((dir === "Compra" ? raw : -raw));
 }
 
-// Cota diária de sinais (igual a dailyQuota() do App.jsx):
-//   free = 4 · premium = min(20, Σ por ativo (4 × qtde de timeframes do ativo))
+// Cota diária de sinais: Free = 4/dia · Premium (mensal/anual) = até 20/dia.
 export function dailyQuota(profile) {
-  if (!profile || profile.plan === "free") return 4;
-  const assets = profile.assets || [];
-  const tfMap = profile.tf_per_asset || {};
-  const sum = assets.reduce((acc, a) => acc + 4 * ((tfMap[a] || []).length || 1), 0);
-  return Math.min(20, sum);
+  return (!profile || profile.plan === "free") ? 4 : 20;
 }
 
 // Hora (0-23) extraída de "HH:MM".
@@ -75,6 +71,8 @@ export function inWindow(date, profile) {
 //   premium→ asset ∈ profile.assets E tf ∈ profile.tf_per_asset[asset]
 // Em ambos os casos respeita a janela de horário (sobre created_at do sinal).
 export function isEligible(signal, profile) {
+  // M1 é exclusivo do plano Anual.
+  if (signal.tf === "M1" && profile?.plan !== "anual") return false;
   const created = new Date(signal.created_at || Date.now());
   if (!inWindow(created, profile)) return false;
   if (!profile || profile.plan === "free") return true;

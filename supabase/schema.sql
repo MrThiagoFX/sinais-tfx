@@ -21,7 +21,7 @@ create table if not exists public.signals (
   id bigint generated always as identity primary key,
   asset text not null check (asset in ('EURUSD','GBPUSD','XAUUSD','NAS100','US30')),
   dir   text not null check (dir in ('Compra','Venda')),
-  tf    text not null check (tf in ('M5','M15','H1')),
+  tf    text not null check (tf in ('M1','M5','M15')),
   entry numeric not null,
   sl    numeric not null,
   tp    numeric not null,
