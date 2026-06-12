@@ -104,13 +104,21 @@ const FlagGB = ({ size = 24 }) => (
 const FlagGold = ({ size = 24 }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" style={{ display: "block" }}>
     <defs>
-      <radialGradient id="gAu" cx="35%" cy="30%">
-        <stop offset="0%" stopColor="#FFE680" /><stop offset="100%" stopColor="#D4A017" />
+      <radialGradient id="gAuBg" cx="34%" cy="28%">
+        <stop offset="0%" stopColor="#574517" /><stop offset="100%" stopColor="#211806" />
       </radialGradient>
+      <linearGradient id="gAuBar" x1="0" y1="0" x2="0.15" y2="1">
+        <stop offset="0%" stopColor="#FFE9A0" /><stop offset="50%" stopColor="#F3C64A" />
+        <stop offset="100%" stopColor="#CF9A1E" />
+      </linearGradient>
     </defs>
-    <circle cx="12" cy="12" r="11.5" fill="url(#gAu)" stroke="#B8860B" strokeWidth="1" />
-    <text x="12" y="15.5" textAnchor="middle" fontSize="9" fontWeight="900"
-      fill="#6B4E00" fontFamily={FONT}>AU</text>
+    <circle cx="12" cy="12" r="11.5" fill="url(#gAuBg)" stroke="#C8911C" strokeWidth="1" />
+    {/* lingote de ouro */}
+    <polygon points="5.5,15 18.5,15 16,9.9 8,9.9" fill="url(#gAuBar)"
+      stroke="#8a6410" strokeWidth="0.5" strokeLinejoin="round" />
+    <polygon points="8,9.9 16,9.9 14.6,8.1 9.4,8.1" fill="#FFEDB0"
+      stroke="#8a6410" strokeWidth="0.5" strokeLinejoin="round" />
+    <polygon points="7,14.4 9.2,10.5 10.3,10.5 8.1,14.4" fill="#FFFFFF" opacity="0.42" />
   </svg>
 );
 
@@ -314,12 +322,12 @@ const dailyQuota = (plan, selectedAssets, tfPerAsset) => {
 const maxTfPerAsset = (numAssets) => (numAssets <= 3 ? 3 : 1);
 
 const SIGNALS_DATA = [
-  { id: 1, asset: "XAUUSD", dir: "Compra", tf: "M5",  time: "14:32", hour: 14, entry: "2.365,40", sl: "2.360,00", tp: "2.373,00", est: "+76 pips", perf: 82 },
-  { id: 2, asset: "EURUSD", dir: "Venda",  tf: "M15", time: "13:15", hour: 13, entry: "1,0842",   sl: "1,0858",   tp: "1,0810",   est: "+32 pips", perf: 64 },
-  { id: 3, asset: "NAS100", dir: "Compra", tf: "H1",  time: "12:00", hour: 12, entry: "18.420",   sl: "18.380",   tp: "18.510",   est: "+90 pts",  perf: 77 },
-  { id: 4, asset: "GBPUSD", dir: "Venda",  tf: "M15", time: "11:45", hour: 11, entry: "1,2710",   sl: "1,2728",   tp: "1,2675",   est: "+35 pips", perf: 55 },
-  { id: 5, asset: "US30",   dir: "Compra", tf: "H1",  time: "10:10", hour: 10, entry: "39.180",   sl: "39.120",   tp: "39.310",   est: "+130 pts", perf: 70 },
-  { id: 6, asset: "XAUUSD", dir: "Venda",  tf: "M15", time: "07:40", hour: 7,  entry: "2.358,00", sl: "2.363,00", tp: "2.349,00", est: "+90 pips", perf: 68 },
+  { id: 1, asset: "XAUUSD", dir: "Compra", tf: "M5",  time: "14:32", hour: 14, ageMin: 3,   entry: "2.365,40", sl: "2.360,00", tp: "2.373,00", est: "+76 pips", perf: 82 },
+  { id: 2, asset: "EURUSD", dir: "Venda",  tf: "M15", time: "13:15", hour: 13, ageMin: 78,  entry: "1,0842",   sl: "1,0858",   tp: "1,0810",   est: "+32 pips", perf: 64 },
+  { id: 3, asset: "NAS100", dir: "Compra", tf: "H1",  time: "12:00", hour: 12, ageMin: 140, entry: "18.420",   sl: "18.380",   tp: "18.510",   est: "+90 pts",  perf: 77 },
+  { id: 4, asset: "GBPUSD", dir: "Venda",  tf: "M15", time: "11:45", hour: 11, ageMin: 200, entry: "1,2710",   sl: "1,2728",   tp: "1,2675",   est: "+35 pips", perf: 55 },
+  { id: 5, asset: "US30",   dir: "Compra", tf: "H1",  time: "10:10", hour: 10, ageMin: 320, entry: "39.180",   sl: "39.120",   tp: "39.310",   est: "+130 pts", perf: 70 },
+  { id: 6, asset: "XAUUSD", dir: "Venda",  tf: "M15", time: "07:40", hour: 7,  ageMin: 420, entry: "2.358,00", sl: "2.363,00", tp: "2.349,00", est: "+90 pips", perf: 68 },
 ];
 
 const HISTORY_DATA = [
@@ -342,11 +350,15 @@ const mapSignal = (s) => {
   return {
     id: s.id, asset: s.asset, dir: s.dir, tf: s.tf,
     time: `${pad(d.getHours())}:${pad(d.getMinutes())}`, hour: d.getHours(),
+    ageMin: Math.round((Date.now() - d.getTime()) / 60000),
     entry: String(s.entry), sl: String(s.sl), tp: String(s.tp),
     est: s.result_pips != null ? `${s.result_pips >= 0 ? "+" : ""}${s.result_pips} pips` : "—",
     perf: 70,
   };
 };
+
+// Janela em que o sinal ainda pode ser copiado/entrado (minutos).
+const COPY_WINDOW_MIN = 10;
 
 const SignalRow = ({ s, t, onClick, pips }) => {
   const buy = s.dir === "Compra";
@@ -583,7 +595,8 @@ const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot }) => {
   );
 };
 
-const Plans = ({ t, onNext, onToggleTheme, plan, setPlan }) => {
+const Plans = ({ t, onNext, onBack, onToggleTheme, plan, setPlan, currentPlan }) => {
+  const upgrade = !!currentPlan;
   const plans = [
     { id: "free", name: "Free", price: "Grátis", sub: "Para conhecer",
       items: ["4 sinais aleatórios por dia", "Dentro do seu horário configurado", "Histórico de 7 dias"] },
@@ -594,10 +607,13 @@ const Plans = ({ t, onNext, onToggleTheme, plan, setPlan }) => {
   ];
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Escolha seu plano" t={t} onToggleTheme={onToggleTheme} />
+      <ScreenHeader title={upgrade ? "Mudar de plano" : "Escolha seu plano"} t={t}
+        onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
         <p style={{ fontSize: 14, color: t.sub, margin: "0 0 18px", fontFamily: FONT }}>
-          Altere quando quiser nas configurações.
+          {upgrade
+            ? `Seu plano atual é ${PLAN_INFO[currentPlan].name}. Escolha para onde quer ir.`
+            : "Altere quando quiser nas configurações."}
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 12 }}>
           {plans.map(p => (
@@ -612,7 +628,13 @@ const Plans = ({ t, onNext, onToggleTheme, plan, setPlan }) => {
               )}
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <div>
-                  <div style={{ fontWeight: 900, fontSize: 17, color: t.text, fontFamily: FONT }}>{p.name}</div>
+                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                    <div style={{ fontWeight: 900, fontSize: 17, color: t.text, fontFamily: FONT }}>{p.name}</div>
+                    {upgrade && p.id === currentPlan && (
+                      <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 6,
+                        background: t.bg2, color: t.sub, border: `1px solid ${t.bdr}`, fontFamily: FONT }}>ATUAL</span>
+                    )}
+                  </div>
                   <div style={{ color: t.accent, fontWeight: 800, fontSize: 16, marginTop: 2, fontFamily: FONT }}>{p.price}</div>
                   <div style={{ color: t.muted, fontSize: 11, marginTop: 2, fontFamily: FONT }}>{p.sub}</div>
                 </div>
@@ -633,7 +655,7 @@ const Plans = ({ t, onNext, onToggleTheme, plan, setPlan }) => {
         </div>
       </Scroll>
       <div style={{ padding: "12px 24px 28px", flexShrink: 0 }}>
-        <Btn t={t} onClick={onNext}>Continuar</Btn>
+        <Btn t={t} onClick={onNext}>{upgrade ? "Confirmar plano" : "Continuar"}</Btn>
       </div>
     </div>
   );
@@ -915,6 +937,8 @@ const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme }) => {
   const s = signal || SIGNALS_DATA[0];
   const buy = s.dir === "Compra";
   const ac = buy ? t.buy : t.sell;
+  // Só dá para copiar/entrar dentro da janela de 10 min após o sinal.
+  const canCopy = s.ageMin != null && s.ageMin <= COPY_WINDOW_MIN;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <Scroll>
@@ -960,11 +984,27 @@ const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme }) => {
               Este é um estudo operacional, não uma recomendação financeira. Avalie o risco antes de operar.
             </span>
           </div>
-          <div style={{ display: "flex", gap: 10 }}>
-            <Btn t={t} style={{ flex: 1, height: 50 }}>Copiar sinal</Btn>
-            <Btn t={t} variant="secondary" style={{ flex: 1, height: 50 }}
-              onClick={() => onNav("history")}>Histórico</Btn>
-          </div>
+          {canCopy ? (
+            <div style={{ display: "flex", gap: 10 }}>
+              <Btn t={t} style={{ flex: 1, height: 50 }}>Copiar sinal</Btn>
+              <Btn t={t} variant="secondary" style={{ flex: 1, height: 50 }}
+                onClick={() => onNav("history")}>Histórico</Btn>
+            </div>
+          ) : (
+            <>
+              <div style={{ background: t.bg2, border: `1px solid ${t.bdr}`,
+                borderRadius: 14, padding: "14px 16px", marginBottom: 10,
+                display: "flex", gap: 10, alignItems: "center" }}>
+                <span style={{ fontSize: 18 }}>⏱️</span>
+                <span style={{ fontSize: 12.5, color: t.sub, lineHeight: 1.5, fontFamily: FONT }}>
+                  <span style={{ fontWeight: 800, color: t.text }}>Janela de entrada encerrada.</span> Este
+                  sinal passou de {COPY_WINDOW_MIN} min — você pode acompanhar, mas não entrar mais.
+                </span>
+              </div>
+              <Btn t={t} variant="secondary" style={{ height: 50 }}
+                onClick={() => onNav("history")}>Ver histórico</Btn>
+            </>
+          )}
         </div>
       </Scroll>
       <BottomNav active="signals" onNav={onNav} t={t} />
@@ -1206,7 +1246,7 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule }) => {
   );
 };
 
-const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onLogout, userEmail, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
+const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onUpgrade, onLogout, userEmail, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
   const [newPass, setNewPass] = useState("");
@@ -1338,7 +1378,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onLogout, userE
             )}
           </Card>
 
-          <Btn t={t} style={{ marginBottom: 10 }}>Upgrade de plano</Btn>
+          <Btn t={t} style={{ marginBottom: 10 }} onClick={onUpgrade}>Upgrade de plano</Btn>
           <Btn t={t} variant="secondary" style={{ marginBottom: 20 }} onClick={onOpenNotifications}>
             🔔 Notificações
           </Btn>
@@ -1555,6 +1595,11 @@ export default function App() {
     setScreen("login");
   }, []);
 
+  // Fluxo de upgrade: abre a tela de Planos a partir do Perfil e volta pra lá.
+  const [upgradeFrom, setUpgradeFrom] = useState(null);
+  const openUpgrade = useCallback(() => { setUpgradeFrom(plan); setScreen("plans"); }, [plan]);
+  const closeUpgrade = useCallback(() => { setUpgradeFrom(null); setScreen("profile"); }, []);
+
   const t = THEMES[themeId];
   const toggleTheme = useCallback(() => setThemeId(x => x === "dark" ? "light" : "dark"), []);
   const go = useCallback(id => setScreen(id), []);
@@ -1575,7 +1620,7 @@ export default function App() {
       case "welcome":       return <Welcome {...common} onNext={() => go("risk")} onLogin={() => go("login")} />;
       case "risk":          return <RiskWarning {...common} onNext={() => go("login")} />;
       case "login":         return <Login {...common} onNext={() => go("plans")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} />;
-      case "plans":         return <Plans {...common} onNext={() => go("assets")} plan={plan} setPlan={setPlan} />;
+      case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
       case "timeframes":    return <Timeframes {...common} onNext={() => go("home")} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} />;
       case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
@@ -1585,7 +1630,7 @@ export default function App() {
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} />;
       case "history":       return <History {...common} onNav={nav} {...bizState} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={schedule} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onLogout={handleLogout} userEmail={session?.user?.email} referral={{ code: api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onUpgrade={openUpgrade} onLogout={handleLogout} userEmail={session?.user?.email} referral={{ code: api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;
     }
   };
