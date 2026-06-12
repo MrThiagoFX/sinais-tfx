@@ -41,9 +41,10 @@ function storedRef() {
   try { return localStorage.getItem("tfx_ref") || null; } catch { return null; }
 }
 
-export async function signUp(email, password, name) {
+export async function signUp(email, password, name, coupon) {
   if (!supabase) return { ok: true, demo: true };
-  const referred_by = storedRef();
+  // Cupom digitado no cadastro tem prioridade; senão usa o ?ref do link.
+  const referred_by = (coupon && coupon.trim()) || storedRef();
   const { data, error } = await supabase.auth.signUp({
     email, password, options: { data: { name, referred_by } },
   });

@@ -526,6 +526,9 @@ const RiskWarning = ({ t, onNext, onToggleTheme }) => {
 const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot }) => {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
+  const [coupon, setCoupon] = useState(() => {
+    try { return localStorage.getItem("tfx_ref") || ""; } catch { return ""; }
+  });
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -534,7 +537,7 @@ const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot }) => {
   const handle = async (isSignup) => {
     if (!onAuth) return onNext();
     setErr(""); setNotice(""); setBusy(true);
-    const r = await onAuth(email.trim(), pass, isSignup);
+    const r = await onAuth(email.trim(), pass, isSignup, coupon.trim());
     setBusy(false);
     if (r?.ok) onNext();
     else setErr(r?.error || "Não foi possível entrar. Verifique os dados.");
@@ -576,6 +579,15 @@ const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot }) => {
                 fontSize: 14, fontFamily: FONT, outline: "none" }} />
           </div>
         ))}
+        <div style={{ marginBottom: 14 }}>
+          <Label t={t} style={{ marginBottom: 6 }}>Cupom de convite (opcional)</Label>
+          <input value={coupon} placeholder="código de quem te indicou" onChange={e => setCoupon(e.target.value)}
+            style={{ width: "100%", height: 52, background: t.card, border: `1.5px solid ${t.bdr}`,
+              borderRadius: 14, padding: "0 16px", color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
+          <p style={{ fontSize: 11, color: t.muted, margin: "6px 2px 0", fontFamily: FONT }}>
+            Use ao <span style={{ fontWeight: 700 }}>criar conta</span>. Se entrou por um link de convite, já vem preenchido.
+          </p>
+        </div>
         <div style={{ textAlign: "right", marginTop: 6 }}>
           <span onClick={forgot} style={{ color: t.accent, fontSize: 13, fontWeight: 700, cursor: "pointer",
             fontFamily: FONT }}>Esqueci minha senha</span>
@@ -1264,6 +1276,7 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
   const [email, setEmail] = useState(userEmail || "");
   const [avatar, setAvatar] = useState(profile.avatar_url || "");
   const [newAvatarData, setNewAvatarData] = useState(null);
+  const [referralCode, setReferralCode] = useState(profile.referral_code || "");
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const info = PLAN_INFO[plan];
@@ -1297,15 +1310,23 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
       if (!up.ok) { setBusy(false); setMsg(up.error || "Falha ao enviar a foto."); return; }
       avatarUrl = up.url;
     }
-    const r = await api.updateProfileFields({ name, username, phone, avatar_url: avatarUrl });
+    const fields = { name, username, phone, avatar_url: avatarUrl };
+    const rc = referralCode.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+    if (rc) fields.referral_code = rc;
+    const r = await api.updateProfileFields(fields);
+    if (!r.ok && /duplicate|unique/i.test(r.error || "")) {
+      setBusy(false); setMsg("Esse código de convite já está em uso. Escolha outro."); return;
+    }
     let extra = "";
     if (email && email !== userEmail) {
       const er = await api.updateEmail(email);
       extra = er.ok ? " Confirme o novo e-mail na caixa de entrada." : ` (e-mail não trocou: ${er.error})`;
     }
     setBusy(false);
-    if (r.ok) { setMsg("✓ Perfil salvo." + extra); onSaved?.({ name, username, phone, avatar_url: avatarUrl }); }
-    else setMsg(r.error || "Não foi possível salvar.");
+    if (r.ok) {
+      setMsg("✓ Perfil salvo." + extra);
+      onSaved?.({ name, username, phone, avatar_url: avatarUrl, ...(rc ? { referral_code: rc } : {}) });
+    } else setMsg(r.error || "Não foi possível salvar.");
   };
 
   const field = (label, value, set, props = {}) => (
@@ -1333,6 +1354,17 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
         {field("Usuário", username, setUsername, { placeholder: "@usuario" })}
         {field("E-mail", email, setEmail, { type: "email", placeholder: "seu@email.com" })}
         {field("Telefone / WhatsApp", phone, setPhone, { placeholder: "(00) 00000-0000" })}
+
+        <div style={{ marginBottom: 14 }}>
+          <Label t={t} style={{ marginBottom: 6 }}>Seu código de convite</Label>
+          <input value={referralCode} placeholder="ex.: mrthiago"
+            onChange={e => setReferralCode(e.target.value)}
+            style={{ width: "100%", height: 50, background: t.card, border: `1.5px solid ${t.bdr}`,
+              borderRadius: 14, padding: "0 16px", color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
+          <p style={{ fontSize: 11, color: t.muted, margin: "6px 2px 0", fontFamily: FONT }}>
+            É o que vai no seu link de convite (`/?ref=seucódigo`). Só letras e números.
+          </p>
+        </div>
 
         <Label t={t} style={{ marginBottom: 6 }}>Plano</Label>
         <Card t={t} onClick={onUpgrade} style={{ display: "flex", justifyContent: "space-between",
@@ -1648,7 +1680,7 @@ export default function App() {
   const [live, setLive] = useState(null);    // resposta de GET /api/signals
   const [stats, setStats] = useState(null);  // resposta de GET /api/stats
   const [referralCount, setReferralCount] = useState(0);
-  const [profileData, setProfileData] = useState({ name: "", username: "", phone: "", avatar_url: "" });
+  const [profileData, setProfileData] = useState({ name: "", username: "", phone: "", avatar_url: "", referral_code: "" });
 
   // Captura ?ref=CODE da URL (link de indicação) ao abrir o app.
   useEffect(() => { api.captureRefFromUrl(); }, []);
@@ -1678,6 +1710,7 @@ export default function App() {
         setProfileData({
           name: p.name || "", username: p.username || "",
           phone: p.phone || "", avatar_url: p.avatar_url || "",
+          referral_code: p.referral_code || "",
         });
       }
       if (alive) setProfileLoaded(true);
@@ -1709,8 +1742,8 @@ export default function App() {
     return () => { alive = false; clearInterval(id); };
   }, [screen, session]);
 
-  const handleAuth = useCallback(async (email, pass, isSignup) => {
-    const r = isSignup ? await api.signUp(email, pass) : await api.signIn(email, pass);
+  const handleAuth = useCallback(async (email, pass, isSignup, coupon) => {
+    const r = isSignup ? await api.signUp(email, pass, undefined, coupon) : await api.signIn(email, pass);
     if (r.ok && !r.demo) setSession(await api.getSession());
     return r;
   }, []);
@@ -1756,7 +1789,7 @@ export default function App() {
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} />;
       case "history":       return <History {...common} onNav={nav} {...bizState} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={schedule} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
       case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;
     }
