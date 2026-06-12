@@ -152,6 +152,15 @@ export async function fetchStats() {
   } catch { return null; }
 }
 
+export async function fetchBreakdown() {
+  if (!hasSupabase) return null;
+  try {
+    const res = await fetch("/api/breakdown", { headers: await authHeader() });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
 /* ── Web Push ── */
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);

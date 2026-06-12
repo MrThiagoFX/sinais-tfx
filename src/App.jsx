@@ -804,34 +804,37 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected }) => 
   );
 };
 
-const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAsset, setTfPerAsset, plan }) => {
+const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAsset, setTfPerAsset, plan, locked, nextChange }) => {
   const maxTf = maxTfPerAsset(selectedAssets.length);
   const tfs = tfOptionsForPlan(plan);
+  const [snapshot] = useState(() => JSON.stringify(tfPerAsset));
   const toggleTf = (a, tf) => {
-    setTfPerAsset(cfg => {
-      const cur = cfg[a] || [];
-      if (maxTf === 1) return { ...cfg, [a]: [tf] };
-      if (cur.includes(tf)) {
-        const next = cur.filter(x => x !== tf);
-        return { ...cfg, [a]: next.length ? next : cur };
-      }
-      if (cur.length >= maxTf) return cfg;
-      return { ...cfg, [a]: [...cur, tf] };
-    });
+    if (locked) return;
+    setTfPerAsset(cfg => ({ ...cfg, [a]: [tf] }));
   };
+  const save = () => onNext(JSON.stringify(tfPerAsset) !== snapshot);
+  const daysLeft = nextChange ? Math.max(1, Math.ceil((nextChange.getTime() - Date.now()) / 86400000)) : 0;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <ScreenHeader title="Tempos gráficos" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
         <Card t={t} accent style={{ marginBottom: 14, padding: "12px 16px" }}>
           <p style={{ fontSize: 12, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-            Você escolheu <span style={{ fontWeight: 800, color: t.accent }}>{selectedAssets.length} ativo{selectedAssets.length !== 1 ? "s" : ""}</span> —
-            {maxTf === 3 ? " selecione até 3 timeframes por ativo." : " selecione 1 timeframe por ativo."}
+            <span style={{ fontWeight: 800, color: t.accent }}>1 timeframe fixo por ativo.</span> Escolha o melhor tempo pelo histórico — você só pode trocar 1 vez por semana.
             {plan === "anual"
               ? <span style={{ color: t.accent, fontWeight: 700 }}> O M1 é exclusivo do seu plano Anual.</span>
               : <span style={{ color: t.muted }}> O M1 é exclusivo do Premium Anual.</span>}
           </p>
         </Card>
+        {locked && (
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14,
+            background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "10px 14px" }}>
+            <span style={{ fontSize: 16 }}>🔒</span>
+            <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.5, fontFamily: FONT }}>
+              Timeframes travados. Você poderá trocar em <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
+            </span>
+          </div>
+        )}
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
           {selectedAssets.map(a => {
             const cur = tfPerAsset[a] || [];
@@ -847,9 +850,8 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
                 <div style={{ display: "flex", gap: 8 }}>
                   {tfs.map(tf => {
                     const active = cur.includes(tf);
-                    const blocked = !active && cur.length >= maxTf && maxTf > 1;
                     return (
-                      <Chip key={tf} label={tf} active={active} disabled={blocked}
+                      <Chip key={tf} label={tf} active={active} disabled={locked && !active}
                         onClick={() => toggleTf(a, tf)} t={t} />
                     );
                   })}
@@ -860,7 +862,7 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
         </div>
       </Scroll>
       <div style={{ padding: "14px 24px 28px", flexShrink: 0 }}>
-        <Btn t={t} onClick={onNext}>Salvar preferências</Btn>
+        <Btn t={t} onClick={save}>Salvar preferências</Btn>
       </div>
     </div>
   );
@@ -1143,7 +1145,95 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan }) => {
   );
 };
 
-const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats }) => {
+const MOCK_BREAKDOWN = [
+  { asset: "XAUUSD", tf: "M5",  assertividade: 78, pips: 210, total: 40 },
+  { asset: "XAUUSD", tf: "M15", assertividade: 65, pips: 140, total: 26 },
+  { asset: "XAUUSD", tf: "M1",  assertividade: 71, pips: 95,  total: 33 },
+  { asset: "NAS100", tf: "M5",  assertividade: 60, pips: 80,  total: 22 },
+  { asset: "NAS100", tf: "M15", assertividade: 74, pips: 180, total: 19 },
+  { asset: "NAS100", tf: "M1",  assertividade: 58, pips: 40,  total: 28 },
+  { asset: "US30",   tf: "M5",  assertividade: 68, pips: 120, total: 25 },
+  { asset: "US30",   tf: "M15", assertividade: 70, pips: 160, total: 21 },
+  { asset: "EURUSD", tf: "M5",  assertividade: 55, pips: 30,  total: 14 },
+  { asset: "EURUSD", tf: "M15", assertividade: 64, pips: 70,  total: 18 },
+  { asset: "GBPUSD", tf: "M5",  assertividade: 52, pips: 20,  total: 12 },
+  { asset: "GBPUSD", tf: "M15", assertividade: 58, pips: 40,  total: 15 },
+];
+
+const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerAsset, plan, breakdown, locked, nextChange, onPick }) => {
+  const data = breakdown?.breakdown?.length ? breakdown.breakdown : MOCK_BREAKDOWN;
+  const tfs = tfOptionsForPlan(plan);
+  const daysLeft = nextChange ? Math.max(1, Math.ceil((nextChange.getTime() - Date.now()) / 86400000)) : 0;
+  const statFor = (a, tf) => data.find(d => d.asset === a && d.tf === tf);
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Histórico por timeframe" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <Scroll style={{ padding: "0 24px" }}>
+        <p style={{ fontSize: 12.5, color: t.sub, margin: "0 0 12px", lineHeight: 1.55, fontFamily: FONT }}>
+          Veja qual tempo rende mais em cada ativo e escolha o melhor. Lembre: <span style={{ fontWeight: 700, color: t.text }}>1 troca por semana</span>.
+        </p>
+        {locked && (
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12,
+            background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "10px 14px" }}>
+            <span style={{ fontSize: 16 }}>🔒</span>
+            <span style={{ fontSize: 12, color: t.warn, fontFamily: FONT }}>
+              Travado — próxima troca em <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
+            </span>
+          </div>
+        )}
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 12 }}>
+          {selectedAssets.map(a => {
+            const cur = (tfPerAsset[a] || [])[0];
+            const rows = tfs.map(tf => ({ tf, s: statFor(a, tf) }))
+              .sort((x, y) => (y.s?.assertividade || 0) - (x.s?.assertividade || 0));
+            const best = rows[0]?.tf;
+            return (
+              <Card key={a} t={t}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 12 }}>
+                  <AssetIcon asset={a} size={28} />
+                  <span style={{ fontWeight: 800, fontSize: 14, color: t.text, fontFamily: FONT }}>{a}</span>
+                </div>
+                {rows.map(({ tf, s }) => {
+                  const isCur = cur === tf;
+                  const assert = s?.assertividade ?? 0;
+                  const pips = s?.pips ?? 0;
+                  const col = assert >= 70 ? t.accent : assert >= 60 ? t.blue : t.warn;
+                  return (
+                    <div key={tf} onClick={() => { if (!locked && !isCur && s) onPick(a, tf); }}
+                      style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 10,
+                        cursor: (!locked && !isCur && s) ? "pointer" : "default", opacity: s ? 1 : 0.45 }}>
+                      <div style={{ width: 42, textAlign: "center", flexShrink: 0 }}>
+                        <span style={{ fontSize: 13, fontWeight: 800, color: t.text, fontFamily: FONT }}>{tf}</span>
+                        {tf === best && s && <div style={{ fontSize: 8, fontWeight: 800, color: t.accent, fontFamily: FONT }}>MELHOR</div>}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
+                          <span style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>
+                            {s ? `${s.total} ops · ${pips >= 0 ? "+" : ""}${pips} pips` : "sem histórico"}
+                          </span>
+                          <span style={{ fontSize: 12, fontWeight: 800, color: col, fontFamily: FONT }}>{assert}%</span>
+                        </div>
+                        <Bar pct={assert} color={col} t={t} />
+                      </div>
+                      <div style={{ width: 56, textAlign: "right", flexShrink: 0 }}>
+                        {isCur
+                          ? <span style={{ fontSize: 10, fontWeight: 800, color: t.accent, fontFamily: FONT }}>● ATUAL</span>
+                          : (!locked && s) ? <span style={{ fontSize: 11, fontWeight: 800, color: t.accent, fontFamily: FONT }}>Usar ›</span> : null}
+                      </div>
+                    </div>
+                  );
+                })}
+              </Card>
+            );
+          })}
+        </div>
+      </Scroll>
+      <BottomNav active="performance" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
+const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, onTfPerf }) => {
   const lineData = [38,52,45,68,62,78,72,88,82,91,85,94];
   const metrics = stats ? [
     { label: "Assertividade",       value: `${Math.round((stats.assertividade || 0) * 100)}%`, color: t.accent },
@@ -1173,6 +1263,17 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats }) => {
               </Card>
             ))}
           </div>
+          <Card t={t} accent onClick={onTfPerf} style={{ marginBottom: 16, display: "flex",
+            alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>📊</span>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT }}>Histórico por timeframe</div>
+                <div style={{ fontSize: 11, color: t.sub, marginTop: 1, fontFamily: FONT }}>Veja qual tempo rende mais e escolha o melhor</div>
+              </div>
+            </div>
+            <span style={{ color: t.accent, fontSize: 18 }}>›</span>
+          </Card>
           <Card t={t} style={{ marginBottom: 12 }}>
             <Label t={t} style={{ marginBottom: 14 }}>Evolução — últimos 30 dias</Label>
             <svg width="100%" height={H+10} viewBox={`0 0 ${W} ${H+10}`} style={{ overflow: "visible" }}>
@@ -1752,6 +1853,8 @@ export default function App() {
   const [stats, setStats] = useState(null);  // resposta de GET /api/stats
   const [referralCount, setReferralCount] = useState(0);
   const [profileData, setProfileData] = useState({ name: "", username: "", phone: "", avatar_url: "", referral_code: "" });
+  const [tfChangedAt, setTfChangedAt] = useState(null);
+  const [breakdown, setBreakdown] = useState(null);
 
   // Captura ?ref=CODE da URL (link de indicação) ao abrir o app.
   useEffect(() => { api.captureRefFromUrl(); }, []);
@@ -1783,6 +1886,7 @@ export default function App() {
           phone: p.phone || "", avatar_url: p.avatar_url || "",
           referral_code: p.referral_code || "",
         });
+        setTfChangedAt(p.tf_changed_at || null);
       }
       if (alive) setProfileLoaded(true);
       api.registerPush();
@@ -1813,6 +1917,12 @@ export default function App() {
     return () => { alive = false; clearInterval(id); };
   }, [screen, session]);
 
+  // Busca o desempenho por timeframe ao abrir a tela.
+  useEffect(() => {
+    if (!hasSupabase || !session || screen !== "tf-perf") return;
+    api.fetchBreakdown().then((b) => { if (b) setBreakdown(b); });
+  }, [screen, session]);
+
   const handleAuth = useCallback(async (email, pass, isSignup, coupon) => {
     const r = isSignup ? await api.signUp(email, pass, undefined, coupon) : await api.signIn(email, pass);
     if (r.ok && !r.demo) setSession(await api.getSession());
@@ -1829,6 +1939,21 @@ export default function App() {
   const [upgradeFrom, setUpgradeFrom] = useState(null);
   const openUpgrade = useCallback(() => { setUpgradeFrom(plan); setScreen("plans"); }, [plan]);
   const closeUpgrade = useCallback(() => { setUpgradeFrom(null); setScreen("profile"); }, []);
+
+  // Trava de timeframe: 1 troca por semana (mantém o histórico limpo).
+  const TF_LOCK_DAYS = 7;
+  const tfNextChange = tfChangedAt ? new Date(new Date(tfChangedAt).getTime() + TF_LOCK_DAYS * 86400000) : null;
+  const tfLocked = !!(tfNextChange && Date.now() < tfNextChange.getTime());
+  const stampTfChange = useCallback(() => {
+    const now = new Date().toISOString();
+    setTfChangedAt(now);
+    api.updateProfileFields({ tf_changed_at: now });
+  }, []);
+  // Define o timeframe de um ativo (respeitando a trava). Usado no histórico por TF.
+  const pickTimeframe = useCallback((asset, tf) => {
+    setTfPerAsset(cfg => ({ ...cfg, [asset]: [tf] }));
+    stampTfChange();
+  }, [stampTfChange]);
 
   const t = THEMES[themeId];
   const toggleTheme = useCallback(() => setThemeId(x => x === "dark" ? "light" : "dark"), []);
@@ -1852,12 +1977,13 @@ export default function App() {
       case "login":         return <Login {...common} onNext={() => go("plans")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} />;
       case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
-      case "timeframes":    return <Timeframes {...common} onNext={() => go("home")} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} />;
+      case "timeframes":    return <Timeframes {...common} onNext={(changed) => { if (changed) stampTfChange(); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
       case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
       case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} />;
       case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} />;
-      case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} />;
+      case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} onTfPerf={() => go("tf-perf")} />;
+      case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} />;
       case "history":       return <History {...common} onNav={nav} {...bizState} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={schedule} />;
       case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
