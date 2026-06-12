@@ -5,6 +5,41 @@ export const ASSETS = ["EURUSD", "GBPUSD", "XAUUSD", "NAS100", "US30"];
 export const TFS = ["M5", "M15", "H1"];
 export const DIRS = ["Compra", "Venda"];
 
+// Tamanho do "pip"/ponto por ativo, para calcular result_pips no fechamento.
+export const PIP_SIZE = { EURUSD: 0.0001, GBPUSD: 0.0001, XAUUSD: 0.1, NAS100: 1, US30: 1 };
+
+// Normaliza o símbolo do MT4 (ex.: "XAUUSD.m", "USTEC", "DJ30") para um dos 5 ativos.
+export function normalizeAsset(symbol) {
+  if (!symbol) return null;
+  const s = String(symbol).toUpperCase().replace(/[^A-Z0-9]/g, "");
+  for (const a of ASSETS) if (s.startsWith(a)) return a;
+  if (s.startsWith("NDX") || s.startsWith("USTEC") || s.startsWith("NAS")) return "NAS100";
+  if (s.startsWith("DJ") || s.startsWith("US30") || s.startsWith("DOW") || s.startsWith("WS30")) return "US30";
+  if (s.startsWith("GOLD") || s.startsWith("XAU")) return "XAUUSD";
+  return null;
+}
+
+// Só M5/M15/H1 são suportados; outros timeframes do EA são ignorados.
+export function normalizeTf(tf) {
+  const t = String(tf || "").toUpperCase();
+  return TFS.includes(t) ? t : null;
+}
+
+// BUY/Compra → "Compra"; SELL/Venda → "Venda".
+export function normalizeDir(dir) {
+  const d = String(dir || "").toUpperCase();
+  if (d === "BUY" || d === "COMPRA") return "Compra";
+  if (d === "SELL" || d === "VENDA") return "Venda";
+  return null;
+}
+
+// Resultado em pips/pontos a partir de entrada e saída.
+export function computePips(asset, dir, entry, exit) {
+  const pip = PIP_SIZE[asset] || 1;
+  const raw = (exit - entry) / pip;
+  return Math.round((dir === "Compra" ? raw : -raw));
+}
+
 // Cota diária de sinais (igual a dailyQuota() do App.jsx):
 //   free = 4 · premium = min(20, Σ por ativo (4 × qtde de timeframes do ativo))
 export function dailyQuota(profile) {

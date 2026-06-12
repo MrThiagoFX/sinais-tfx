@@ -20,16 +20,27 @@ export default async function handler(req, res) {
   const sb = serviceClient();
   const { data: profile } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
 
-  // Considera os últimos 30 dias de sinais já encerrados (ganho/perda).
+  // Janela base: últimos 90 dias…
   const since = new Date();
-  since.setDate(since.getDate() - 30);
+  since.setDate(since.getDate() - 90);
+
+  // …mas o admin pode definir a data em que o histórico "real" começa
+  // (descarta o período de teste). Vale a data mais recente entre as duas.
+  let cutoff = since;
+  try {
+    const { data: cfg } = await sb.from("app_settings").select("history_start_date").eq("id", 1).maybeSingle();
+    if (cfg?.history_start_date) {
+      const d = new Date(cfg.history_start_date);
+      if (d > cutoff) cutoff = d;
+    }
+  } catch { /* tabela ainda não criada → ignora */ }
 
   const { data: rows, error } = await sb
     .from("signals")
     .select("*")
-    .gte("created_at", since.toISOString())
+    .gte("created_at", cutoff.toISOString())
     .in("status", ["ganho", "perda"])
-    .limit(2000);
+    .limit(5000);
   if (error) return res.status(500).json({ error: "Falha ao ler sinais", detail: error.message });
 
   const relevant = (rows || []).filter((s) => isEligible(s, profile));
