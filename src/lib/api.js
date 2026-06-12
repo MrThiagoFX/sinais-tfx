@@ -55,6 +55,39 @@ export async function signOut() {
   if (supabase) await supabase.auth.signOut();
 }
 
+// Atualiza campos do perfil (name, username, phone, avatar_url...).
+export async function updateProfileFields(fields) {
+  if (!supabase) return { ok: false, error: "sem backend" };
+  const session = await getSession();
+  if (!session) return { ok: false, error: "sem sessão" };
+  const { error } = await supabase.from("profiles").update(fields).eq("id", session.user.id);
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// Troca o e-mail (Supabase envia confirmação para o novo endereço).
+export async function updateEmail(email) {
+  if (!supabase) return { ok: false, error: "sem backend" };
+  const { error } = await supabase.auth.updateUser({ email });
+  if (error) return { ok: false, error: error.message };
+  return { ok: true };
+}
+
+// Envia a foto (data URL) para /api/avatar e devolve a URL pública.
+export async function uploadAvatar(dataUrl) {
+  if (!hasSupabase) return { ok: false, error: "sem backend" };
+  try {
+    const res = await fetch("/api/avatar", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ image: dataUrl }),
+    });
+    const json = await res.json();
+    if (!res.ok) return { ok: false, error: json.error || "Falha no upload" };
+    return { ok: true, url: json.url };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
 // Troca a senha do usuário logado.
 export async function updatePassword(newPassword) {
   if (!supabase) return { ok: false, error: "sem backend" };

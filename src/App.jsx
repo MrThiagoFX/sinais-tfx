@@ -1246,7 +1246,118 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule }) => {
   );
 };
 
-const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onUpgrade, onLogout, userEmail, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
+const AvatarCircle = ({ url, t, size = 62, fontSize = 30 }) => (
+  url ? (
+    <img src={url} alt="" style={{ width: size, height: size, borderRadius: size * 0.32,
+      objectFit: "cover", flexShrink: 0, border: `2px solid ${t.accentBdr}` }} />
+  ) : (
+    <div style={{ width: size, height: size, borderRadius: size * 0.32, flexShrink: 0,
+      background: t.accentSoft, border: `2px solid ${t.accentBdr}`,
+      display: "flex", alignItems: "center", justifyContent: "center", fontSize }}>👤</div>
+  )
+);
+
+const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile, userEmail, onSaved }) => {
+  const [name, setName] = useState(profile.name || "");
+  const [username, setUsername] = useState(profile.username || "");
+  const [phone, setPhone] = useState(profile.phone || "");
+  const [email, setEmail] = useState(userEmail || "");
+  const [avatar, setAvatar] = useState(profile.avatar_url || "");
+  const [newAvatarData, setNewAvatarData] = useState(null);
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const info = PLAN_INFO[plan];
+
+  const pickPhoto = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const max = 512;
+        const scale = Math.min(1, max / Math.max(img.width, img.height));
+        const w = Math.round(img.width * scale), h = Math.round(img.height * scale);
+        const c = document.createElement("canvas");
+        c.width = w; c.height = h;
+        c.getContext("2d").drawImage(img, 0, 0, w, h);
+        const data = c.toDataURL("image/jpeg", 0.85);
+        setAvatar(data); setNewAvatarData(data);
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const save = async () => {
+    setBusy(true); setMsg("");
+    let avatarUrl = profile.avatar_url;
+    if (newAvatarData) {
+      const up = await api.uploadAvatar(newAvatarData);
+      if (!up.ok) { setBusy(false); setMsg(up.error || "Falha ao enviar a foto."); return; }
+      avatarUrl = up.url;
+    }
+    const r = await api.updateProfileFields({ name, username, phone, avatar_url: avatarUrl });
+    let extra = "";
+    if (email && email !== userEmail) {
+      const er = await api.updateEmail(email);
+      extra = er.ok ? " Confirme o novo e-mail na caixa de entrada." : ` (e-mail não trocou: ${er.error})`;
+    }
+    setBusy(false);
+    if (r.ok) { setMsg("✓ Perfil salvo." + extra); onSaved?.({ name, username, phone, avatar_url: avatarUrl }); }
+    else setMsg(r.error || "Não foi possível salvar.");
+  };
+
+  const field = (label, value, set, props = {}) => (
+    <div style={{ marginBottom: 14 }}>
+      <Label t={t} style={{ marginBottom: 6 }}>{label}</Label>
+      <input value={value} onChange={e => set(e.target.value)} {...props}
+        style={{ width: "100%", height: 50, background: t.card, border: `1.5px solid ${t.bdr}`,
+          borderRadius: 14, padding: "0 16px", color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
+    </div>
+  );
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Editar perfil" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <Scroll style={{ padding: "0 24px" }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginBottom: 18 }}>
+          <AvatarCircle url={avatar} t={t} size={92} fontSize={42} />
+          <label style={{ cursor: "pointer", color: t.accent, fontSize: 13, fontWeight: 800, fontFamily: FONT }}>
+            📷 Trocar foto
+            <input type="file" accept="image/png,image/jpeg,image/webp" onChange={pickPhoto} style={{ display: "none" }} />
+          </label>
+        </div>
+
+        {field("Nome completo", name, setName, { placeholder: "Seu nome" })}
+        {field("Usuário", username, setUsername, { placeholder: "@usuario" })}
+        {field("E-mail", email, setEmail, { type: "email", placeholder: "seu@email.com" })}
+        {field("Telefone / WhatsApp", phone, setPhone, { placeholder: "(00) 00000-0000" })}
+
+        <Label t={t} style={{ marginBottom: 6 }}>Plano</Label>
+        <Card t={t} onClick={onUpgrade} style={{ display: "flex", justifyContent: "space-between",
+          alignItems: "center", marginBottom: 8, cursor: "pointer" }}>
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: t.text, fontFamily: FONT }}>{info.name}</div>
+            <div style={{ fontSize: 11, color: t.muted, fontFamily: FONT }}>{info.price}</div>
+          </div>
+          <span style={{ color: t.accent, fontSize: 13, fontWeight: 800, fontFamily: FONT }}>Mudar ›</span>
+        </Card>
+
+        {msg && (
+          <p style={{ margin: "12px 0 0", fontSize: 12.5, fontFamily: FONT,
+            color: msg.startsWith("✓") ? t.buy : t.sell }}>{msg}</p>
+        )}
+        <div style={{ height: 14 }} />
+      </Scroll>
+      <div style={{ padding: "12px 24px 28px", flexShrink: 0 }}>
+        <Btn t={t} onClick={save} disabled={busy}>{busy ? "Salvando…" : "Salvar alterações"}</Btn>
+      </div>
+    </div>
+  );
+};
+
+const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgrade, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
   const [newPass, setNewPass] = useState("");
@@ -1285,18 +1396,28 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onUpgrade, onLo
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, letterSpacing: -0.5,
               color: t.text, fontFamily: FONT }}>Meu perfil</h1>
-            <ThemeToggle t={t} onToggle={onToggleTheme} />
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              {onEdit && (
+                <button onClick={onEdit} aria-label="Editar perfil" style={{
+                  width: 38, height: 38, borderRadius: 12, cursor: "pointer",
+                  background: t.card, border: `1.5px solid ${t.bdr}`,
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  fontSize: 17, padding: 0 }}>⚙️</button>
+              )}
+              <ThemeToggle t={t} onToggle={onToggleTheme} />
+            </div>
           </div>
 
-          <div style={{ display: "flex", gap: 14, alignItems: "center", marginBottom: 22 }}>
-            <div style={{ width: 62, height: 62, borderRadius: 20, flexShrink: 0,
-              background: t.accentSoft, border: `2px solid ${t.accentBdr}`,
-              display: "flex", alignItems: "center", justifyContent: "center", fontSize: 30 }}>👤</div>
+          <div onClick={onEdit} style={{ display: "flex", gap: 14, alignItems: "center",
+            marginBottom: 22, cursor: onEdit ? "pointer" : "default" }}>
+            <AvatarCircle url={profile?.avatar_url} t={t} />
             <div>
               <div style={{ fontWeight: 900, fontSize: 18, color: t.text, fontFamily: FONT }}>
-                {userEmail ? userEmail.split("@")[0] : "João Trader"}
+                {profile?.name || (userEmail ? userEmail.split("@")[0] : "João Trader")}
               </div>
-              <div style={{ fontSize: 13, color: t.sub, marginTop: 3, fontFamily: FONT }}>{userEmail || "joao@email.com"}</div>
+              <div style={{ fontSize: 13, color: t.sub, marginTop: 3, fontFamily: FONT }}>
+                {profile?.username ? `@${profile.username.replace(/^@/, "")}` : (userEmail || "joao@email.com")}
+              </div>
             </div>
           </div>
 
@@ -1527,6 +1648,7 @@ export default function App() {
   const [live, setLive] = useState(null);    // resposta de GET /api/signals
   const [stats, setStats] = useState(null);  // resposta de GET /api/stats
   const [referralCount, setReferralCount] = useState(0);
+  const [profileData, setProfileData] = useState({ name: "", username: "", phone: "", avatar_url: "" });
 
   // Captura ?ref=CODE da URL (link de indicação) ao abrir o app.
   useEffect(() => { api.captureRefFromUrl(); }, []);
@@ -1553,6 +1675,10 @@ export default function App() {
           allDay: !!p.schedule_all_day,
         });
         setReferralCount(p.referral_count || 0);
+        setProfileData({
+          name: p.name || "", username: p.username || "",
+          phone: p.phone || "", avatar_url: p.avatar_url || "",
+        });
       }
       if (alive) setProfileLoaded(true);
       api.registerPush();
@@ -1630,7 +1756,8 @@ export default function App() {
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} />;
       case "history":       return <History {...common} onNav={nav} {...bizState} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={schedule} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onUpgrade={openUpgrade} onLogout={handleLogout} userEmail={session?.user?.email} referral={{ code: api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
+      case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;
     }
   };
