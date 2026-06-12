@@ -320,15 +320,26 @@ const REFERRAL_RATE = 0.30;
 // Cota diária: Free = 4 sinais/dia. Premium (mensal/anual) = até 20 operações/dia.
 const dailyQuota = (plan) => (plan === "free" ? 4 : 20);
 
-const maxTfPerAsset = (numAssets) => (numAssets <= 3 ? 3 : 1);
+// Agora é 1 timeframe fixo por ativo (o cliente escolhe o melhor pelo histórico).
+const maxTfPerAsset = () => 1;
+const ALL_TFS = ["M1", "M5", "M15"];
+// Remove timeframes inválidos (ex.: H1 antigo) e mantém só 1 por ativo.
+const sanitizeTfPerAsset = (cfg) => {
+  const out = {};
+  for (const a of Object.keys(cfg || {})) {
+    const valid = (cfg[a] || []).filter((tf) => ALL_TFS.includes(tf));
+    out[a] = valid.length ? [valid[0]] : ["M5"];
+  }
+  return out;
+};
 
 const SIGNALS_DATA = [
-  { id: 1, asset: "XAUUSD", dir: "Compra", tf: "M5",  time: "14:32", hour: 14, ageMin: 3,   entry: "2.365,40", sl: "2.360,00", tp: "2.373,00", est: "+76 pips", perf: 82 },
-  { id: 2, asset: "EURUSD", dir: "Venda",  tf: "M15", time: "13:15", hour: 13, ageMin: 78,  entry: "1,0842",   sl: "1,0858",   tp: "1,0810",   est: "+32 pips", perf: 64 },
-  { id: 3, asset: "NAS100", dir: "Compra", tf: "M15",  time: "12:00", hour: 12, ageMin: 140, entry: "18.420",   sl: "18.380",   tp: "18.510",   est: "+90 pts",  perf: 77 },
-  { id: 4, asset: "GBPUSD", dir: "Venda",  tf: "M15", time: "11:45", hour: 11, ageMin: 200, entry: "1,2710",   sl: "1,2728",   tp: "1,2675",   est: "+35 pips", perf: 55 },
-  { id: 5, asset: "US30",   dir: "Compra", tf: "M15",  time: "10:10", hour: 10, ageMin: 320, entry: "39.180",   sl: "39.120",   tp: "39.310",   est: "+130 pts", perf: 70 },
-  { id: 6, asset: "XAUUSD", dir: "Venda",  tf: "M15", time: "07:40", hour: 7,  ageMin: 420, entry: "2.358,00", sl: "2.363,00", tp: "2.349,00", est: "+90 pips", perf: 68 },
+  { id: 1, asset: "XAUUSD", dir: "Compra", tf: "M5",  time: "14:32", hour: 14, ageMin: 3,   status: "aberto", rr: "3:1", entry: "2.365,40", sl: "2.360,00", tp: "2.373,00", est: "+76 pips", perf: 82 },
+  { id: 2, asset: "EURUSD", dir: "Venda",  tf: "M15", time: "13:15", hour: 13, ageMin: 78,  status: "ganho",  rr: "2:1", resultPips: 32,  entry: "1,0842",   sl: "1,0858",   tp: "1,0810",   est: "+32 pips", perf: 64 },
+  { id: 3, asset: "NAS100", dir: "Compra", tf: "M15", time: "12:00", hour: 12, ageMin: 140, status: "ganho",  rr: "2.3:1", resultPips: 90, entry: "18.420",   sl: "18.380",   tp: "18.510",   est: "+90 pts",  perf: 77 },
+  { id: 4, asset: "GBPUSD", dir: "Venda",  tf: "M15", time: "11:45", hour: 11, ageMin: 200, status: "perda",  rr: "2:1", resultPips: -18, entry: "1,2710",   sl: "1,2728",   tp: "1,2675",   est: "+35 pips", perf: 55 },
+  { id: 5, asset: "US30",   dir: "Compra", tf: "M15", time: "10:10", hour: 10, ageMin: 320, status: "ganho",  rr: "2.2:1", resultPips: 130, entry: "39.180",   sl: "39.120",   tp: "39.310",   est: "+130 pts", perf: 70 },
+  { id: 6, asset: "XAUUSD", dir: "Venda",  tf: "M15", time: "07:40", hour: 7,  ageMin: 420, status: "perda",  rr: "2:1", resultPips: -50, entry: "2.358,00", sl: "2.363,00", tp: "2.349,00", est: "+90 pips", perf: 68 },
 ];
 
 const HISTORY_DATA = [
@@ -345,6 +356,13 @@ const HISTORY_DATA = [
 
 // Converte um sinal vindo do /api (números crus + created_at) para o formato
 // de exibição usado pelas telas (mesmo shape de SIGNALS_DATA).
+const rrText = (entry, sl, tp) => {
+  const risk = Math.abs(entry - sl), reward = Math.abs(tp - entry);
+  if (!risk) return "—";
+  const r = reward / risk;
+  return `${(Math.round(r * 10) / 10).toString().replace(".0", "")}:1`;
+};
+
 const mapSignal = (s) => {
   const d = new Date(s.created_at || Date.now());
   const pad = (n) => String(n).padStart(2, "0");
@@ -352,10 +370,69 @@ const mapSignal = (s) => {
     id: s.id, asset: s.asset, dir: s.dir, tf: s.tf,
     time: `${pad(d.getHours())}:${pad(d.getMinutes())}`, hour: d.getHours(),
     ageMin: Math.round((Date.now() - d.getTime()) / 60000),
+    status: s.status || "aberto",
+    resultPips: s.result_pips,
+    rr: rrText(Number(s.entry), Number(s.sl), Number(s.tp)),
     entry: String(s.entry), sl: String(s.sl), tp: String(s.tp),
     est: s.result_pips != null ? `${s.result_pips >= 0 ? "+" : ""}${s.result_pips} pips` : "—",
     perf: 70,
   };
+};
+
+// Card de sinal do Dashboard: mostra "em andamento" (com painel), ✓ ganho ou ✗ perda.
+const DashSignalCard = ({ s, t, onClick }) => {
+  const buy = s.dir === "Compra";
+  const ac = buy ? t.buy : t.sell;
+  const open = s.status === "aberto" || s.status == null;
+  const win = s.status === "ganho";
+  const resColor = win ? t.buy : t.sell;
+  const pips = s.resultPips;
+  return (
+    <Card t={t} onClick={onClick} style={{ marginBottom: 10 }}>
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <AssetIcon asset={s.asset} size={36} />
+          <div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: t.text, fontFamily: FONT }}>{s.asset}</div>
+            <div style={{ fontSize: 11, color: t.sub, marginTop: 1, fontFamily: FONT }}>{s.time} · {s.tf}</div>
+          </div>
+        </div>
+        {open ? (
+          <div style={{ display: "flex", alignItems: "center", gap: 6, background: `${t.warn}1A`,
+            border: `1px solid ${t.warn}40`, borderRadius: 8, padding: "4px 9px" }}>
+            <span style={{ width: 7, height: 7, borderRadius: "50%", background: t.warn }} />
+            <span style={{ fontSize: 11, fontWeight: 800, color: t.warn, fontFamily: FONT }}>Em andamento</span>
+          </div>
+        ) : (
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontWeight: 900, fontSize: 15, color: resColor, fontFamily: FONT }}>
+              {pips != null ? `${pips >= 0 ? "+" : ""}${pips}` : ""} {win ? "✓" : "✗"}
+            </span>
+          </div>
+        )}
+      </div>
+      {open ? (
+        <div style={{ display: "flex", gap: 8 }}>
+          {[["Entrada", s.entry, t.text], ["Alvo", s.tp, t.buy], ["Stop", s.sl, t.sell]].map(([lbl, v, c]) => (
+            <div key={lbl} style={{ flex: 1, background: t.bg2, border: `1px solid ${t.bdr}`,
+              borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
+              <div style={{ fontSize: 10, color: t.muted, fontFamily: FONT }}>{lbl}</div>
+              <div style={{ fontSize: 13, fontWeight: 800, color: c, fontFamily: FONT, marginTop: 2 }}>{v}</div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+          <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>
+            <Badge text={s.dir} color={ac} /> <span style={{ marginLeft: 6 }}>R:R {s.rr}</span>
+          </span>
+          <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>
+            {s.entry} → {win ? s.tp : s.sl}
+          </span>
+        </div>
+      )}
+    </Card>
+  );
 };
 
 // Janela em que o sinal ainda pode ser copiado/entrado (minutos).
@@ -686,8 +763,8 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected }) => 
         </p>
         <Card t={t} accent style={{ marginBottom: 14, padding: "12px 16px" }}>
           <p style={{ fontSize: 12, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-            <span style={{ fontWeight: 800, color: t.accent }}>Regra de timeframes:</span> até 3 ativos
-            → escolha até 3 timeframes por ativo. Mais de 3 ativos → 1 timeframe por ativo.
+            <span style={{ fontWeight: 800, color: t.accent }}>1 timeframe fixo por ativo.</span> Você
+            escolhe o melhor tempo pelo histórico — e só pode trocar 1 vez por semana.
           </p>
         </Card>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
@@ -719,7 +796,7 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected }) => 
       </Scroll>
       <div style={{ padding: "14px 24px 28px", flexShrink: 0 }}>
         <p style={{ fontSize: 12, color: t.sub, textAlign: "center", margin: "0 0 12px", fontFamily: FONT }}>
-          {n} ativo{n !== 1 ? "s" : ""} · {n <= 3 ? "até 3 timeframes por ativo" : "1 timeframe por ativo"}
+          {n} ativo{n !== 1 ? "s" : ""} · 1 timeframe fixo por ativo
         </p>
         <Btn t={t} onClick={onNext} disabled={n === 0}>Continuar</Btn>
       </div>
@@ -795,8 +872,10 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
   const used = live?.delivered ?? Math.min(3, quota);
   const info = PLAN_INFO[plan];
   const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
-  const last = liveSignals?.[0]
-    || SIGNALS_DATA.find(s => selectedAssets.includes(s.asset)) || SIGNALS_DATA[0];
+  const recent3 = (liveSignals
+    || SIGNALS_DATA.filter(s => selectedAssets.includes(s.asset))
+    ).slice(0, 3);
+  const recent = recent3.length ? recent3 : SIGNALS_DATA.slice(0, 3);
   const assertTxt = stats ? `${Math.round((stats.assertividade || 0) * 100)}%` : "71%";
   const acumTxt = stats ? `${stats.acumulado_pips >= 0 ? "+" : ""}${stats.acumulado_pips} pips` : "+313 pips";
   return (
@@ -840,26 +919,12 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
             </p>
           </div>
 
-          <Card t={t} style={{ marginBottom: 14 }}>
-            <Label t={t} style={{ marginBottom: 12 }}>Último sinal</Label>
-            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-                <AssetIcon asset={last.asset} size={44} />
-                <div>
-                  <div style={{ fontWeight: 900, fontSize: 18, color: t.text, fontFamily: FONT }}>{last.asset}</div>
-                  <div style={{ fontSize: 12, color: t.sub, marginTop: 2, fontFamily: FONT }}>{last.time}</div>
-                </div>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column", gap: 5, alignItems: "flex-end" }}>
-                <Badge text={last.dir} color={last.dir === "Compra" ? t.buy : t.sell} />
-                <span style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>{last.tf}</span>
-              </div>
-            </div>
-            <div style={{ marginTop: 14 }}>
-              <Btn t={t} style={{ height: 44, fontSize: 14 }}
-                onClick={() => { onOpenSignal(last); onNav("signal-detail"); }}>Ver detalhes</Btn>
-            </div>
-          </Card>
+          <Label t={t} style={{ marginBottom: 10 }}>Últimos sinais</Label>
+          {recent.map((s, i) => (
+            <DashSignalCard key={s.id ?? i} s={s} t={t}
+              onClick={() => { onOpenSignal(s); onNav("signal-detail"); }} />
+          ))}
+          <div style={{ height: 4 }} />
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
             <Card t={t}>
@@ -1666,7 +1731,7 @@ export default function App() {
   const [selectedAssets, setSelectedAssets] = useState(["XAUUSD", "NAS100", "US30"]);
   const [tfPerAsset, setTfPerAsset] = useState({
     EURUSD: ["M15"], GBPUSD: ["M15"],
-    XAUUSD: ["M5", "M15"], NAS100: ["M15"], US30: ["M15"],
+    XAUUSD: ["M5"], NAS100: ["M15"], US30: ["M5"],
   });
   const [schedule, setSchedule] = useState({ start: "08:00", end: "18:00", allDay: false });
   const [isMobile, setIsMobile] = useState(
@@ -1706,7 +1771,7 @@ export default function App() {
       if (alive && p) {
         if (p.plan) setPlan(p.plan);
         if (Array.isArray(p.assets) && p.assets.length) setSelectedAssets(p.assets);
-        if (p.tf_per_asset && Object.keys(p.tf_per_asset).length) setTfPerAsset(p.tf_per_asset);
+        if (p.tf_per_asset && Object.keys(p.tf_per_asset).length) setTfPerAsset(sanitizeTfPerAsset(p.tf_per_asset));
         setSchedule({
           start: p.schedule_start || "08:00",
           end: p.schedule_end || "18:00",
