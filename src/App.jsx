@@ -412,15 +412,20 @@ const DashSignalCard = ({ s, t, onClick }) => {
         )}
       </div>
       {open ? (
-        <div style={{ display: "flex", gap: 8 }}>
-          {[["Entrada", s.entry, t.text], ["Alvo", s.tp, t.buy], ["Stop", s.sl, t.sell]].map(([lbl, v, c]) => (
-            <div key={lbl} style={{ flex: 1, background: t.bg2, border: `1px solid ${t.bdr}`,
-              borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
-              <div style={{ fontSize: 10, color: t.muted, fontFamily: FONT }}>{lbl}</div>
-              <div style={{ fontSize: 13, fontWeight: 800, color: c, fontFamily: FONT, marginTop: 2 }}>{v}</div>
-            </div>
-          ))}
-        </div>
+        <>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[["Entrada", s.entry, t.text], ["Alvo", s.tp, t.buy], ["Stop", s.sl, t.sell]].map(([lbl, v, c]) => (
+              <div key={lbl} style={{ flex: 1, background: t.bg2, border: `1px solid ${t.bdr}`,
+                borderRadius: 10, padding: "8px 6px", textAlign: "center" }}>
+                <div style={{ fontSize: 10, color: t.muted, fontFamily: FONT }}>{lbl}</div>
+                <div style={{ fontSize: 13, fontWeight: 800, color: c, fontFamily: FONT, marginTop: 2 }}>{v}</div>
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: 11, color: t.muted, margin: "8px 2px 0", lineHeight: 1.45, fontFamily: FONT }}>
+            ⏳ Operação rodando — aguardando bater <span style={{ color: t.buy, fontWeight: 700 }}>TP</span> ou <span style={{ color: t.sell, fontWeight: 700 }}>SL</span>. O próximo sinal só abre quando esta fechar.
+          </p>
+        </>
       ) : (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>
