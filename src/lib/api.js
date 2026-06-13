@@ -161,6 +161,34 @@ export async function fetchBreakdown() {
   } catch { return null; }
 }
 
+/* ── Admin ── */
+export async function isAdminUser() {
+  const session = await getSession();
+  const u = session?.user;
+  return !!(u && (u.app_metadata?.role === "admin" || u.user_metadata?.is_admin === true));
+}
+
+export async function adminList() {
+  if (!hasSupabase) return null;
+  try {
+    const res = await fetch("/api/admin", { headers: await authHeader() });
+    if (!res.ok) return null;
+    return await res.json();
+  } catch { return null; }
+}
+
+async function adminPost(body) {
+  const res = await fetch("/api/admin", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", ...(await authHeader()) },
+    body: JSON.stringify(body),
+  });
+  const json = await res.json().catch(() => ({}));
+  return res.ok ? { ok: true, ...json } : { ok: false, error: json.error || "falhou" };
+}
+export const adminSetPlan = (userId, plan) => adminPost({ action: "set-plan", userId, plan });
+export const adminSetHistory = (date) => adminPost({ action: "set-history", date });
+
 /* ── Web Push ── */
 function urlBase64ToUint8Array(base64String) {
   const padding = "=".repeat((4 - (base64String.length % 4)) % 4);

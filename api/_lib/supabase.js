@@ -14,6 +14,11 @@ export function serviceClient() {
   });
 }
 
+// O usuário é admin? (marcado no metadata da conta).
+export function isAdmin(user) {
+  return user?.app_metadata?.role === "admin" || user?.user_metadata?.is_admin === true;
+}
+
 // Valida o JWT do usuário (header Authorization: Bearer <token>) e devolve o user.
 // Retorna null se ausente/ inválido.
 export async function getUser(req) {

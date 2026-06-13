@@ -1565,7 +1565,103 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
   );
 };
 
-const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgrade, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
+const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
+  const [data, setData] = useState(null);
+  const [msg, setMsg] = useState("");
+  const [histDate, setHistDate] = useState("");
+  const [q, setQ] = useState("");
+  const PLANS = ["free", "mensal", "anual"];
+
+  useEffect(() => {
+    let alive = true;
+    api.adminList().then(d => { if (alive && d) { setData(d); setHistDate(d.settings?.history_start_date?.slice(0, 10) || ""); } });
+    return () => { alive = false; };
+  }, []);
+
+  const setPlan = async (userId, plan) => {
+    const r = await api.adminSetPlan(userId, plan);
+    setMsg(r.ok ? "✓ Plano atualizado" : (r.error || "erro"));
+    if (r.ok) setData(d => ({ ...d, users: d.users.map(u => u.id === userId ? { ...u, plan } : u) }));
+    setTimeout(() => setMsg(""), 2000);
+  };
+  const saveHist = async () => {
+    const iso = histDate ? new Date(histDate + "T00:00:00").toISOString() : null;
+    const r = await api.adminSetHistory(iso);
+    setMsg(r.ok ? "✓ Data de ativação salva" : (r.error || "erro"));
+    setTimeout(() => setMsg(""), 2500);
+  };
+
+  const users = (data?.users || []).filter(u =>
+    !q || `${u.email} ${u.name} ${u.referral_code}`.toLowerCase().includes(q.toLowerCase()));
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Painel admin" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <Scroll style={{ padding: "0 24px" }}>
+        {msg && (
+          <p style={{ margin: "0 0 10px", fontSize: 12.5, fontWeight: 700, fontFamily: FONT,
+            color: msg.startsWith("✓") ? t.buy : t.sell }}>{msg}</p>
+        )}
+
+        <Card t={t} accent style={{ marginBottom: 14 }}>
+          <Label t={t} style={{ marginBottom: 8 }}>🗓️ Ativação do histórico</Label>
+          <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
+            Desempenho/Histórico contam só a partir desta data (descarta o período de teste). Vazio = conta tudo.
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input type="date" value={histDate} onChange={e => setHistDate(e.target.value)}
+              style={{ flex: 1, height: 44, background: t.card, border: `1.5px solid ${t.bdr}`,
+                borderRadius: 12, padding: "0 12px", color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
+            <button onClick={saveHist} style={{ flexShrink: 0, height: 44, padding: "0 16px", borderRadius: 12,
+              cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: FONT, border: "none",
+              background: t.accent, color: t.activeText }}>Salvar</button>
+          </div>
+        </Card>
+
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
+          <Label t={t}>Usuários ({data?.count ?? "…"})</Label>
+        </div>
+        <input value={q} placeholder="Buscar por e-mail, nome ou código" onChange={e => setQ(e.target.value)}
+          style={{ width: "100%", height: 44, background: t.card, border: `1.5px solid ${t.bdr}`,
+            borderRadius: 12, padding: "0 14px", color: t.text, fontSize: 13, fontFamily: FONT, outline: "none", marginBottom: 12 }} />
+
+        <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 12 }}>
+          {users.map(u => (
+            <Card key={u.id} t={t}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 10 }}>
+                <div style={{ minWidth: 0 }}>
+                  <div style={{ fontWeight: 800, fontSize: 14, color: t.text, fontFamily: FONT,
+                    whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.name || u.email.split("@")[0]}</div>
+                  <div style={{ fontSize: 11, color: t.sub, marginTop: 2, fontFamily: FONT }}>{u.email}</div>
+                  <div style={{ fontSize: 10.5, color: t.muted, marginTop: 3, fontFamily: FONT }}>
+                    cód: {u.referral_code || "—"} · indicados: {u.referral_count}
+                    {u.referred_by ? ` · veio de: ${u.referred_by}` : ""}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: "flex", gap: 6 }}>
+                {PLANS.map(p => (
+                  <button key={p} onClick={() => setPlan(u.id, p)} style={{
+                    flex: 1, padding: "7px 0", borderRadius: 9, fontSize: 11, fontWeight: 800,
+                    cursor: "pointer", fontFamily: FONT, textTransform: "uppercase",
+                    border: `1.5px solid ${u.plan === p ? t.accent : t.bdr}`,
+                    background: u.plan === p ? t.accent : "transparent",
+                    color: u.plan === p ? t.activeText : t.sub }}>{p}</button>
+                ))}
+              </div>
+            </Card>
+          ))}
+          {data && users.length === 0 && (
+            <p style={{ fontSize: 12, color: t.sub, textAlign: "center", fontFamily: FONT }}>Nenhum usuário encontrado.</p>
+          )}
+        </div>
+      </Scroll>
+      <BottomNav active="profile" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
+const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgrade, onAdmin, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
   const [newPass, setNewPass] = useState("");
@@ -1591,9 +1687,23 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
   const isFree = plan === "free";
   const items = [
     { id: "termos",  icon: "📄", label: "Termos de uso",
-      body: "Os sinais são estudos operacionais gerados por indicadores MT4. Não constituem recomendação de investimento. Versão 1.2 — atualizada em 2026." },
+      body: "INFINITY SIGNALS — TERMOS DE USO\n\n"
+        + "1. Natureza do serviço. O Infinity Signals fornece alertas e estudos operacionais (sinais) gerados por indicadores técnicos no MetaTrader, de caráter educacional e informativo.\n\n"
+        + "2. Não é recomendação. Os sinais NÃO constituem recomendação, oferta ou solicitação de compra/venda de ativos, nem consultoria ou gestão de investimentos, conforme as normas da CVM. Nada aqui é aconselhamento financeiro individualizado.\n\n"
+        + "3. Risco. Operar Forex, índices e metais envolve alto risco e pode resultar em perda total do capital. Resultados passados não garantem resultados futuros. As decisões e operações são de sua exclusiva responsabilidade.\n\n"
+        + "4. Sem garantia. Não garantimos lucro, assertividade ou desempenho. As estatísticas exibidas são informativas e podem variar.\n\n"
+        + "5. Responsabilidade. O Infinity Signals e MrThiagoFX não se responsabilizam por perdas decorrentes do uso dos sinais. Opere conforme seu perfil de risco.\n\n"
+        + "6. Conta. Você é responsável por suas credenciais. É proibido revender ou redistribuir os sinais.\n\n"
+        + "Versão 1.0 — 2026. Ao usar o app, você declara que leu e concorda com estes termos." },
     { id: "priv",    icon: "🔒", label: "Política de privacidade",
-      body: "Seus dados são usados apenas para autenticação e envio de alertas. Não compartilhamos informações com terceiros." },
+      body: "INFINITY SIGNALS — POLÍTICA DE PRIVACIDADE\n\n"
+        + "1. Dados coletados. E-mail, nome, telefone e foto (opcionais) que você fornecer, e suas preferências (ativos, timeframes, horários, plano).\n\n"
+        + "2. Uso. Usamos seus dados apenas para autenticar seu acesso, entregar os sinais/alertas e prestar suporte. Não vendemos nem compartilhamos seus dados com terceiros para marketing.\n\n"
+        + "3. Notificações. Ao permitir, registramos a inscrição de push do seu dispositivo para enviar alertas. Você pode revogar a qualquer momento nas configurações do navegador/celular.\n\n"
+        + "4. Armazenamento. Seus dados ficam em infraestrutura segura (Supabase), com medidas razoáveis de proteção.\n\n"
+        + "5. Seus direitos. Você pode solicitar acesso, correção ou exclusão dos seus dados pelo suporte.\n\n"
+        + "6. Indicações. Registramos o vínculo de indicação (quem indicou quem) para o programa de bônus.\n\n"
+        + "Direitos reservados © MrThiagoFX. Versão 1.0 — 2026." },
     { id: "suporte", icon: "💬", label: "Suporte",
       body: "Atendimento via e-mail: suporte@infinitysignals.app — resposta em até 24h úteis." },
   ];
@@ -1709,9 +1819,13 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
           </Card>
 
           <Btn t={t} style={{ marginBottom: 10 }} onClick={onUpgrade}>Upgrade de plano</Btn>
-          <Btn t={t} variant="secondary" style={{ marginBottom: 20 }} onClick={onOpenNotifications}>
+          <Btn t={t} variant="secondary" style={{ marginBottom: isAdmin ? 10 : 20 }} onClick={onOpenNotifications}>
             🔔 Notificações
           </Btn>
+          {isAdmin && (
+            <Btn t={t} style={{ marginBottom: 20, background: t.blue, color: t.id === "dark" ? "#05121A" : "#FFFFFF" }}
+              onClick={onAdmin}>🛠️ Painel admin</Btn>
+          )}
 
           <Card t={t} accent style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
@@ -1769,7 +1883,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
                 {open && (
                   <div style={{ background: t.bg2, border: `1px solid ${t.accentBdr}`, borderTop: "none",
                     borderRadius: "0 0 16px 16px", padding: "12px 16px" }}>
-                    <p style={{ fontSize: 12, color: t.sub, lineHeight: 1.65, margin: 0, fontFamily: FONT }}>{body}</p>
+                    <p style={{ fontSize: 12, color: t.sub, lineHeight: 1.65, margin: 0, fontFamily: FONT, whiteSpace: "pre-line" }}>{body}</p>
                   </div>
                 )}
               </div>
@@ -1973,6 +2087,7 @@ export default function App() {
   // Free usa horário fixo; Premium usa a janela escolhida.
   const effSchedule = plan === "free" ? FREE_SCHEDULE : schedule;
   const bizState = { plan, selectedAssets, tfPerAsset, schedule: effSchedule };
+  const isAdmin = !!(session?.user && (session.user.app_metadata?.role === "admin" || session.user.user_metadata?.is_admin === true));
 
   const render = () => {
     switch (screen) {
@@ -1991,7 +2106,8 @@ export default function App() {
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} />;
       case "history":       return <History {...common} onNav={nav} {...bizState} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={schedule} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onAdmin={() => go("admin")} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
+      case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
       case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;
     }
