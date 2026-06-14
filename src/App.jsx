@@ -1588,62 +1588,6 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
   );
 };
 
-const Ticket = ({ t, onNav, onBack, onToggleTheme }) => {
-  const [msg, setMsg] = useState("");
-  const [busy, setBusy] = useState(false);
-  const [sent, setSent] = useState(false);
-  const [err, setErr] = useState("");
-  const send = async () => {
-    if (msg.trim().length < 5) { setErr("Descreva o problema (mín. 5 caracteres)."); return; }
-    setBusy(true); setErr("");
-    const r = await api.sendTicket(msg.trim());
-    setBusy(false);
-    if (r.ok) { setSent(true); setMsg(""); }
-    else setErr(r.error || "Não foi possível enviar.");
-  };
-  return (
-    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Suporte" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
-      <Scroll style={{ padding: "0 24px" }}>
-        {sent ? (
-          <Card t={t} accent style={{ textAlign: "center", padding: "26px 18px" }}>
-            <div style={{ fontSize: 38, marginBottom: 8 }}>✅</div>
-            <div style={{ fontWeight: 800, fontSize: 16, color: t.text, fontFamily: FONT, marginBottom: 6 }}>Ticket enviado!</div>
-            <p style={{ fontSize: 13, color: t.sub, lineHeight: 1.6, margin: 0, fontFamily: FONT }}>
-              Recebemos sua mensagem. O atendimento responde em <b>7 a 24 horas</b>.
-            </p>
-            <div style={{ marginTop: 16 }}>
-              <Btn t={t} variant="secondary" onClick={() => setSent(false)}>Abrir outro ticket</Btn>
-            </div>
-          </Card>
-        ) : (
-          <>
-            <p style={{ fontSize: 13, color: t.sub, margin: "0 0 14px", lineHeight: 1.6, fontFamily: FONT }}>
-              Descreva o que aconteceu (cobrança, sinal, acesso, dúvida…). Enviamos junto seu nome, e-mail e plano — não precisa repetir.
-            </p>
-            <textarea value={msg} onChange={e => setMsg(e.target.value)} rows={7}
-              placeholder="Conte o que está acontecendo…"
-              style={{ width: "100%", background: t.card, border: `1.5px solid ${t.bdr}`,
-                borderRadius: 14, padding: "12px 14px", color: t.text, fontSize: 14,
-                fontFamily: FONT, outline: "none", resize: "vertical" }} />
-            {err && <p style={{ margin: "10px 0 0", fontSize: 12, color: t.sell, fontFamily: FONT }}>{err}</p>}
-            <p style={{ fontSize: 11, color: t.muted, margin: "12px 0 0", fontFamily: FONT }}>
-              ⏱️ O atendimento de tickets responde em <b>7 a 24 horas</b>.
-            </p>
-          </>
-        )}
-        <div style={{ height: 14 }} />
-      </Scroll>
-      {!sent && (
-        <div style={{ padding: "12px 24px 28px", flexShrink: 0 }}>
-          <Btn t={t} onClick={send} disabled={busy}>{busy ? "Enviando…" : "Enviar ticket"}</Btn>
-        </div>
-      )}
-      <BottomNav active="profile" onNav={onNav} t={t} />
-    </div>
-  );
-};
-
 const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   const [data, setData] = useState(null);
   const [msg, setMsg] = useState("");
@@ -1783,7 +1727,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
         + "5. Seus direitos. Você pode solicitar acesso, correção ou exclusão dos seus dados pelo suporte.\n\n"
         + "6. Indicações. Registramos o vínculo de indicação (quem indicou quem) para o programa de bônus.\n\n"
         + "Direitos reservados © MrThiagoFX. Versão 1.0 — 2026." },
-    { id: "suporte", icon: "🎫", label: "Suporte (abrir ticket)",
+    { id: "suporte", icon: "💬", label: "Suporte (Telegram)",
       body: "" },
   ];
   return (
@@ -2186,9 +2130,8 @@ export default function App() {
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} />;
       case "history":       return <History {...common} onNav={nav} {...bizState} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => go("ticket")} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
-      case "ticket":        return <Ticket {...common} onNav={nav} onBack={() => go("profile")} />;
       case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;
     }

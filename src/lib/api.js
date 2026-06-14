@@ -161,20 +161,6 @@ export async function fetchBreakdown() {
   } catch { return null; }
 }
 
-// Abre um ticket de suporte (vai pro Telegram do admin).
-export async function sendTicket(message) {
-  if (!hasSupabase) return { ok: false, error: "sem backend" };
-  try {
-    const res = await fetch("/api/ticket", {
-      method: "POST",
-      headers: { "Content-Type": "application/json", ...(await authHeader()) },
-      body: JSON.stringify({ message }),
-    });
-    const json = await res.json().catch(() => ({}));
-    return res.ok ? { ok: true } : { ok: false, error: json.error || "falhou" };
-  } catch (e) { return { ok: false, error: e.message }; }
-}
-
 /* ── Admin ── */
 export async function isAdminUser() {
   const session = await getSession();
