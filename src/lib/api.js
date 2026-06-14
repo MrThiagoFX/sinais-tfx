@@ -188,6 +188,7 @@ async function adminPost(body) {
 }
 export const adminSetPlan = (userId, plan) => adminPost({ action: "set-plan", userId, plan });
 export const adminSetHistory = (date) => adminPost({ action: "set-history", date });
+export const adminSetFreeQuota = (value) => adminPost({ action: "set-free-quota", value });
 
 /* ── Web Push ── */
 function urlBase64ToUint8Array(base64String) {

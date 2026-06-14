@@ -95,7 +95,12 @@ async function getSignals(req, res) {
   const sb = serviceClient();
 
   const { data: profile } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
-  const quota = dailyQuota(profile);
+  let freeQuota = 4;
+  try {
+    const { data: cfg } = await sb.from("app_settings").select("free_quota").eq("id", 1).maybeSingle();
+    if (cfg?.free_quota) freeQuota = cfg.free_quota;
+  } catch { /* coluna ainda não criada */ }
+  const quota = dailyQuota(profile, freeQuota);
 
   // Busca os sinais do dia e filtra na aplicação pelas preferências do usuário.
   const startOfDay = new Date();

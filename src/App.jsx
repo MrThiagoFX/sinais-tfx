@@ -707,7 +707,7 @@ const Plans = ({ t, onNext, onBack, onToggleTheme, plan, setPlan, currentPlan })
   const upgrade = !!currentPlan;
   const plans = [
     { id: "free", name: "Free", price: "Grátis", sub: "Para conhecer",
-      items: ["4 sinais por dia (M5/M15 sortidos)", "Em horários fixos", "Histórico de 7 dias"] },
+      items: ["2 a 4 operações por dia (M5/M15)", "Em horários fixos", "Histórico de 7 dias"] },
     { id: "mensal", name: "Premium Mensal", price: "R$ 99/mês", sub: "Cobrança mensal",
       items: ["Até 20 operações por dia", "Timeframes M5 e M15", "Escolha seus ativos e horário", "Histórico completo"] },
     { id: "anual", name: "Premium Anual", price: "R$ 79/mês", sub: "Equivalente — cobrado anualmente", badge: "Mais popular",
@@ -934,7 +934,7 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
             <Bar pct={(used / quota) * 100} t={t} />
             <p style={{ fontSize: 12, color: t.sub, margin: "8px 0 0", fontFamily: FONT }}>
               {plan === "free"
-                ? "Plano Free — 4 sinais por dia (M5/M15 sortidos)"
+                ? "Plano Free — operações sorteadas (M5/M15)"
                 : `${info.name} — até 20 operações por dia`}
             </p>
           </div>
@@ -1011,7 +1011,7 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
           <div style={{ background: `${t.warn}10`, border: `1px solid ${t.warn}30`,
             borderRadius: 12, padding: "8px 12px", marginBottom: 4 }}>
             <p style={{ fontSize: 11, color: t.warn, margin: 0, fontFamily: FONT }}>
-              Plano Free: 4 sinais por dia (M5/M15 sortidos) em horários fixos. Faça upgrade para escolher ativos.
+              Plano Free: 2 a 4 operações por dia (M5/M15 sortidos) em horários fixos. Faça upgrade para escolher ativos.
             </p>
           </div>
         )}
@@ -1592,14 +1592,26 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   const [data, setData] = useState(null);
   const [msg, setMsg] = useState("");
   const [histDate, setHistDate] = useState("");
+  const [freeQuota, setFreeQuota] = useState(4);
   const [q, setQ] = useState("");
   const PLANS = ["free", "mensal", "anual"];
 
   useEffect(() => {
     let alive = true;
-    api.adminList().then(d => { if (alive && d) { setData(d); setHistDate(d.settings?.history_start_date?.slice(0, 10) || ""); } });
+    api.adminList().then(d => { if (alive && d) {
+      setData(d);
+      setHistDate(d.settings?.history_start_date?.slice(0, 10) || "");
+      setFreeQuota(d.settings?.free_quota || 4);
+    } });
     return () => { alive = false; };
   }, []);
+
+  const saveFreeQuota = async (v) => {
+    setFreeQuota(v);
+    const r = await api.adminSetFreeQuota(v);
+    setMsg(r.ok ? `✓ Cota Free = ${v} operações/dia` : (r.error || "erro"));
+    setTimeout(() => setMsg(""), 2500);
+  };
 
   const setPlan = async (userId, plan) => {
     const r = await api.adminSetPlan(userId, plan);
@@ -1638,6 +1650,22 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
             <button onClick={saveHist} style={{ flexShrink: 0, height: 44, padding: "0 16px", borderRadius: 12,
               cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: FONT, border: "none",
               background: t.accent, color: t.activeText }}>Salvar</button>
+          </div>
+        </Card>
+
+        <Card t={t} accent style={{ marginBottom: 14 }}>
+          <Label t={t} style={{ marginBottom: 8 }}>🎁 Operações grátis por dia (Free)</Label>
+          <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
+            Define quantas operações os usuários Free recebem nesta semana (2 a 4). Vale pra todos do plano Free.
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            {[2, 3, 4].map(v => (
+              <button key={v} onClick={() => saveFreeQuota(v)} style={{
+                flex: 1, height: 44, borderRadius: 12, cursor: "pointer", fontWeight: 800, fontSize: 15,
+                fontFamily: FONT, border: `1.5px solid ${freeQuota === v ? t.accent : t.bdr}`,
+                background: freeQuota === v ? t.accent : "transparent",
+                color: freeQuota === v ? t.activeText : t.text }}>{v}</button>
+            ))}
           </div>
         </Card>
 
@@ -1800,7 +1828,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
             ) : isFree ? (
               <>
                 <p style={{ fontSize: 12, color: t.sub, margin: "0 0 12px", lineHeight: 1.55, fontFamily: FONT }}>
-                  No plano Free os <span style={{ fontWeight: 800, color: t.text }}>4 sinais do dia</span> (M5/M15 sortidos) chegam em <span style={{ fontWeight: 800, color: t.text }}>horários fixos</span>:
+                  No plano Free as <span style={{ fontWeight: 800, color: t.text }}>operações do dia</span> (2 a 4, M5/M15 sortidos) chegam em <span style={{ fontWeight: 800, color: t.text }}>horários fixos</span>:
                 </p>
                 <div style={{ display: "flex", gap: 8 }}>
                   {FREE_SLOTS.map(h => (

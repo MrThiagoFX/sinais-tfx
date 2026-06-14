@@ -14,7 +14,7 @@ export function normalizeAsset(symbol) {
   if (!symbol) return null;
   const s = String(symbol).toUpperCase().replace(/[^A-Z0-9]/g, "");
   for (const a of ASSETS) if (s.startsWith(a)) return a;
-  if (s.startsWith("NDX") || s.startsWith("USTEC") || s.startsWith("NAS")) return "NAS100";
+  if (s.startsWith("US100") || s.startsWith("NDX") || s.startsWith("USTEC") || s.startsWith("NAS")) return "NAS100";
   if (s.startsWith("DJ") || s.startsWith("US30") || s.startsWith("DOW") || s.startsWith("WS30")) return "US30";
   if (s.startsWith("GOLD") || s.startsWith("XAU")) return "XAUUSD";
   return null;
@@ -41,9 +41,13 @@ export function computePips(asset, dir, entry, exit) {
   return Math.round((dir === "Compra" ? raw : -raw));
 }
 
-// Cota diária de sinais: Free = 4/dia · Premium (mensal/anual) = até 20/dia.
-export function dailyQuota(profile) {
-  return (!profile || profile.plan === "free") ? 4 : 20;
+// Cota diária de sinais: Free = configurável pelo admin (2 a 4) · Premium = 20.
+export function dailyQuota(profile, freeQuota = 4) {
+  if (!profile || profile.plan === "free") {
+    const q = parseInt(freeQuota, 10);
+    return (q >= 2 && q <= 4) ? q : 4;
+  }
+  return 20;
 }
 
 // Hora (0-23) extraída de "HH:MM".

@@ -30,13 +30,14 @@ export default async function handler(req, res) {
       };
     }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    let history_start_date = null;
+    let history_start_date = null, free_quota = 4;
     try {
-      const { data: cfg } = await sb.from("app_settings").select("history_start_date").eq("id", 1).maybeSingle();
+      const { data: cfg } = await sb.from("app_settings").select("history_start_date, free_quota").eq("id", 1).maybeSingle();
       history_start_date = cfg?.history_start_date || null;
+      if (cfg?.free_quota) free_quota = cfg.free_quota;
     } catch { /* ignore */ }
 
-    return res.status(200).json({ users, settings: { history_start_date }, count: users.length });
+    return res.status(200).json({ users, settings: { history_start_date, free_quota }, count: users.length });
   }
 
   if (req.method === "POST") {
@@ -54,6 +55,14 @@ export default async function handler(req, res) {
       const { date } = req.body; // ISO string ou null
       const { error } = await sb.from("app_settings")
         .upsert({ id: 1, history_start_date: date || null });
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ ok: true });
+    }
+
+    if (action === "set-free-quota") {
+      let v = parseInt(req.body.value, 10);
+      if (!(v >= 2 && v <= 4)) return res.status(400).json({ error: "cota Free deve ser 2, 3 ou 4" });
+      const { error } = await sb.from("app_settings").upsert({ id: 1, free_quota: v });
       if (error) return res.status(500).json({ error: error.message });
       return res.status(200).json({ ok: true });
     }
