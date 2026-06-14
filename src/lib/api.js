@@ -5,6 +5,26 @@ import { supabase, hasSupabase } from "./supabase.js";
 
 export { hasSupabase };
 
+// Traduz as mensagens de erro do Supabase Auth (em inglês) para PT-BR claro.
+// Mantém o texto original como fallback se não houver tradução conhecida.
+export function friendlyAuthError(error) {
+  const raw = (typeof error === "string" ? error : error?.message) || "";
+  const m = raw.toLowerCase();
+  if (!raw) return "Algo deu errado. Tente novamente.";
+  if (m.includes("invalid login credentials")) return "E-mail ou senha incorretos.";
+  if (m.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar (veja sua caixa de entrada).";
+  if (m.includes("user already registered") || m.includes("already been registered"))
+    return "Este e-mail já tem conta. Use “Entrar”.";
+  if (m.includes("password should be at least")) return "A senha deve ter pelo menos 6 caracteres.";
+  if (m.includes("unable to validate email") || m.includes("invalid format")) return "E-mail inválido.";
+  if (m.includes("signups not allowed")) return "Cadastro desativado no momento.";
+  if (m.includes("for security purposes") || m.includes("rate limit") || m.includes("too many"))
+    return "Muitas tentativas. Aguarde alguns segundos e tente de novo.";
+  if (m.includes("failed to fetch") || m.includes("networkerror") || m.includes("load failed"))
+    return "Sem conexão com o servidor. Verifique sua internet.";
+  return raw; // mensagem desconhecida → mostra a original
+}
+
 /* ── Sessão / token ── */
 export async function getSession() {
   if (!supabase) return null;
@@ -21,7 +41,7 @@ async function authHeader() {
 export async function signIn(email, password) {
   if (!supabase) return { ok: true, demo: true };
   const { data, error } = await supabase.auth.signInWithPassword({ email, password });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyAuthError(error) };
   return { ok: true, session: data.session };
 }
 
@@ -48,7 +68,7 @@ export async function signUp(email, password, name, coupon) {
   const { data, error } = await supabase.auth.signUp({
     email, password, options: { data: { name, referred_by } },
   });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyAuthError(error) };
   return { ok: true, session: data.session };
 }
 
@@ -70,7 +90,7 @@ export async function updateProfileFields(fields) {
 export async function updateEmail(email) {
   if (!supabase) return { ok: false, error: "sem backend" };
   const { error } = await supabase.auth.updateUser({ email });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyAuthError(error) };
   return { ok: true };
 }
 
@@ -93,7 +113,7 @@ export async function uploadAvatar(dataUrl) {
 export async function updatePassword(newPassword) {
   if (!supabase) return { ok: false, error: "sem backend" };
   const { error } = await supabase.auth.updateUser({ password: newPassword });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyAuthError(error) };
   return { ok: true };
 }
 
@@ -102,7 +122,7 @@ export async function resetPassword(email) {
   if (!supabase) return { ok: false, error: "sem backend" };
   const redirectTo = typeof window !== "undefined" ? window.location.origin : undefined;
   const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-  if (error) return { ok: false, error: error.message };
+  if (error) return { ok: false, error: friendlyAuthError(error) };
   return { ok: true };
 }
 

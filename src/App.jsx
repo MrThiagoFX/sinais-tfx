@@ -694,7 +694,12 @@ const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot }) => {
       </Scroll>
       <div style={{ padding: "12px 24px 32px", display: "flex", flexDirection: "column", gap: 10, flexShrink: 0 }}>
         {err && (
-          <p style={{ margin: 0, fontSize: 12, color: t.sell, textAlign: "center", fontFamily: FONT }}>{err}</p>
+          <div role="alert" style={{ margin: 0, display: "flex", alignItems: "center", gap: 8,
+            background: `${t.sell}1A`, border: `1.5px solid ${t.sell}`, borderRadius: 12,
+            padding: "12px 14px", fontFamily: FONT }}>
+            <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>⚠️</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: t.sell, lineHeight: 1.35 }}>{err}</span>
+          </div>
         )}
         <Btn t={t} onClick={() => handle(false)} disabled={busy}>{busy ? "Entrando…" : "Entrar"}</Btn>
         <Btn t={t} variant="secondary" onClick={() => handle(true)} disabled={busy}>Criar conta</Btn>
