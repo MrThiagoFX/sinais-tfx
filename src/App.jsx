@@ -53,6 +53,19 @@ const GlobalStyle = ({ t }) => (
     .scrollarea::-webkit-scrollbar-thumb { background: ${t.bdrMid}; border-radius: 99px; }
     .scrollarea::-webkit-scrollbar-thumb:hover { background: ${t.muted}; }
     select option { background: ${t.card}; color: ${t.text}; }
+
+    /* ── Polimento: animações suaves + feedback de toque ── */
+    @keyframes screenIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+    @keyframes pop { 0% { transform: scale(.96); opacity: .6; } 100% { transform: scale(1); opacity: 1; } }
+    @keyframes pulseDot { 0%,100% { opacity: 1; } 50% { opacity: .35; } }
+    .screen-anim { flex: 1; display: flex; flex-direction: column; min-height: 0; animation: screenIn .26s cubic-bezier(.22,.61,.36,1); }
+    button { transition: transform .08s ease, filter .15s ease, opacity .15s ease; }
+    button:not(:disabled):active { transform: scale(.96); }
+    .pcard { transition: transform .12s ease, border-color .2s ease, box-shadow .2s ease; }
+    .pcard:active { transform: scale(.987); }
+    .live-dot { animation: pulseDot 1.4s ease-in-out infinite; }
+    @media (prefers-reduced-motion: reduce) { .screen-anim, button, .pcard { animation: none !important; transition: none !important; } }
   `}</style>
 );
 
@@ -215,7 +228,7 @@ const Btn = ({ children, t, variant = "primary", onClick, disabled, style = {} }
 };
 
 const Card = ({ children, t, style = {}, onClick, accent = false }) => (
-  <div onClick={onClick} style={{
+  <div onClick={onClick} className={onClick ? "pcard" : undefined} style={{
     background: t.card, borderRadius: 18, padding: "16px 18px",
     border: `1px solid ${accent ? t.accentBdr : t.bdr}`,
     position: "relative", overflow: "hidden",
@@ -400,7 +413,7 @@ const DashSignalCard = ({ s, t, onClick }) => {
         {open ? (
           <div style={{ display: "flex", alignItems: "center", gap: 6, background: `${t.warn}1A`,
             border: `1px solid ${t.warn}40`, borderRadius: 8, padding: "4px 9px" }}>
-            <span style={{ width: 7, height: 7, borderRadius: "50%", background: t.warn }} />
+            <span className="live-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: t.warn }} />
             <span style={{ fontSize: 11, fontWeight: 800, color: t.warn, fontFamily: FONT }}>Em andamento</span>
           </div>
         ) : (
@@ -1369,10 +1382,14 @@ const History = ({ t, onNav, onToggleTheme, schedule, selectedAssets, plan }) =>
   );
 };
 
-const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule }) => {
+const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, selectedAssets = [], tfPerAsset = {} }) => {
   const [tog, setTog] = useState({ rt: true, daily: false, fav: true, sound: true });
   const [expanded, setExpanded] = useState(null);
   const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
+  const isFree = plan === "free";
+  const ativosTxt = selectedAssets.length
+    ? selectedAssets.map(a => `${a} (${(tfPerAsset[a] || []).join("/") || "—"})`).join(", ")
+    : "nenhum ativo selecionado";
   const toggles = [
     { id: "rt",    label: "Sinais em tempo real", sub: "Alerta assim que o sinal for detectado" },
     { id: "daily", label: "Boletim diário",        sub: "Resumo de desempenho do dia" },
@@ -1381,11 +1398,17 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule }) => {
   ];
   const expandables = [
     { id: "horario", label: "Horário de envio",
-      body: `Janela atual: ${schedTxt}. Para alterar, acesse Perfil → Horário de sinais.` },
+      body: isFree
+        ? "Plano Free: horários fixos (04:00 · 10:30 · 15:00 · 21:00). Faça upgrade para personalizar."
+        : `Janela atual: ${schedTxt}. Para alterar, acesse Perfil → Horário de sinais.` },
     { id: "fav2",    label: "Gerenciar favoritos",
-      body: "Favoritos atuais: XAUUSD, NAS100. Toque em um ativo na tela Sinais para favoritar." },
-    { id: "ativos",  label: "Gerenciar ativos",
-      body: "Para alterar os ativos monitorados, acesse Perfil → Ativos monitorados." },
+      body: isFree
+        ? "No plano Free os sinais são sortidos (M5/M15) — sem seleção de favoritos. Faça upgrade para escolher."
+        : `Seus ativos favoritos: ${ativosTxt}. Para alterar, acesse Perfil → Histórico por timeframe / Ativos.` },
+    { id: "ativos",  label: "Ativos monitorados",
+      body: isFree
+        ? "Free recebe sinais sortidos dos 5 ativos. No Premium você escolhe."
+        : `Você monitora: ${ativosTxt}.` },
   ];
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -2162,7 +2185,7 @@ export default function App() {
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} onTfPerf={() => go("tf-perf")} />;
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} />;
       case "history":       return <History {...common} onNav={nav} {...bizState} />;
-      case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={schedule} />;
+      case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
       case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => go("ticket")} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
       case "ticket":        return <Ticket {...common} onNav={nav} onBack={() => go("profile")} />;
@@ -2190,7 +2213,7 @@ export default function App() {
           borderRadius: isMobile ? 0 : 28,
           border: isMobile ? "none" : `1px solid ${t.bdr}`,
           boxShadow: isMobile ? "none" : "0 24px 80px rgba(0,0,0,.45)" }}>
-          {render()}
+          <div className="screen-anim" key={screen}>{render()}</div>
         </div>
       </div>
     );
