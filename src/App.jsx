@@ -39,7 +39,7 @@ const THEMES = {
 /* CSS global: scroll fino + reset */
 const GlobalStyle = ({ t }) => (
   <style>{`
-    html, body, #root { height: 100%; margin: 0; }
+    html, body, #root { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
     * { box-sizing: border-box; }
     .scrollarea {
       overflow-y: auto; overflow-x: hidden;
@@ -286,7 +286,8 @@ const NAV = [
 
 const BottomNav = ({ active, onNav, t }) => (
   <div style={{ background: t.bg1, borderTop: `1px solid ${t.bdr}`,
-    display: "flex", paddingBottom: 8, paddingTop: 6, flexShrink: 0 }}>
+    display: "flex", paddingTop: 6, flexShrink: 0,
+    paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))" }}>
     {NAV.map(({ id, label, icon }) => (
       <button key={id} onClick={() => onNav(id)} style={{
         flex: 1, background: "none", border: "none", cursor: "pointer",
@@ -961,20 +962,6 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
               <div style={{ fontSize: 22, fontWeight: 900, color: t.buy, fontFamily: FONT }}>{acumTxt}</div>
             </Card>
           </div>
-
-          <Label t={t} style={{ marginBottom: 10 }}>Ativos monitorados</Label>
-          <div style={{ display: "flex", gap: 10, flexWrap: "wrap" }}>
-            {selectedAssets.map(a => (
-              <div key={a} style={{ background: t.card, border: `1px solid ${t.bdr}`,
-                borderRadius: 12, padding: "8px 12px", display: "flex", alignItems: "center", gap: 8 }}>
-                <AssetIcon asset={a} size={24} />
-                <span style={{ fontSize: 12, fontWeight: 800, color: t.text, fontFamily: FONT }}>{a}</span>
-                <span style={{ fontSize: 10, color: t.muted, fontFamily: FONT }}>
-                  {(tfPerAsset[a] || []).join(" · ")}
-                </span>
-              </div>
-            ))}
-          </div>
         </div>
       </Scroll>
       <BottomNav active="home" onNav={onNav} t={t} />
@@ -1481,6 +1468,17 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
   const [avatar, setAvatar] = useState(profile.avatar_url || "");
   const [newAvatarData, setNewAvatarData] = useState(null);
   const [referralCode, setReferralCode] = useState(profile.referral_code || "");
+  const [newPass, setNewPass] = useState("");
+  const [pwMsg, setPwMsg] = useState("");
+  const [pwBusy, setPwBusy] = useState(false);
+  const changePass = async () => {
+    if (newPass.length < 6) { setPwMsg("A senha precisa de ao menos 6 caracteres."); return; }
+    setPwBusy(true); setPwMsg("");
+    const r = await api.updatePassword(newPass);
+    setPwBusy(false);
+    setPwMsg(r.ok ? "✓ Senha alterada com sucesso." : (r.error || "Não foi possível alterar."));
+    if (r.ok) setNewPass("");
+  };
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState("");
   const info = PLAN_INFO[plan];
@@ -1579,6 +1577,24 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
           </div>
           <span style={{ color: t.accent, fontSize: 13, fontWeight: 800, fontFamily: FONT }}>Mudar ›</span>
         </Card>
+
+        <Label t={t} style={{ margin: "8px 0 6px" }}>🔑 Trocar senha</Label>
+        <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+          <input type="password" value={newPass} placeholder="Nova senha (mín. 6)"
+            onChange={e => setNewPass(e.target.value)}
+            style={{ flex: 1, minWidth: 0, height: 46, background: t.card,
+              border: `1.5px solid ${t.bdr}`, borderRadius: 12, padding: "0 14px",
+              color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
+          <button onClick={changePass} disabled={pwBusy} style={{
+            flexShrink: 0, height: 46, padding: "0 16px", borderRadius: 12,
+            cursor: pwBusy ? "default" : "pointer", fontWeight: 800, fontSize: 13,
+            fontFamily: FONT, border: "none", background: t.accent, color: t.activeText,
+            opacity: pwBusy ? 0.5 : 1 }}>{pwBusy ? "..." : "Trocar"}</button>
+        </div>
+        {pwMsg && (
+          <p style={{ margin: "8px 0 0", fontSize: 12, fontFamily: FONT,
+            color: pwMsg.startsWith("✓") ? t.buy : t.sell }}>{pwMsg}</p>
+        )}
 
         {msg && (
           <p style={{ margin: "12px 0 0", fontSize: 12.5, fontFamily: FONT,
@@ -1720,17 +1736,6 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
 const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
-  const [newPass, setNewPass] = useState("");
-  const [pwMsg, setPwMsg] = useState("");
-  const [pwBusy, setPwBusy] = useState(false);
-  const changePass = async () => {
-    if (newPass.length < 6) { setPwMsg("A senha precisa de ao menos 6 caracteres."); return; }
-    setPwBusy(true); setPwMsg("");
-    const r = await api.updatePassword(newPass);
-    setPwBusy(false);
-    setPwMsg(r.ok ? "✓ Senha alterada com sucesso." : (r.error || "Não foi possível alterar."));
-    if (r.ok) setNewPass("");
-  };
   const refCode = referral?.code || "SEUCODIGO";
   const refLink = `https://sinais-tfx.vercel.app/?ref=${refCode}`;
   const copyRef = () => {
@@ -1947,28 +1952,6 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
             );
           })}
 
-          {userEmail && (
-            <Card t={t} style={{ marginTop: 16 }}>
-              <Label t={t} style={{ marginBottom: 10 }}>🔑 Trocar senha</Label>
-              <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-                <input type="password" value={newPass} placeholder="Nova senha (mín. 6)"
-                  onChange={e => setNewPass(e.target.value)}
-                  style={{ flex: 1, minWidth: 0, height: 46, background: t.bg2,
-                    border: `1.5px solid ${t.bdr}`, borderRadius: 12, padding: "0 14px",
-                    color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
-                <button onClick={changePass} disabled={pwBusy} style={{
-                  flexShrink: 0, height: 46, padding: "0 16px", borderRadius: 12,
-                  cursor: pwBusy ? "default" : "pointer", fontWeight: 800, fontSize: 13,
-                  fontFamily: FONT, border: "none", background: t.accent, color: t.activeText,
-                  opacity: pwBusy ? 0.5 : 1 }}>{pwBusy ? "..." : "Salvar"}</button>
-              </div>
-              {pwMsg && (
-                <p style={{ margin: "10px 0 0", fontSize: 12, fontFamily: FONT,
-                  color: pwMsg.startsWith("✓") ? t.buy : t.sell }}>{pwMsg}</p>
-              )}
-            </Card>
-          )}
-
           <div style={{ marginTop: 16 }}>
             <Btn t={t} variant="danger" onClick={onLogout}>Sair da conta</Btn>
           </div>
@@ -2176,7 +2159,7 @@ export default function App() {
      Celular → tela cheia. Desktop em produção → coluna centralizada estilo app mobile. ── */
   if (!isDev || isMobile) {
     return (
-      <div style={{ height: "100vh", display: "flex", justifyContent: "center",
+      <div style={{ height: "100dvh", display: "flex", justifyContent: "center",
         alignItems: isMobile ? "stretch" : "center", fontFamily: FONT,
         background: isMobile ? t.bg0 : (themeId === "dark"
           ? "radial-gradient(circle at 50% 30%, #11161f 0%, #03050a 78%)"
@@ -2184,7 +2167,7 @@ export default function App() {
         transition: "background .3s" }}>
         <GlobalStyle t={t} />
         <div style={{ width: "100%", maxWidth: isMobile ? "100%" : 460,
-          height: isMobile ? "100%" : "min(calc(100vh - 40px), 880px)",
+          height: isMobile ? "100%" : "min(calc(100dvh - 40px), 880px)",
           display: "flex", flexDirection: "column", overflow: "hidden", background: t.bg0,
           borderRadius: isMobile ? 0 : 28,
           border: isMobile ? "none" : `1px solid ${t.bdr}`,
