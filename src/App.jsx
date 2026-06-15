@@ -570,7 +570,7 @@ const Welcome = ({ t, onNext, onLogin, onToggleTheme }) => (
           <div style={{ position: "absolute", top: 14, left: 12,
             background: `${t.blue}16`, border: `1px solid ${t.blue}35`,
             borderRadius: 10, padding: "4px 10px", fontSize: 11, fontWeight: 700,
-            color: t.blue, fontFamily: FONT }}>M5 · M15 · H1</div>
+            color: t.blue, fontFamily: FONT }}>M5 · M15</div>
         </div>
         <div style={{ textAlign: "center" }}>
           <h1 style={{ fontSize: 27, fontWeight: 900, lineHeight: 1.2, margin: "0 0 12px",
@@ -630,24 +630,21 @@ const RiskWarning = ({ t, onNext, onToggleTheme }) => {
   );
 };
 
-const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot }) => {
+const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot, onCreateAccount }) => {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
-  const [coupon, setCoupon] = useState(() => {
-    try { return localStorage.getItem("tfx_ref") || ""; } catch { return ""; }
-  });
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
 
   // Sem backend (modo demo) → apenas avança. Com backend → autentica de verdade.
-  // onNext recebe isSignup: cadastro novo → tela de planos; login → home.
-  const handle = async (isSignup) => {
-    if (!onAuth) return onNext(isSignup);
+  // Login é só entrada; o cadastro vive na tela própria (Signup).
+  const handle = async () => {
+    if (!onAuth) return onNext();
     setErr(""); setNotice(""); setBusy(true);
-    const r = await onAuth(email.trim(), pass, isSignup, coupon.trim());
+    const r = await onAuth(email.trim(), pass, false);
     setBusy(false);
-    if (r?.ok) onNext(isSignup);
+    if (r?.ok) onNext();
     else setErr(r?.error || "Não foi possível entrar. Verifique os dados.");
   };
 
@@ -687,15 +684,6 @@ const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot }) => {
                 fontSize: 14, fontFamily: FONT, outline: "none" }} />
           </div>
         ))}
-        <div style={{ marginBottom: 14 }}>
-          <Label t={t} style={{ marginBottom: 6 }}>Cupom de convite (opcional)</Label>
-          <input value={coupon} placeholder="código de quem te indicou" onChange={e => setCoupon(e.target.value)}
-            style={{ width: "100%", height: 52, background: t.card, border: `1.5px solid ${t.bdr}`,
-              borderRadius: 14, padding: "0 16px", color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
-          <p style={{ fontSize: 11, color: t.muted, margin: "6px 2px 0", fontFamily: FONT }}>
-            Use ao <span style={{ fontWeight: 700 }}>criar conta</span>. Se entrou por um link de convite, já vem preenchido.
-          </p>
-        </div>
         <div style={{ textAlign: "right", marginTop: 6 }}>
           <span onClick={forgot} style={{ color: t.accent, fontSize: 13, fontWeight: 700, cursor: "pointer",
             fontFamily: FONT }}>Esqueci minha senha</span>
@@ -713,8 +701,100 @@ const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot }) => {
             <span style={{ fontSize: 13, fontWeight: 600, color: t.sell, lineHeight: 1.35 }}>{err}</span>
           </div>
         )}
-        <Btn t={t} onClick={() => handle(false)} disabled={busy}>{busy ? "Entrando…" : "Entrar"}</Btn>
-        <Btn t={t} variant="secondary" onClick={() => handle(true)} disabled={busy}>Criar conta</Btn>
+        <Btn t={t} onClick={handle} disabled={busy}>{busy ? "Entrando…" : "Entrar"}</Btn>
+        <Btn t={t} variant="secondary" onClick={onCreateAccount} disabled={busy}>Criar conta</Btn>
+      </div>
+    </div>
+  );
+};
+
+const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount }) => {
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [pass, setPass] = useState("");
+  const [pass2, setPass2] = useState("");
+  const [coupon, setCoupon] = useState(() => {
+    try { return localStorage.getItem("tfx_ref") || ""; } catch { return ""; }
+  });
+  const [err, setErr] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim());
+
+  const handle = async () => {
+    if (!onSignup) return onNext();
+    if (name.trim().length < 2) { setErr("Digite seu nome completo."); return; }
+    if (!emailOk) { setErr("Digite um e-mail válido."); return; }
+    if (pass.length < 6) { setErr("A senha deve ter pelo menos 6 caracteres."); return; }
+    if (pass !== pass2) { setErr("As senhas não conferem."); return; }
+    setErr(""); setNotice(""); setBusy(true);
+    const r = await onSignup({ name: name.trim(), email: email.trim(), phone: phone.trim(), pass, coupon: coupon.trim() });
+    setBusy(false);
+    if (r?.ok && r?.needsConfirm) { setNotice("Conta criada! Confirme seu e-mail (veja a caixa de entrada/spam) e depois faça login."); return; }
+    if (r?.ok) onNext();
+    else setErr(r?.error || "Não foi possível criar a conta.");
+  };
+
+  const field = (lbl, val, set, props = {}) => (
+    <div style={{ marginBottom: 13 }}>
+      <Label t={t} style={{ marginBottom: 6 }}>{lbl}</Label>
+      <input value={val} onChange={e => set(e.target.value)} {...props}
+        style={{ width: "100%", height: 50, background: t.card, border: `1.5px solid ${t.bdr}`,
+          borderRadius: 14, padding: "0 16px", color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
+    </div>
+  );
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <div style={{ display: "flex", justifyContent: "flex-end", padding: "14px 18px 0", flexShrink: 0 }}>
+        <ThemeToggle t={t} onToggle={onToggleTheme} />
+      </div>
+      <Scroll style={{ padding: "8px 24px 0" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
+          <BoltLogo t={t} size={28} />
+          <Label t={t}>Criar sua conta</Label>
+        </div>
+        <h1 style={{ fontSize: 25, fontWeight: 900, margin: "0 0 22px", letterSpacing: -0.5,
+          lineHeight: 1.2, color: t.text, fontFamily: FONT }}>
+          Bem-vindo ao<br /><span style={{ color: t.accent }}>Infinity Signals</span>
+        </h1>
+        {field("Nome completo", name, setName, { placeholder: "Seu nome" })}
+        {field("E-mail", email, setEmail, { type: "email", placeholder: "seu@email.com" })}
+        {field("Telefone / WhatsApp", phone, setPhone, { placeholder: "(00) 00000-0000", type: "tel" })}
+        {field("Senha", pass, setPass, { type: "password", placeholder: "mín. 6 caracteres" })}
+        {field("Confirmar senha", pass2, setPass2, { type: "password", placeholder: "repita a senha" })}
+        {field("Cupom de convite (opcional)", coupon, setCoupon, { placeholder: "código de quem te indicou" })}
+        <p style={{ fontSize: 11, color: t.muted, margin: "-4px 2px 8px", lineHeight: 1.5, fontFamily: FONT }}>
+          🔒 Seus dados são protegidos e usados só para o serviço. Ao criar conta você concorda com os Termos e a Política de Privacidade.
+        </p>
+      </Scroll>
+      <div style={{ padding: "12px 24px 32px", display: "flex", flexDirection: "column", gap: 10, flexShrink: 0 }}>
+        {notice && (
+          <div role="status" style={{ display: "flex", alignItems: "center", gap: 8,
+            background: `${t.buy}1A`, border: `1.5px solid ${t.buy}`, borderRadius: 12,
+            padding: "12px 14px", fontFamily: FONT }}>
+            <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>✅</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: t.buy, lineHeight: 1.35 }}>{notice}</span>
+          </div>
+        )}
+        {err && (
+          <div role="alert" style={{ display: "flex", alignItems: "center", gap: 8,
+            background: `${t.sell}1A`, border: `1.5px solid ${t.sell}`, borderRadius: 12,
+            padding: "12px 14px", fontFamily: FONT }}>
+            <span style={{ fontSize: 16, lineHeight: 1, flexShrink: 0 }}>⚠️</span>
+            <span style={{ fontSize: 13, fontWeight: 600, color: t.sell, lineHeight: 1.35 }}>{err}</span>
+          </div>
+        )}
+        {notice ? (
+          <Btn t={t} onClick={onHaveAccount}>Ir para o login</Btn>
+        ) : (
+          <>
+            <Btn t={t} onClick={handle} disabled={busy}>{busy ? "Criando…" : "Criar conta"}</Btn>
+            <Btn t={t} variant="secondary" onClick={onHaveAccount} disabled={busy}>Já tenho conta</Btn>
+          </>
+        )}
       </div>
     </div>
   );
@@ -997,7 +1077,7 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
   );
 };
 
-const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live, showMock }) => {
+const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live, stats, showMock }) => {
   const [filter, setFilter] = useState("Todos");
   const inWindow = h => schedule.allDay || (h >= parseInt(schedule.start) && h < parseInt(schedule.end));
   // Com backend, o /api já devolve os sinais filtrados por plano/ativos/janela/cota.
@@ -1022,6 +1102,34 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
             display: "flex", alignItems: "center", justifyContent: "center",
             fontSize: 16, color: t.accent, padding: 0 }}>⚙</button>
         } />
+      {(() => {
+        const zero = { pips: 0, assertividade: 0, total: 0 };
+        const dia = stats?.dia || (showMock ? { pips: 6, assertividade: 67, total: 3 } : zero);
+        const semana = stats?.semana || (showMock ? { pips: 41, assertividade: 72, total: 18 } : zero);
+        const row = (label, d) => {
+          const pos = (d.pips || 0) >= 0;
+          return (
+            <div style={{ flex: 1, background: t.card, border: `1px solid ${t.bdr}`,
+              borderRadius: 14, padding: "10px 12px", display: "flex",
+              flexDirection: "column", gap: 2 }}>
+              <span style={{ fontSize: 11, color: t.sub, fontFamily: FONT, fontWeight: 600 }}>{label}</span>
+              <span style={{ fontSize: 18, fontWeight: 800, color: pos ? t.buy : t.sell, fontFamily: FONT }}>
+                {pos ? "+" : ""}{d.pips || 0} pips
+              </span>
+              <span style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>
+                {d.total || 0} ops · {d.assertividade || 0}% acerto
+              </span>
+            </div>
+          );
+        };
+        return (
+          <div style={{ padding: "0 24px", marginBottom: 10, flexShrink: 0,
+            display: "flex", gap: 10 }}>
+            {row("Hoje", dia)}
+            {row("Semana", semana)}
+          </div>
+        );
+      })()}
       <div style={{ padding: "0 24px", marginBottom: 10, flexShrink: 0 }}>
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           {["Todos", "Compras", "Vendas"].map(f => (
@@ -2133,6 +2241,14 @@ export default function App() {
     let alive = true;
     (async () => {
       const p = await api.loadProfile();
+      // Sincroniza nome/telefone do cadastro (metadata) caso ainda não estejam no perfil.
+      if (p) {
+        const meta = session.user?.user_metadata || {};
+        const patch = {};
+        if (!p.name && meta.name) patch.name = meta.name;
+        if (!p.phone && meta.phone) patch.phone = meta.phone;
+        if (Object.keys(patch).length) { try { await api.updateProfileFields(patch); Object.assign(p, patch); } catch { /* ignore */ } }
+      }
       if (alive && p) {
         if (p.plan) setPlan(p.plan);
         if (Array.isArray(p.assets) && p.assets.length) setSelectedAssets(p.assets);
@@ -2185,10 +2301,21 @@ export default function App() {
     api.fetchBreakdown().then((b) => { if (b) setBreakdown(b); });
   }, [screen, session]);
 
-  const handleAuth = useCallback(async (email, pass, isSignup, coupon) => {
-    const r = isSignup ? await api.signUp(email, pass, undefined, coupon) : await api.signIn(email, pass);
+  const handleAuth = useCallback(async (email, pass) => {
+    const r = await api.signIn(email, pass);
     if (r.ok && !r.demo) setSession(await api.getSession());
     return r;
+  }, []);
+
+  const handleSignup = useCallback(async ({ name, email, phone, pass, coupon }) => {
+    const r = await api.signUp(email, pass, name, coupon, phone);
+    if (!r.ok || r.demo) return r;
+    if (r.session) {
+      setSession(r.session);
+      try { await api.updateProfileFields({ name, phone }); } catch { /* sincroniza no 1º login */ }
+      return { ok: true };
+    }
+    return { ok: true, needsConfirm: true }; // confirmação de e-mail ligada
   }, []);
 
   const handleLogout = useCallback(async () => {
@@ -2236,13 +2363,14 @@ export default function App() {
     switch (screen) {
       case "splash":        return <Splash {...common} onNext={() => go("welcome")} />;
       case "welcome":       return <Welcome {...common} onNext={() => go("risk")} onLogin={() => go("login")} />;
-      case "risk":          return <RiskWarning {...common} onNext={() => go("login")} />;
-      case "login":         return <Login {...common} onNext={(isSignup) => go(isSignup ? "plans" : "home")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} />;
+      case "risk":          return <RiskWarning {...common} onNext={() => go("signup")} />;
+      case "login":         return <Login {...common} onNext={() => go("home")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} onCreateAccount={() => go("signup")} />;
+      case "signup":        return <Signup {...common} onNext={() => go("plans")} onSignup={hasSupabase ? handleSignup : undefined} onHaveAccount={() => go("login")} />;
       case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
       case "timeframes":    return <Timeframes {...common} onNext={(changed) => { if (changed) stampTfChange(); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
       case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} showMock={showMock} onToggleMock={toggleMock} />;
-      case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} showMock={showMock} />;
+      case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} stats={stats} showMock={showMock} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} showMock={showMock} />;
       case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} />;
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} onTfPerf={() => go("tf-perf")} showMock={showMock} />;

@@ -44,21 +44,31 @@ export default async function handler(req, res) {
   if (error) return res.status(500).json({ error: "Falha ao ler sinais", detail: error.message });
 
   const relevant = (rows || []).filter((s) => isEligible(s, profile));
-  let ganhos = 0, perdas = 0, acumulado = 0;
-  for (const s of relevant) {
-    const pips = Number(s.result_pips) || 0;
-    acumulado += pips;
-    if (s.status === "ganho") ganhos++;
-    else if (s.status === "perda") perdas++;
-  }
-  const total = ganhos + perdas;
-  const assertividade = total ? ganhos / total : 0;
+
+  // Acumulado geral + recortes de hoje e da semana (7 dias).
+  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
+  const weekAgo = new Date(Date.now() - 7 * 86400000);
+  const agg = (list) => {
+    let g = 0, p = 0, pips = 0;
+    for (const s of list) {
+      pips += Number(s.result_pips) || 0;
+      if (s.status === "ganho") g++; else if (s.status === "perda") p++;
+    }
+    const tot = g + p;
+    return { ganhos: g, perdas: p, total: tot, pips: Math.round(pips), assertividade: tot ? Math.round((g / tot) * 100) : 0 };
+  };
+
+  const geral = agg(relevant);
+  const dia = agg(relevant.filter((s) => new Date(s.created_at) >= startOfDay));
+  const semana = agg(relevant.filter((s) => new Date(s.created_at) >= weekAgo));
 
   return res.status(200).json({
-    assertividade: Math.round(assertividade * 100) / 100,
-    ganhos,
-    perdas,
-    acumulado_pips: Math.round(acumulado),
-    amostra: total,
+    assertividade: geral.total ? Math.round((geral.ganhos / geral.total) * 100) / 100 : 0,
+    ganhos: geral.ganhos,
+    perdas: geral.perdas,
+    acumulado_pips: geral.pips,
+    amostra: geral.total,
+    dia,
+    semana,
   });
 }

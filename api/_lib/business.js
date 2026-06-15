@@ -25,7 +25,7 @@ export function normalizeAsset(symbol) {
   return null;
 }
 
-// Só M5/M15/H1 são suportados; outros timeframes do EA são ignorados.
+// Só M1/M5/M15 são suportados; outros timeframes do EA são ignorados.
 export function normalizeTf(tf) {
   const t = String(tf || "").toUpperCase();
   return TFS.includes(t) ? t : null;
