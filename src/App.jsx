@@ -404,9 +404,15 @@ const mapSignal = (s) => {
   const fromId = m ? new Date(parseInt(m[1], 10) * 1000) : null;
   const d = (fromId && !isNaN(fromId.getTime())) ? fromId : new Date(s.created_at || Date.now());
   const pad = (n) => String(n).padStart(2, "0");
+  const hhmm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  // Rótulo com DIA + horário: "Hoje 14:32" · "Ontem 16:10" · "12/06 16:10".
+  const today = new Date(); today.setHours(0, 0, 0, 0);
+  const sigDay = new Date(d); sigDay.setHours(0, 0, 0, 0);
+  const dayDiff = Math.round((today.getTime() - sigDay.getTime()) / 86400000);
+  const dateLbl = dayDiff === 0 ? "Hoje" : dayDiff === 1 ? "Ontem" : `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
   return {
     id: s.id, asset: s.asset, dir: s.dir, tf: s.tf,
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`, hour: d.getHours(),
+    time: `${dateLbl} ${hhmm}`, hhmm, hour: d.getHours(),
     ageMin: Math.round((Date.now() - d.getTime()) / 60000),
     status: s.status || "aberto",
     resultPips: s.result_pips,
@@ -504,11 +510,17 @@ const SignalRow = ({ s, t, onClick, pips }) => {
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>Resultado</span>
           <span style={{ fontWeight: 800, fontSize: 15, color: pips >= 0 ? t.buy : t.sell, fontFamily: FONT }}>
-            {pips >= 0 ? "+" : ""}{pips} pips
+            {pips >= 0 ? "+" : ""}{pips} pips · {pips >= 0 ? "✓" : "✗"}
           </span>
         </div>
       ) : (
-        <Bar pct={s.perf} color={ac} t={t} />
+        <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span className="live-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: t.warn }} />
+            <span style={{ fontSize: 12, fontWeight: 700, color: t.warn, fontFamily: FONT }}>Em andamento</span>
+          </div>
+          <span style={{ fontSize: 11.5, color: t.muted, fontFamily: FONT }}>aguardando TP/SL</span>
+        </div>
       )}
     </Card>
   );
@@ -1503,8 +1515,11 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
     .filter(r => r.status === "ganho" || r.status === "perda")
     .map(mapSignal);
   const shown = closed.filter(s =>
-    tab === "Todos" || (tab === "Ganhos" ? (s.resultPips || 0) >= 0 : (s.resultPips || 0) < 0));
+    tab === "Todos" || (tab === "Ganhos" ? s.status === "ganho" : s.status === "perda"));
   const total = shown.reduce((a, s) => a + (s.resultPips || 0), 0);
+  const wins = shown.filter(s => s.status === "ganho").length;
+  const losses = shown.length - wins;
+  const winRate = shown.length ? Math.round((wins / shown.length) * 100) : 0;
   const schedTxt = schedule.allDay ? "dia todo" : `${schedule.start}–${schedule.end}`;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -1524,6 +1539,11 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
               color: total >= 0 ? t.buy : t.sell, fontFamily: FONT }}>
               {total >= 0 ? "+" : ""}{total} pips
             </span>
+          </div>
+          <div style={{ display: "flex", gap: 12, marginBottom: 4 }}>
+            <span style={{ fontSize: 12, color: t.buy, fontWeight: 700, fontFamily: FONT }}>{wins} ganhos</span>
+            <span style={{ fontSize: 12, color: t.sell, fontWeight: 700, fontFamily: FONT }}>{losses} perdas</span>
+            <span style={{ fontSize: 12, color: t.sub, fontWeight: 700, fontFamily: FONT }}>{winRate}% acerto</span>
           </div>
           <p style={{ fontSize: 11, color: t.muted, margin: 0, fontFamily: FONT }}>
             🕐 Contabilizado no seu horário: {schedTxt}
