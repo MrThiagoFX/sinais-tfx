@@ -1,7 +1,7 @@
 // GET /api/stats — métricas de desempenho do usuário autenticado.
 // Calcula sobre public.signals (status, result_pips), respeitando as
 // preferências (ativos/timeframes) e a janela de horário do usuário.
-import { serviceClient, getUser, hasSupabase } from "./_lib/supabase.js";
+import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
 import { isEligible, startOfBrtDayMs } from "./_lib/business.js";
 
 export default async function handler(req, res) {
@@ -44,7 +44,9 @@ export default async function handler(req, res) {
     .limit(5000);
   if (error) return res.status(500).json({ error: "Falha ao ler sinais", detail: error.message });
 
-  const relevant = (rows || []).filter((s) => isEligible(s, profile));
+  // Admin conta todos os ativos/timeframes; cliente, só o que escolheu.
+  const admin = isAdmin(user);
+  const relevant = (rows || []).filter((s) => admin || isEligible(s, profile));
 
   // Acumulado geral + recortes de hoje (dia de Brasília) e da semana (7 dias).
   const dayStart = startOfBrtDayMs();
