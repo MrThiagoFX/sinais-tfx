@@ -1568,11 +1568,13 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
   );
 };
 
-const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, selectedAssets = [], tfPerAsset = {} }) => {
+const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, selectedAssets = [], tfPerAsset = {}, favorites = [], onToggleFav }) => {
   const [tog, setTog] = useState({ rt: true, daily: false, fav: true, sound: true });
   const [expanded, setExpanded] = useState(null);
   const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
   const isFree = plan === "free";
+  // Ativos que o usuário pode favoritar (Premium: os monitorados; Free: todos).
+  const favAssets = (isFree || !selectedAssets.length) ? ASSETS : selectedAssets;
   const ativosTxt = selectedAssets.length
     ? selectedAssets.map(a => `${a} (${(tfPerAsset[a] || []).join("/") || "—"})`).join(", ")
     : "nenhum ativo selecionado";
@@ -1587,10 +1589,8 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
       body: isFree
         ? "Plano Free: horários fixos (04:00 · 10:30 · 15:00 · 21:00). Faça upgrade para personalizar."
         : `Janela atual: ${schedTxt}. Para alterar, acesse Perfil → Horário de sinais.` },
-    { id: "fav2",    label: "Gerenciar favoritos",
-      body: isFree
-        ? "No plano Free os sinais são sortidos (M5/M15) — sem seleção de favoritos. Faça upgrade para escolher."
-        : `Seus ativos favoritos: ${ativosTxt}. Para alterar, acesse Perfil → Histórico por timeframe / Ativos.` },
+    { id: "fav2",    label: "Como funcionam os favoritos",
+      body: "Marque ⭐ em 'Operações favoritas' acima para receber notificação só desses ativos (entrada e conclusão). Sem nenhum favorito, você recebe todos os sinais elegíveis." },
     { id: "ativos",  label: "Ativos monitorados",
       body: isFree
         ? "Free recebe sinais sortidos dos 5 ativos. No Premium você escolhe."
@@ -1616,6 +1616,31 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
               <Toggle on={tog[id]} onChange={v => setTog(s => ({ ...s, [id]: v }))} t={t} />
             </Card>
           ))}
+          <Label t={t} style={{ marginTop: 22, marginBottom: 6 }}>⭐ Operações favoritas</Label>
+          <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 12px", lineHeight: 1.5, fontFamily: FONT }}>
+            Toque pra escolher os ativos que vão te notificar (entrada e conclusão).
+            {favorites.length === 0
+              ? " Nenhum favorito = você recebe TODOS."
+              : ` Só estes vão apitar: ${favorites.join(", ")}.`}
+          </p>
+          {favAssets.map(a => {
+            const on = favorites.includes(a);
+            return (
+              <Card key={a} t={t} onClick={() => onToggleFav && onToggleFav(a)}
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+                  marginBottom: 8, border: `1.5px solid ${on ? t.accent : t.bdr}` }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
+                  <AssetIcon asset={a} />
+                  <div>
+                    <div style={{ fontWeight: 800, fontSize: 14, color: t.text, fontFamily: FONT }}>{a}</div>
+                    <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>{ASSET_NAMES[a] || a}</div>
+                  </div>
+                </div>
+                <span style={{ fontSize: 22, lineHeight: 1, color: on ? t.accent : t.muted }}>{on ? "★" : "☆"}</span>
+              </Card>
+            );
+          })}
+
           <Label t={t} style={{ marginTop: 22, marginBottom: 12 }}>Mais opções</Label>
           {expandables.map(({ id, label, body }) => {
             const open = expanded === id;
@@ -2250,6 +2275,7 @@ export default function App() {
   const [profileData, setProfileData] = useState({ name: "", username: "", phone: "", avatar_url: "", referral_code: "" });
   const [tfChangedAt, setTfChangedAt] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
+  const [favorites, setFavorites] = useState([]); // ativos favoritos p/ notificação
 
   // Sem dados fictícios: as telas mostram apenas dados reais do servidor
   // (e estados vazios quando não há nada). Mantido como constante para
@@ -2299,6 +2325,7 @@ export default function App() {
           referral_code: p.referral_code || "",
         });
         setTfChangedAt(p.tf_changed_at || null);
+        if (Array.isArray(p.notify_favorites)) setFavorites(p.notify_favorites);
       }
       if (alive) setProfileLoaded(true);
       api.registerPush();
@@ -2377,6 +2404,14 @@ export default function App() {
     setTfPerAsset(cfg => ({ ...cfg, [asset]: [tf] }));
     stampTfChange();
   }, [stampTfChange]);
+  // Marca/desmarca um ativo como favorito (push só apita os favoritos). Persiste.
+  const toggleFavorite = useCallback((asset) => {
+    setFavorites(curr => {
+      const next = curr.includes(asset) ? curr.filter(a => a !== asset) : [...curr, asset];
+      api.updateProfileFields({ notify_favorites: next });
+      return next;
+    });
+  }, []);
 
   const t = THEMES[themeId];
   const toggleTheme = useCallback(() => setThemeId(x => x === "dark" ? "light" : "dark"), []);
@@ -2410,7 +2445,7 @@ export default function App() {
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} onTfPerf={() => go("tf-perf")} showMock={showMock} />;
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
       case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} />;
-      case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
+      case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} favorites={favorites} onToggleFav={toggleFavorite} />;
       case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
       case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;

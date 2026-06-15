@@ -15,6 +15,15 @@ if (hasVapid) {
   );
 }
 
+// O ativo do sinal está entre os favoritos do usuário?
+// Sem favoritos marcados → notifica todos (comportamento padrão).
+// Com favoritos → só notifica os ativos escolhidos (não apita todos).
+function isFavorite(signal, profile) {
+  const favs = profile?.notify_favorites;
+  if (!Array.isArray(favs) || favs.length === 0) return true;
+  return favs.includes(signal.asset);
+}
+
 // Notifica todos os usuários elegíveis a `signal` (asset/tf/janela/cota).
 // Incrementa daily_usage e remove subscriptions expiradas (410/404).
 export async function notifyEligibleUsers(signal) {
@@ -34,6 +43,7 @@ export async function notifyEligibleUsers(signal) {
   let sent = 0;
   for (const profile of profiles) {
     if (!isEligible(signal, profile)) continue;
+    if (!isFavorite(signal, profile)) continue;
 
     // Respeita a cota diária do plano.
     const { data: usage } = await sb
@@ -94,6 +104,7 @@ export async function notifyClose(signal) {
   let sent = 0;
   for (const profile of profiles) {
     if (!isEligible(signal, profile)) continue;
+    if (!isFavorite(signal, profile)) continue;
 
     const { data: subs } = await sb
       .from("push_subscriptions")
