@@ -60,6 +60,16 @@ function hourOf(hhmm) {
   return parseInt(String(hhmm || "0").slice(0, 2), 10) || 0;
 }
 
+// Hora (0-23) do instante no fuso de Brasília (UTC-3, sem horário de verão
+// desde 2019). A Vercel roda em UTC, então não dá pra usar date.getHours()
+// direto — as janelas/slots do usuário são em horário de Brasília.
+export function hourInBrasilia(date) {
+  const f = new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false,
+  });
+  return parseInt(f.format(date), 10) % 24;
+}
+
 // Plano Free tem janela FIXA (não personalizável) — espelha FREE_SCHEDULE do front.
 export const FREE_WINDOW = { start: 8, end: 18 };
 
@@ -68,7 +78,7 @@ export const FREE_WINDOW = { start: 8, end: 18 };
 export function inWindow(date, profile) {
   if (!profile) return true;
   if (isAnualLike(profile.plan) && profile.schedule_all_day) return true;
-  const h = date.getHours();
+  const h = hourInBrasilia(date);
   if (profile.plan === "free") return h >= FREE_WINDOW.start && h < FREE_WINDOW.end;
   const start = hourOf(profile.schedule_start || "08:00");
   const end = hourOf(profile.schedule_end || "18:00");
