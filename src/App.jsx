@@ -2199,15 +2199,27 @@ export default function App() {
     XAUUSD: ["M5"], NAS100: ["M15"], US30: ["M5"],
   });
   const [schedule, setSchedule] = useState({ start: "08:00", end: "18:00", allDay: false });
-  const [isMobile, setIsMobile] = useState(
-    typeof window !== "undefined" ? window.innerWidth < 520 : false
-  );
+  // Viewport real (largura + altura). Recalcula no resize e ao girar a tela,
+  // para o app se adaptar a qualquer display: celular, iPad, desktop.
+  const [vp, setVp] = useState(() => ({
+    w: typeof window !== "undefined" ? window.innerWidth : 390,
+    h: typeof window !== "undefined" ? window.innerHeight : 844,
+  }));
 
   useEffect(() => {
-    const onResize = () => setIsMobile(window.innerWidth < 520);
+    const onResize = () => setVp({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener("resize", onResize);
-    return () => window.removeEventListener("resize", onResize);
+    window.addEventListener("orientationchange", onResize);
+    return () => {
+      window.removeEventListener("resize", onResize);
+      window.removeEventListener("orientationchange", onResize);
+    };
   }, []);
+
+  // Tela estreita (celular) → app ocupa tudo, edge-to-edge.
+  // Telas largas (iPad/desktop) → cartão centralizado que escala com o display.
+  const edgeToEdge = vp.w <= 540;
+  const isMobile = edgeToEdge; // compat. com o restante do render
 
   // ── Integração com backend (Fase 5) — ativa só quando o Supabase está configurado.
   // Sem credenciais (hasSupabase=false), tudo abaixo é no-op e o app roda em modo demo.
@@ -2395,23 +2407,28 @@ export default function App() {
 
   const isDev = import.meta.env.DEV;
 
-  /* ── APP REAL: produção (celular ou desktop) e também o celular em dev.
-     Celular → tela cheia. Desktop em produção → coluna centralizada estilo app mobile. ── */
-  if (!isDev || isMobile) {
+  /* ── APP REAL: produção (qualquer display) e também o celular em dev.
+     Sistema fluido: mede o viewport e se adapta.
+       • Celular (estreito)  → ocupa a tela inteira (edge-to-edge).
+       • iPad / desktop      → cartão centralizado que escala com a tela. ── */
+  if (!isDev || edgeToEdge) {
+    // Largura-base estilo celular; em telas maiores vira coluna centralizada.
+    const cardW = edgeToEdge ? "100%" : Math.min(vp.w - 32, 460);
+    // Altura cresce com a tela até um teto, sempre com folga p/ centralizar.
+    const cardH = edgeToEdge ? "100dvh" : Math.min(vp.h - 32, 920);
     return (
-      <div style={{ height: "100dvh", display: "flex", justifyContent: "center",
-        alignItems: isMobile ? "stretch" : "center", fontFamily: FONT,
-        background: isMobile ? t.bg0 : (themeId === "dark"
+      <div style={{ minHeight: "100dvh", height: "100dvh", display: "flex",
+        justifyContent: "center", alignItems: "center", fontFamily: FONT,
+        background: edgeToEdge ? t.bg0 : (themeId === "dark"
           ? "radial-gradient(circle at 50% 30%, #11161f 0%, #03050a 78%)"
           : "radial-gradient(circle at 50% 30%, #FFFFFF 0%, #D2E0ED 80%)"),
         transition: "background .3s" }}>
         <GlobalStyle t={t} />
-        <div className={isMobile ? "safe-top" : undefined} style={{ width: "100%", maxWidth: isMobile ? "100%" : 460,
-          height: isMobile ? "100%" : "min(calc(100dvh - 40px), 880px)",
+        <div className={edgeToEdge ? "safe-top" : undefined} style={{ width: cardW, height: cardH,
           display: "flex", flexDirection: "column", overflow: "hidden", background: t.bg0,
-          borderRadius: isMobile ? 0 : 28,
-          border: isMobile ? "none" : `1px solid ${t.bdr}`,
-          boxShadow: isMobile ? "none" : "0 24px 80px rgba(0,0,0,.45)" }}>
+          borderRadius: edgeToEdge ? 0 : 28,
+          border: edgeToEdge ? "none" : `1px solid ${t.bdr}`,
+          boxShadow: edgeToEdge ? "none" : "0 24px 80px rgba(0,0,0,.45)" }}>
           <div className="screen-anim" key={screen}>{render()}</div>
         </div>
       </div>
