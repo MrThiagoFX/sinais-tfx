@@ -2,7 +2,7 @@
 // Calcula sobre public.signals (status, result_pips), respeitando as
 // preferências (ativos/timeframes) e a janela de horário do usuário.
 import { serviceClient, getUser, hasSupabase } from "./_lib/supabase.js";
-import { isEligible } from "./_lib/business.js";
+import { isEligible, signalTimeMs } from "./_lib/business.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -58,9 +58,10 @@ export default async function handler(req, res) {
     return { ganhos: g, perdas: p, total: tot, pips: Math.round(pips), assertividade: tot ? Math.round((g / tot) * 100) : 0 };
   };
 
+  // Usa o horário REAL do sinal (signal_id) — coerente com a tela Sinais.
   const geral = agg(relevant);
-  const dia = agg(relevant.filter((s) => new Date(s.created_at) >= startOfDay));
-  const semana = agg(relevant.filter((s) => new Date(s.created_at) >= weekAgo));
+  const dia = agg(relevant.filter((s) => signalTimeMs(s) >= startOfDay.getTime()));
+  const semana = agg(relevant.filter((s) => signalTimeMs(s) >= weekAgo.getTime()));
 
   return res.status(200).json({
     assertividade: geral.total ? Math.round((geral.ganhos / geral.total) * 100) / 100 : 0,

@@ -46,6 +46,19 @@ export function computePips(asset, dir, entry, exit) {
   return Math.round((dir === "Compra" ? raw : -raw));
 }
 
+// Horário REAL do sinal (epoch ms). O signal_id do EA termina no horário do
+// sinal em unix-segundos (ex.: "XAUUSD_M5_BUY_1781286600"). Usa-o quando houver;
+// senão, o created_at. Serve para ordenar e datar de forma consistente — o
+// created_at é a hora de inserção (o backfill chega tudo junto e bagunça a ordem).
+export function signalTimeMs(s) {
+  const m = /(\d{10})\D*$/.exec(s?.signal_id || "");
+  if (m) {
+    const ms = parseInt(m[1], 10) * 1000;
+    if (Number.isFinite(ms)) return ms;
+  }
+  return new Date(s?.created_at || Date.now()).getTime();
+}
+
 // Cota diária de sinais: Free = configurável pelo admin (2 a 4) · Premium = 20.
 export function dailyQuota(profile, freeQuota = 4) {
   if (!profile || profile.plan === "free") {
