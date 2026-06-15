@@ -163,6 +163,18 @@ export async function fetchSignals() {
   } catch { return null; }
 }
 
+// Realtime: chama onChange a cada INSERT/UPDATE/DELETE na tabela signals.
+// Requer "Realtime" habilitado na tabela signals no Supabase (Database →
+// Replication). Se não estiver, simplesmente não dispara — o polling cobre.
+export function subscribeSignals(onChange) {
+  if (!supabase) return () => {};
+  const ch = supabase
+    .channel("rt-signals")
+    .on("postgres_changes", { event: "*", schema: "public", table: "signals" }, onChange)
+    .subscribe();
+  return () => { try { supabase.removeChannel(ch); } catch { /* ignore */ } };
+}
+
 export async function fetchStats() {
   if (!hasSupabase) return null;
   try {

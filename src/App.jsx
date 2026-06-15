@@ -2340,7 +2340,8 @@ export default function App() {
       schedule: plan === "free" ? FREE_SCHEDULE : schedule });
   }, [plan, selectedAssets, tfPerAsset, schedule, session, profileLoaded]);
 
-  // Busca dados reais nas telas de dados e atualiza a cada 30s (polling do feed).
+  // Atualização do feed: realtime (Supabase) + polling 15s + ao voltar pro app.
+  // Cobre o caso de bater TP/SL com o app aberto ou ao tocar na notificação.
   useEffect(() => {
     if (!hasSupabase || !session) return;
     if (!["home", "signals", "performance", "history"].includes(screen)) return;
@@ -2352,8 +2353,20 @@ export default function App() {
       if (st) setStats(st);
     };
     pull();
-    const id = setInterval(pull, 30000);
-    return () => { alive = false; clearInterval(id); };
+    const id = setInterval(pull, 15000);
+    // Atualiza na hora ao voltar pro app (ex.: tocar na notificação de fechamento).
+    const onVisible = () => { if (document.visibilityState === "visible") pull(); };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", pull);
+    // Realtime: qualquer mudança em signals refaz o fetch imediatamente.
+    const unsub = api.subscribeSignals(() => pull());
+    return () => {
+      alive = false;
+      clearInterval(id);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", pull);
+      unsub();
+    };
   }, [screen, session]);
 
   // Busca o desempenho por timeframe ao abrir a tela.

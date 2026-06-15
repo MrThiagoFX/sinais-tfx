@@ -20,9 +20,10 @@ export default async function handler(req, res) {
   const sb = serviceClient();
   const { data: profile } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
 
-  // Janela base: últimos 90 dias…
+  // Janela base: últimos 30 dias (contabilidade mensal — histórico real curto
+  // e consistente, em vez de acumular meses)…
   const since = new Date();
-  since.setDate(since.getDate() - 90);
+  since.setDate(since.getDate() - 30);
 
   // …mas o admin pode definir a data em que o histórico "real" começa
   // (descarta o período de teste). Vale a data mais recente entre as duas.
