@@ -96,31 +96,44 @@ async function getSignals(req, res) {
 
   const { data: profile } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
   let freeQuota = 4;
+  // Janela base para "operações recentes": últimos 30 dias…
+  let cutoff = new Date(Date.now() - 30 * 86400000);
   try {
-    const { data: cfg } = await sb.from("app_settings").select("free_quota").eq("id", 1).maybeSingle();
+    const { data: cfg } = await sb.from("app_settings").select("free_quota, history_start_date").eq("id", 1).maybeSingle();
     if (cfg?.free_quota) freeQuota = cfg.free_quota;
-  } catch { /* coluna ainda não criada */ }
+    // …mas o admin pode definir a data em que o histórico "real" começa.
+    if (cfg?.history_start_date) {
+      const d = new Date(cfg.history_start_date);
+      if (d > cutoff) cutoff = d;
+    }
+  } catch { /* colunas ainda não criadas */ }
   const quota = dailyQuota(profile, freeQuota);
 
-  // Busca os sinais do dia e filtra na aplicação pelas preferências do usuário.
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-
+  // Lê os sinais recentes (até 30 dias) e filtra na aplicação pelas preferências.
   const { data: rows, error } = await sb
     .from("signals")
     .select("*")
-    .gte("created_at", startOfDay.toISOString())
+    .gte("created_at", cutoff.toISOString())
     .order("created_at", { ascending: false })
-    .limit(200);
+    .limit(300);
   if (error) return res.status(500).json({ error: "Falha ao ler sinais", detail: error.message });
 
   const eligible = (rows || []).filter((s) => isEligible(s, profile));
-  const signals = eligible.slice(0, quota);
+
+  // Sinais de HOJE → alimentam o contador "sinais hoje" e respeitam a cota.
+  const startOfDay = new Date();
+  startOfDay.setHours(0, 0, 0, 0);
+  const todayEligible = eligible.filter((s) => new Date(s.created_at) >= startOfDay);
+  const signals = todayEligible.slice(0, quota);
+
+  // Operações recentes (qualquer dia) → tela Sinais, Histórico e Dashboard.
+  const recent = eligible.slice(0, 24);
 
   return res.status(200).json({
     plan: profile?.plan || "free",
     quota,
     delivered: signals.length,
     signals,
+    recent,
   });
 }

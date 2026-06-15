@@ -994,17 +994,15 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
 
 const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, showMock, onToggleMock }) => {
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
+  const recentSignals = live?.recent?.length ? live.recent.map(mapSignal) : null;
   const quota = live?.quota ?? dailyQuota(plan);
-  const used = live?.delivered ?? (showMock ? Math.min(3, quota) : 0);
+  const used = live?.delivered ?? 0;
   const info = PLAN_INFO[plan];
   const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
-  // Sinais reais quando há; senão mock só se "dados fictícios" estiver ligado.
-  const mockRecent = SIGNALS_DATA.filter(s => selectedAssets.includes(s.asset)).slice(0, 3);
-  const recent = liveSignals
-    ? liveSignals.slice(0, 3)
-    : (showMock ? (mockRecent.length ? mockRecent : SIGNALS_DATA.slice(0, 3)) : []);
-  const assertTxt = stats ? `${Math.round((stats.assertividade || 0) * 100)}%` : (showMock ? "71%" : "—");
-  const acumTxt = stats ? `${stats.acumulado_pips >= 0 ? "+" : ""}${stats.acumulado_pips} pips` : (showMock ? "+313 pips" : "—");
+  // Últimos sinais: os de hoje quando há; senão as operações recentes do servidor.
+  const recent = (liveSignals || recentSignals || []).slice(0, 3);
+  const assertTxt = stats ? `${Math.round((stats.assertividade || 0) * 100)}%` : "—";
+  const acumTxt = stats ? `${stats.acumulado_pips >= 0 ? "+" : ""}${stats.acumulado_pips} pips` : "—";
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <Scroll>
@@ -1028,16 +1026,6 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
               <ThemeToggle t={t} onToggle={onToggleTheme} />
             </div>
           </div>
-
-          <button onClick={onToggleMock} style={{
-            width: "100%", marginBottom: 14, cursor: "pointer",
-            background: showMock ? t.accentSoft : t.card,
-            border: `1.5px solid ${showMock ? t.accent : t.bdr}`,
-            borderRadius: 12, padding: "10px 14px",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            color: showMock ? t.accent : t.sub, fontSize: 12.5, fontWeight: 700, fontFamily: FONT }}>
-            🧪 {showMock ? "Dados fictícios ATIVOS — toque para ocultar" : "Exibir dados fictícios"}
-          </button>
 
           <div style={{ background: t.card2, border: `1.5px solid ${t.accentBdr}`,
             borderRadius: 22, padding: "20px 20px 18px", marginBottom: 14 }}>
@@ -1090,15 +1078,11 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
   const [filter, setFilter] = useState("Todos");
   const inWindow = h => schedule.allDay || (h >= parseInt(schedule.start) && h < parseInt(schedule.end));
   // Com backend, o /api já devolve os sinais filtrados por plano/ativos/janela/cota.
+  // O backend já devolve os sinais filtrados por plano/ativos/janela/cota:
+  // `signals` = os de hoje; `recent` = as operações recentes (qualquer dia).
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
-  const mockBase = plan === "free"
-    ? SIGNALS_DATA.filter(s => inWindow(s.hour)).slice(0, 4)
-    : SIGNALS_DATA.filter(s =>
-        selectedAssets.includes(s.asset) &&
-        (tfPerAsset[s.asset] || []).includes(s.tf) &&
-        inWindow(s.hour)
-      );
-  const base = liveSignals || (showMock ? mockBase : []);
+  const recentSignals = live?.recent?.length ? live.recent.map(mapSignal) : null;
+  const base = liveSignals || recentSignals || [];
   const shown = base.filter(s =>
     filter === "Todos" || (filter === "Compras" ? s.dir === "Compra" : s.dir === "Venda"));
   return (
@@ -1113,8 +1097,8 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
         } />
       {(() => {
         const zero = { pips: 0, assertividade: 0, total: 0 };
-        const dia = stats?.dia || (showMock ? { pips: 6, assertividade: 67, total: 3 } : zero);
-        const semana = stats?.semana || (showMock ? { pips: 41, assertividade: 72, total: 18 } : zero);
+        const dia = stats?.dia || zero;
+        const semana = stats?.semana || zero;
         const row = (label, d) => {
           const pos = (d.pips || 0) >= 0;
           return (
@@ -1163,6 +1147,7 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
           </Card>
         ) : shown.map(s => (
           <SignalRow key={s.id} s={s} t={t}
+            pips={s.status && s.status !== "aberto" ? s.resultPips : undefined}
             onClick={() => { onOpenSignal(s); onNav("signal-detail"); }} />
         ))}
         <div style={{ height: 16 }} />
@@ -1505,15 +1490,16 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, onTfPerf,
   );
 };
 
-const History = ({ t, onNav, onToggleTheme, schedule, selectedAssets, plan, showMock }) => {
+const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
   const [tab, setTab] = useState("Todos");
-  const inWindow = h => schedule.allDay || (h >= parseInt(schedule.start) && h < parseInt(schedule.end));
-  const source = showMock ? HISTORY_DATA : [];
-  const base = source.filter(s =>
-    inWindow(s.hour) && (plan === "free" || selectedAssets.includes(s.asset)));
-  const shown = base.filter(s =>
-    tab === "Todos" || (tab === "Ganhos" ? s.pips >= 0 : s.pips < 0));
-  const total = shown.reduce((a,s) => a + s.pips, 0);
+  // Operações fechadas reais enviadas pelo MT4/VPS ao servidor (já filtradas
+  // pelo backend por plano/ativos/timeframe). `recent` traz qualquer dia.
+  const closed = (live?.recent || [])
+    .filter(r => r.status === "ganho" || r.status === "perda")
+    .map(mapSignal);
+  const shown = closed.filter(s =>
+    tab === "Todos" || (tab === "Ganhos" ? (s.resultPips || 0) >= 0 : (s.resultPips || 0) < 0));
+  const total = shown.reduce((a, s) => a + (s.resultPips || 0), 0);
   const schedTxt = schedule.allDay ? "dia todo" : `${schedule.start}–${schedule.end}`;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -1546,7 +1532,10 @@ const History = ({ t, onNav, onToggleTheme, schedule, selectedAssets, plan, show
               Nenhuma operação no período.<br />Seu histórico aparece aqui conforme os sinais são fechados.
             </p>
           </Card>
-        ) : shown.map((s,i) => <SignalRow key={i} s={s} t={t} pips={s.pips} />)}
+        ) : shown.map((s, i) => (
+          <SignalRow key={s.id ?? i} s={s} t={t} pips={s.resultPips}
+            onClick={() => { onOpenSignal(s); onNav("signal-detail"); }} />
+        ))}
         <div style={{ height: 16 }} />
       </Scroll>
       <BottomNav active="history" onNav={onNav} t={t} />
@@ -2232,16 +2221,10 @@ export default function App() {
   const [tfChangedAt, setTfChangedAt] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
 
-  // Dados fictícios (mock) para ajustar a UI. Padrão: DESLIGADO → as telas
-  // mostram só dados reais (e estados vazios). Ligado por um botão na Home.
-  const [showMock, setShowMock] = useState(() => {
-    try { return localStorage.getItem("tfx_show_mock") === "1"; } catch { return false; }
-  });
-  const toggleMock = useCallback(() => setShowMock(v => {
-    const nv = !v;
-    try { localStorage.setItem("tfx_show_mock", nv ? "1" : "0"); } catch { /* ignore */ }
-    return nv;
-  }), []);
+  // Sem dados fictícios: as telas mostram apenas dados reais do servidor
+  // (e estados vazios quando não há nada). Mantido como constante para
+  // neutralizar os antigos fallbacks de mock sem refatorar cada tela.
+  const showMock = false;
 
   // Captura ?ref=CODE da URL (link de indicação) ao abrir o app.
   useEffect(() => { api.captureRefFromUrl(); }, []);
@@ -2390,13 +2373,13 @@ export default function App() {
       case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
       case "timeframes":    return <Timeframes {...common} onNext={(changed) => { if (changed) stampTfChange(); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
-      case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} showMock={showMock} onToggleMock={toggleMock} />;
+      case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
       case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} stats={stats} showMock={showMock} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} showMock={showMock} />;
       case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} />;
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} onTfPerf={() => go("tf-perf")} showMock={showMock} />;
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
-      case "history":       return <History {...common} onNav={nav} {...bizState} showMock={showMock} />;
+      case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
       case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
