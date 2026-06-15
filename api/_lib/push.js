@@ -73,3 +73,44 @@ export async function notifyEligibleUsers(signal) {
   }
   return { sent };
 }
+
+// Notifica o FECHAMENTO de um sinal (bateu TP ou STOP) aos usuários elegíveis.
+// Não consome cota (não é um sinal novo) e remove subscriptions expiradas.
+export async function notifyClose(signal) {
+  if (!hasVapid) return { sent: 0, skipped: "VAPID ausente" };
+  const sb = serviceClient();
+
+  const { data: profiles, error: pErr } = await sb.from("profiles").select("*");
+  if (pErr || !profiles) return { sent: 0, error: pErr?.message };
+
+  const win = signal.status === "ganho";
+  const pips = Number(signal.result_pips) || 0;
+  const payload = JSON.stringify({
+    title: win ? `🎯 ${signal.asset} bateu o alvo (TP)` : `🛑 ${signal.asset} bateu o stop (SL)`,
+    body: `${signal.dir} · ${signal.tf} · resultado ${pips >= 0 ? "+" : ""}${pips} pips`,
+    url: "/",
+  });
+
+  let sent = 0;
+  for (const profile of profiles) {
+    if (!isEligible(signal, profile)) continue;
+
+    const { data: subs } = await sb
+      .from("push_subscriptions")
+      .select("id, subscription")
+      .eq("user_id", profile.id);
+    if (!subs?.length) continue;
+
+    for (const row of subs) {
+      try {
+        await webpush.sendNotification(row.subscription, payload);
+        sent++;
+      } catch (err) {
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          await sb.from("push_subscriptions").delete().eq("id", row.id);
+        }
+      }
+    }
+  }
+  return { sent };
+}

@@ -397,7 +397,12 @@ const rrText = (entry, sl, tp) => {
 };
 
 const mapSignal = (s) => {
-  const d = new Date(s.created_at || Date.now());
+  // O signal_id do EA termina no horário real do sinal (unix em segundos),
+  // ex.: "XAUUSD_M5_BUY_1781286600". Usa-o quando houver; senão, o created_at.
+  // (Corrige os horários iguais do lote de backfill enviado de uma vez.)
+  const m = /(\d{10})(?:\D*)$/.exec(s.signal_id || "");
+  const fromId = m ? new Date(parseInt(m[1], 10) * 1000) : null;
+  const d = (fromId && !isNaN(fromId.getTime())) ? fromId : new Date(s.created_at || Date.now());
   const pad = (n) => String(n).padStart(2, "0");
   return {
     id: s.id, asset: s.asset, dir: s.dir, tf: s.tf,
@@ -1908,12 +1913,17 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
               </div>
               <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center" }}>
                 <span style={{ fontSize: 10.5, color: t.muted, fontFamily: FONT, flexShrink: 0 }}>Validade:</span>
-                {[["+15d", 15], ["+30d", 30], ["Sem limite", 0]].map(([lbl, d]) => (
-                  <button key={lbl} onClick={() => setExpiry(u.id, d)} style={{
-                    flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 10.5, fontWeight: 700,
-                    cursor: "pointer", fontFamily: FONT, border: `1px solid ${t.bdr}`,
-                    background: "transparent", color: t.sub }}>{lbl}</button>
-                ))}
+                {[["+15d", 15], ["+30d", 30], ["Sem limite", 0]].map(([lbl, d]) => {
+                  const active = d === 0 && !u.plan_expires_at; // "Sem limite" aceso quando ilimitado
+                  return (
+                    <button key={lbl} onClick={() => setExpiry(u.id, d)} style={{
+                      flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 10.5, fontWeight: 700,
+                      cursor: "pointer", fontFamily: FONT,
+                      border: `1px solid ${active ? t.accent : t.bdr}`,
+                      background: active ? t.accent : "transparent",
+                      color: active ? t.activeText : t.sub }}>{lbl}</button>
+                  );
+                })}
               </div>
             </Card>
           ))}

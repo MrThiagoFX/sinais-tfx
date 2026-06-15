@@ -7,7 +7,7 @@ import {
   isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips,
 } from "./_lib/business.js";
 import { serviceClient, getUser, hasSupabase } from "./_lib/supabase.js";
-import { notifyEligibleUsers } from "./_lib/push.js";
+import { notifyEligibleUsers, notifyClose } from "./_lib/push.js";
 
 export default async function handler(req, res) {
   if (req.method === "POST") return postSignal(req, res);
@@ -57,7 +57,14 @@ async function postSignal(req, res) {
                  : q.eq("asset", asset).eq("tf", tf).eq("dir", dir).eq("status", "aberto");
     const { data, error } = await q.select();
     if (error) return res.status(500).json({ error: "Falha ao fechar sinal", detail: error.message });
-    return res.status(200).json({ ok: true, event, closed: data?.length || 0, result_pips: pips, status });
+
+    // Notifica o fechamento (TP/SL) aos usuários elegíveis.
+    let push = { sent: 0 };
+    if (data?.length) {
+      try { push = await notifyClose(data[0]); }
+      catch (e) { push = { sent: 0, error: e.message }; }
+    }
+    return res.status(200).json({ ok: true, event, closed: data?.length || 0, result_pips: pips, status, push });
   }
 
   // ── Abertura: grava e dispara push ──
@@ -118,7 +125,14 @@ async function getSignals(req, res) {
     .limit(300);
   if (error) return res.status(500).json({ error: "Falha ao ler sinais", detail: error.message });
 
-  const eligible = (rows || []).filter((s) => isEligible(s, profile));
+  // Anti-travamento: um "aberto" com mais de 12h é resíduo (o CLOSE se perdeu
+  // ou o EA reiniciou) — M5/M15 não ficam abertos tanto tempo. Não exibe.
+  const STALE_OPEN_MS = 12 * 3600 * 1000;
+  const now = Date.now();
+  const fresh = (rows || []).filter(
+    (s) => !(s.status === "aberto" && now - new Date(s.created_at).getTime() > STALE_OPEN_MS)
+  );
+  const eligible = fresh.filter((s) => isEligible(s, profile));
 
   // Sinais de HOJE → alimentam o contador "sinais hoje" e respeitam a cota.
   const startOfDay = new Date();
