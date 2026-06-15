@@ -411,7 +411,7 @@ const mapSignal = (s) => {
   const dayDiff = Math.round((today.getTime() - sigDay.getTime()) / 86400000);
   const dateLbl = dayDiff === 0 ? "Hoje" : dayDiff === 1 ? "Ontem" : `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
   return {
-    id: s.id, asset: s.asset, dir: s.dir, tf: s.tf,
+    id: s.id, signalId: s.signal_id, asset: s.asset, dir: s.dir, tf: s.tf,
     time: `${dateLbl} ${hhmm}`, hhmm, hour: d.getHours(),
     ageMin: Math.round((Date.now() - d.getTime()) / 60000),
     status: s.status || "aberto",
@@ -424,7 +424,7 @@ const mapSignal = (s) => {
 };
 
 // Card de sinal do Dashboard: mostra "em andamento" (com painel), ✓ ganho ou ✗ perda.
-const DashSignalCard = ({ s, t, onClick }) => {
+const DashSignalCard = ({ s, t, onClick, fav, onToggleFav }) => {
   const buy = s.dir === "Compra";
   const ac = buy ? t.buy : t.sell;
   const open = s.status === "aberto" || s.status == null;
@@ -442,10 +442,18 @@ const DashSignalCard = ({ s, t, onClick }) => {
           </div>
         </div>
         {open ? (
-          <div style={{ display: "flex", alignItems: "center", gap: 6, background: `${t.warn}1A`,
-            border: `1px solid ${t.warn}40`, borderRadius: 8, padding: "4px 9px" }}>
-            <span className="live-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: t.warn }} />
-            <span style={{ fontSize: 11, fontWeight: 800, color: t.warn, fontFamily: FONT }}>Em andamento</span>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {onToggleFav && (
+              <button onClick={(e) => { e.stopPropagation(); onToggleFav(); }} title="Avisar quando fechar"
+                aria-label="Favoritar para alerta de fechamento" style={{
+                  background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1,
+                  fontSize: 20, color: fav ? t.accent : t.muted }}>{fav ? "★" : "☆"}</button>
+            )}
+            <div style={{ display: "flex", alignItems: "center", gap: 6, background: `${t.warn}1A`,
+              border: `1px solid ${t.warn}40`, borderRadius: 8, padding: "4px 9px" }}>
+              <span className="live-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: t.warn }} />
+              <span style={{ fontSize: 11, fontWeight: 800, color: t.warn, fontFamily: FONT }}>Em andamento</span>
+            </div>
           </div>
         ) : (
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
@@ -487,7 +495,7 @@ const DashSignalCard = ({ s, t, onClick }) => {
 // Janela em que o sinal ainda pode ser copiado/entrado (minutos).
 const COPY_WINDOW_MIN = 10;
 
-const SignalRow = ({ s, t, onClick, pips }) => {
+const SignalRow = ({ s, t, onClick, pips, fav, onToggleFav }) => {
   const buy = s.dir === "Compra";
   const ac = buy ? t.buy : t.sell;
   return (
@@ -519,7 +527,20 @@ const SignalRow = ({ s, t, onClick, pips }) => {
             <span className="live-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: t.warn }} />
             <span style={{ fontSize: 12, fontWeight: 700, color: t.warn, fontFamily: FONT }}>Em andamento</span>
           </div>
-          <span style={{ fontSize: 11.5, color: t.muted, fontFamily: FONT }}>aguardando TP/SL</span>
+          {onToggleFav ? (
+            <button onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
+              aria-label="Avisar quando fechar" style={{
+                background: fav ? t.accentSoft : "transparent", cursor: "pointer",
+                border: `1px solid ${fav ? t.accent : t.bdr}`, borderRadius: 8, padding: "4px 9px",
+                display: "flex", alignItems: "center", gap: 5, fontFamily: FONT }}>
+              <span style={{ fontSize: 14, lineHeight: 1, color: fav ? t.accent : t.muted }}>{fav ? "★" : "☆"}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: fav ? t.accent : t.sub }}>
+                {fav ? "avisando" : "avisar ao fechar"}
+              </span>
+            </button>
+          ) : (
+            <span style={{ fontSize: 11.5, color: t.muted, fontFamily: FONT }}>aguardando TP/SL</span>
+          )}
         </div>
       )}
     </Card>
@@ -1009,7 +1030,7 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
   );
 };
 
-const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, showMock, onToggleMock }) => {
+const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, closeAlerts = [], onToggleCloseAlert }) => {
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
   const recentSignals = live?.recent?.length ? live.recent.map(mapSignal) : null;
   const quota = live?.quota ?? dailyQuota(plan);
@@ -1070,6 +1091,8 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
             </Card>
           ) : recent.map((s, i) => (
             <DashSignalCard key={s.id ?? i} s={s} t={t}
+              fav={closeAlerts.includes(s.signalId)}
+              onToggleFav={s.signalId && onToggleCloseAlert ? () => onToggleCloseAlert(s.signalId) : undefined}
               onClick={() => { onOpenSignal(s); onNav("signal-detail"); }} />
           ))}
           <div style={{ height: 4 }} />
@@ -1091,7 +1114,7 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
   );
 };
 
-const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live, stats, showMock }) => {
+const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live, stats, showMock, closeAlerts = [], onToggleCloseAlert }) => {
   const [filter, setFilter] = useState("Todos");
   const inWindow = h => schedule.allDay || (h >= parseInt(schedule.start) && h < parseInt(schedule.end));
   // Com backend, o /api já devolve os sinais filtrados por plano/ativos/janela/cota.
@@ -1162,11 +1185,16 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
               Nenhum sinal no seu horário e filtros atuais.<br />Ajuste nos Filtros ou no Perfil.
             </p>
           </Card>
-        ) : shown.map(s => (
-          <SignalRow key={s.id} s={s} t={t}
-            pips={s.status && s.status !== "aberto" ? s.resultPips : undefined}
-            onClick={() => { onOpenSignal(s); onNav("signal-detail"); }} />
-        ))}
+        ) : shown.map(s => {
+          const open = !s.status || s.status === "aberto";
+          return (
+            <SignalRow key={s.id} s={s} t={t}
+              pips={open ? undefined : s.resultPips}
+              fav={open ? closeAlerts.includes(s.signalId) : undefined}
+              onToggleFav={open && s.signalId && onToggleCloseAlert ? () => onToggleCloseAlert(s.signalId) : undefined}
+              onClick={() => { onOpenSignal(s); onNav("signal-detail"); }} />
+          );
+        })}
         <div style={{ height: 16 }} />
       </Scroll>
       <BottomNav active="signals" onNav={onNav} t={t} />
@@ -1568,13 +1596,11 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
   );
 };
 
-const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, selectedAssets = [], tfPerAsset = {}, favorites = [], onToggleFav }) => {
+const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, selectedAssets = [], tfPerAsset = {} }) => {
   const [tog, setTog] = useState({ rt: true, daily: false, fav: true, sound: true });
   const [expanded, setExpanded] = useState(null);
   const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
   const isFree = plan === "free";
-  // Ativos que o usuário pode favoritar (Premium: os monitorados; Free: todos).
-  const favAssets = (isFree || !selectedAssets.length) ? ASSETS : selectedAssets;
   const ativosTxt = selectedAssets.length
     ? selectedAssets.map(a => `${a} (${(tfPerAsset[a] || []).join("/") || "—"})`).join(", ")
     : "nenhum ativo selecionado";
@@ -1589,8 +1615,8 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
       body: isFree
         ? "Plano Free: horários fixos (04:00 · 10:30 · 15:00 · 21:00). Faça upgrade para personalizar."
         : `Janela atual: ${schedTxt}. Para alterar, acesse Perfil → Horário de sinais.` },
-    { id: "fav2",    label: "Como funcionam os favoritos",
-      body: "Marque ⭐ em 'Operações favoritas' acima para receber notificação só desses ativos (entrada e conclusão). Sem nenhum favorito, você recebe todos os sinais elegíveis." },
+    { id: "fav2",    label: "Alerta de fechamento (⭐ por operação)",
+      body: "Você recebe a notificação de ENTRADA de todos os sinais. Toque na ⭐ de uma operação em andamento (no Início ou em Sinais) para ser avisado quando ELA fechar (TP/Stop). Sem a estrela, você não recebe o alerta de fechamento daquela operação." },
     { id: "ativos",  label: "Ativos monitorados",
       body: isFree
         ? "Free recebe sinais sortidos dos 5 ativos. No Premium você escolhe."
@@ -1616,31 +1642,6 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
               <Toggle on={tog[id]} onChange={v => setTog(s => ({ ...s, [id]: v }))} t={t} />
             </Card>
           ))}
-          <Label t={t} style={{ marginTop: 22, marginBottom: 6 }}>⭐ Operações favoritas</Label>
-          <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 12px", lineHeight: 1.5, fontFamily: FONT }}>
-            Toque pra escolher os ativos que vão te notificar (entrada e conclusão).
-            {favorites.length === 0
-              ? " Nenhum favorito = você recebe TODOS."
-              : ` Só estes vão apitar: ${favorites.join(", ")}.`}
-          </p>
-          {favAssets.map(a => {
-            const on = favorites.includes(a);
-            return (
-              <Card key={a} t={t} onClick={() => onToggleFav && onToggleFav(a)}
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
-                  marginBottom: 8, border: `1.5px solid ${on ? t.accent : t.bdr}` }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 11 }}>
-                  <AssetIcon asset={a} />
-                  <div>
-                    <div style={{ fontWeight: 800, fontSize: 14, color: t.text, fontFamily: FONT }}>{a}</div>
-                    <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>{ASSET_NAMES[a] || a}</div>
-                  </div>
-                </div>
-                <span style={{ fontSize: 22, lineHeight: 1, color: on ? t.accent : t.muted }}>{on ? "★" : "☆"}</span>
-              </Card>
-            );
-          })}
-
           <Label t={t} style={{ marginTop: 22, marginBottom: 12 }}>Mais opções</Label>
           {expandables.map(({ id, label, body }) => {
             const open = expanded === id;
@@ -2275,7 +2276,7 @@ export default function App() {
   const [profileData, setProfileData] = useState({ name: "", username: "", phone: "", avatar_url: "", referral_code: "" });
   const [tfChangedAt, setTfChangedAt] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
-  const [favorites, setFavorites] = useState([]); // ativos favoritos p/ notificação
+  const [closeAlerts, setCloseAlerts] = useState([]); // signal_id marcados p/ alerta de fechamento
 
   // Sem dados fictícios: as telas mostram apenas dados reais do servidor
   // (e estados vazios quando não há nada). Mantido como constante para
@@ -2325,7 +2326,7 @@ export default function App() {
           referral_code: p.referral_code || "",
         });
         setTfChangedAt(p.tf_changed_at || null);
-        if (Array.isArray(p.notify_favorites)) setFavorites(p.notify_favorites);
+        if (Array.isArray(p.close_alerts)) setCloseAlerts(p.close_alerts);
       }
       if (alive) setProfileLoaded(true);
       api.registerPush();
@@ -2421,11 +2422,12 @@ export default function App() {
     setTfPerAsset(cfg => ({ ...cfg, [asset]: [tf] }));
     stampTfChange();
   }, [stampTfChange]);
-  // Marca/desmarca um ativo como favorito (push só apita os favoritos). Persiste.
-  const toggleFavorite = useCallback((asset) => {
-    setFavorites(curr => {
-      const next = curr.includes(asset) ? curr.filter(a => a !== asset) : [...curr, asset];
-      api.updateProfileFields({ notify_favorites: next });
+  // Marca/desmarca uma OPERAÇÃO (signal_id) para receber alerta de fechamento. Persiste.
+  const toggleCloseAlert = useCallback((signalId) => {
+    if (!signalId) return;
+    setCloseAlerts(curr => {
+      const next = curr.includes(signalId) ? curr.filter(x => x !== signalId) : [...curr, signalId];
+      api.updateProfileFields({ close_alerts: next });
       return next;
     });
   }, []);
@@ -2454,14 +2456,14 @@ export default function App() {
       case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
       case "timeframes":    return <Timeframes {...common} onNext={(changed) => { if (changed) stampTfChange(); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
-      case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
-      case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} stats={stats} showMock={showMock} />;
+      case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} />;
+      case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} stats={stats} showMock={showMock} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} showMock={showMock} />;
       case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} />;
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} onTfPerf={() => go("tf-perf")} showMock={showMock} />;
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
       case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} />;
-      case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} favorites={favorites} onToggleFav={toggleFavorite} />;
+      case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
       case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
       case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;

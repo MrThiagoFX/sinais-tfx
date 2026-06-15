@@ -15,13 +15,11 @@ if (hasVapid) {
   );
 }
 
-// O ativo do sinal está entre os favoritos do usuário?
-// Sem favoritos marcados → notifica todos (comportamento padrão).
-// Com favoritos → só notifica os ativos escolhidos (não apita todos).
-function isFavorite(signal, profile) {
-  const favs = profile?.notify_favorites;
-  if (!Array.isArray(favs) || favs.length === 0) return true;
-  return favs.includes(signal.asset);
+// O usuário pediu alerta de FECHAMENTO desta operação específica?
+// (Modelo "estrela por operação": só avisa o fechamento das que ele marcou.)
+function wantsCloseAlert(signal, profile) {
+  const favs = profile?.close_alerts;
+  return Array.isArray(favs) && favs.includes(signal.signal_id);
 }
 
 // Notifica todos os usuários elegíveis a `signal` (asset/tf/janela/cota).
@@ -43,7 +41,7 @@ export async function notifyEligibleUsers(signal) {
   let sent = 0;
   for (const profile of profiles) {
     if (!isEligible(signal, profile)) continue;
-    if (!isFavorite(signal, profile)) continue;
+    // Entrada: notifica todos os elegíveis (sem filtro de favorito por ativo).
 
     // Respeita a cota diária do plano.
     const { data: usage } = await sb
@@ -104,7 +102,8 @@ export async function notifyClose(signal) {
   let sent = 0;
   for (const profile of profiles) {
     if (!isEligible(signal, profile)) continue;
-    if (!isFavorite(signal, profile)) continue;
+    // Fechamento: só avisa quem marcou ⭐ nesta operação.
+    if (!wantsCloseAlert(signal, profile)) continue;
 
     const { data: subs } = await sb
       .from("push_subscriptions")
