@@ -54,6 +54,15 @@ const GlobalStyle = ({ t }) => (
     .scrollarea::-webkit-scrollbar-thumb:hover { background: ${t.muted}; }
     select option { background: ${t.card}; color: ${t.text}; }
 
+    /* ── Safe area do topo (notch/status bar) em PWA/WebView ── */
+    /* Aba normal de navegador: inset real (0 quando não há notch). */
+    .safe-top { padding-top: env(safe-area-inset-top, 0px); }
+    /* App instalado/standalone: garante um mínimo mesmo em wrappers que não
+       reportam o inset, e usa o inset real quando disponível (iOS/cutout). */
+    @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+      .safe-top { padding-top: max(env(safe-area-inset-top, 0px), 28px); }
+    }
+
     /* ── Polimento: animações suaves + feedback de toque ── */
     @keyframes screenIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -2397,7 +2406,7 @@ export default function App() {
           : "radial-gradient(circle at 50% 30%, #FFFFFF 0%, #D2E0ED 80%)"),
         transition: "background .3s" }}>
         <GlobalStyle t={t} />
-        <div style={{ width: "100%", maxWidth: isMobile ? "100%" : 460,
+        <div className={isMobile ? "safe-top" : undefined} style={{ width: "100%", maxWidth: isMobile ? "100%" : 460,
           height: isMobile ? "100%" : "min(calc(100dvh - 40px), 880px)",
           display: "flex", flexDirection: "column", overflow: "hidden", background: t.bg0,
           borderRadius: isMobile ? 0 : 28,
