@@ -2390,10 +2390,14 @@ export default function App() {
   const openUpgrade = useCallback(() => { setUpgradeFrom(plan); setScreen("plans"); }, [plan]);
   const closeUpgrade = useCallback(() => { setUpgradeFrom(null); setScreen("profile"); }, []);
 
+  // Admin (conta interna) tem privilégios: troca o timeframe quando quiser.
+  const isAdmin = !!(session?.user && (session.user.app_metadata?.role === "admin" || session.user.user_metadata?.is_admin === true));
+
   // Trava de timeframe: 1 troca por semana (mantém o histórico limpo).
+  // O admin não é travado — pode alternar M5/M15 sem esperar a semana.
   const TF_LOCK_DAYS = 7;
   const tfNextChange = tfChangedAt ? new Date(new Date(tfChangedAt).getTime() + TF_LOCK_DAYS * 86400000) : null;
-  const tfLocked = !!(tfNextChange && Date.now() < tfNextChange.getTime());
+  const tfLocked = !isAdmin && !!(tfNextChange && Date.now() < tfNextChange.getTime());
   const stampTfChange = useCallback(() => {
     const now = new Date().toISOString();
     setTfChangedAt(now);
@@ -2426,7 +2430,6 @@ export default function App() {
   // Free usa horário fixo; Premium usa a janela escolhida.
   const effSchedule = plan === "free" ? FREE_SCHEDULE : schedule;
   const bizState = { plan, selectedAssets, tfPerAsset, schedule: effSchedule };
-  const isAdmin = !!(session?.user && (session.user.app_metadata?.role === "admin" || session.user.user_metadata?.is_admin === true));
 
   const render = () => {
     switch (screen) {
@@ -2459,24 +2462,38 @@ export default function App() {
      Sistema fluido: mede o viewport e se adapta.
        • Celular (estreito)  → ocupa a tela inteira (edge-to-edge).
        • iPad / desktop      → cartão centralizado que escala com a tela. ── */
-  if (!isDev || edgeToEdge) {
-    // Largura-base estilo celular; em telas maiores vira coluna centralizada.
-    const cardW = edgeToEdge ? "100%" : Math.min(vp.w - 32, 460);
-    // Altura cresce com a tela até um teto, sempre com folga p/ centralizar.
-    const cardH = edgeToEdge ? "100dvh" : Math.min(vp.h - 32, 920);
+  // CELULAR (tela estreita): o app PREENCHE exatamente a tela, sem centralizar
+  // nem altura fixa — o card flui com flex:1, então o menu inferior encosta no
+  // rodapé (nada de "flutuar" por causa de 100dvh menor que a área visível).
+  if (edgeToEdge) {
+    return (
+      <div style={{ height: "100dvh", display: "flex", flexDirection: "column",
+        background: t.bg0, fontFamily: FONT }}>
+        <GlobalStyle t={t} />
+        <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
+          flexDirection: "column", overflow: "hidden", background: t.bg0 }}>
+          <div className="screen-anim" key={screen}>{render()}</div>
+        </div>
+      </div>
+    );
+  }
+
+  // iPad / DESKTOP em produção: cartão centralizado que escala com a tela.
+  if (!isDev) {
+    const cardW = Math.min(vp.w - 32, 460);
+    const cardH = Math.min(vp.h - 32, 920);
     return (
       <div style={{ minHeight: "100dvh", height: "100dvh", display: "flex",
         justifyContent: "center", alignItems: "center", fontFamily: FONT,
-        background: edgeToEdge ? t.bg0 : (themeId === "dark"
+        background: themeId === "dark"
           ? "radial-gradient(circle at 50% 30%, #11161f 0%, #03050a 78%)"
-          : "radial-gradient(circle at 50% 30%, #FFFFFF 0%, #D2E0ED 80%)"),
+          : "radial-gradient(circle at 50% 30%, #FFFFFF 0%, #D2E0ED 80%)",
         transition: "background .3s" }}>
         <GlobalStyle t={t} />
-        <div className={edgeToEdge ? "safe-top" : undefined} style={{ width: cardW, height: cardH,
+        <div style={{ width: cardW, height: cardH,
           display: "flex", flexDirection: "column", overflow: "hidden", background: t.bg0,
-          borderRadius: edgeToEdge ? 0 : 28,
-          border: edgeToEdge ? "none" : `1px solid ${t.bdr}`,
-          boxShadow: edgeToEdge ? "none" : "0 24px 80px rgba(0,0,0,.45)" }}>
+          borderRadius: 28, border: `1px solid ${t.bdr}`,
+          boxShadow: "0 24px 80px rgba(0,0,0,.45)" }}>
           <div className="screen-anim" key={screen}>{render()}</div>
         </div>
       </div>
