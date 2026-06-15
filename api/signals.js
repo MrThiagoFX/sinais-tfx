@@ -4,7 +4,7 @@
 //   entry/stop/target, signal_id) e também o formato legado {asset,dir,tf,entry,sl,tp}.
 // GET → app lista sinais do usuário.
 import {
-  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, signalTimeMs,
+  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, startOfBrtDayMs,
 } from "./_lib/business.js";
 import { serviceClient, getUser, hasSupabase } from "./_lib/supabase.js";
 import { notifyEligibleUsers, notifyClose } from "./_lib/push.js";
@@ -132,16 +132,14 @@ async function getSignals(req, res) {
   const fresh = (rows || []).filter(
     (s) => !(s.status === "aberto" && now - new Date(s.created_at).getTime() > STALE_OPEN_MS)
   );
-  // Ordena pelo horário REAL do sinal (não pela hora de inserção), para a lista
-  // ficar em ordem cronológica de verdade — mais recentes primeiro.
+  // Ordena por created_at (UTC real do servidor), mais recentes primeiro.
   const eligible = fresh
     .filter((s) => isEligible(s, profile))
-    .sort((a, b) => signalTimeMs(b) - signalTimeMs(a));
+    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
-  // Sinais de HOJE → alimentam o contador "sinais hoje" e respeitam a cota.
-  const startOfDay = new Date();
-  startOfDay.setHours(0, 0, 0, 0);
-  const todayEligible = eligible.filter((s) => signalTimeMs(s) >= startOfDay.getTime());
+  // Sinais de HOJE (dia de Brasília) → contador "sinais hoje" + cota.
+  const dayStart = startOfBrtDayMs();
+  const todayEligible = eligible.filter((s) => new Date(s.created_at).getTime() >= dayStart);
   const signals = todayEligible.slice(0, quota);
 
   // Operações recentes (qualquer dia) → tela Sinais, Histórico e Dashboard.

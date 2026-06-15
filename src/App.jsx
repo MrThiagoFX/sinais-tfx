@@ -396,23 +396,24 @@ const rrText = (entry, sl, tp) => {
   return `${(Math.round(r * 10) / 10).toString().replace(".0", "")}:1`;
 };
 
+// Formatadores fixos no fuso de Brasília (GMT-3) — independem do fuso do aparelho.
+const BRT_TIME = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false });
+const BRT_DDMM = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" });
+const BRT_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" });
+
 const mapSignal = (s) => {
-  // O signal_id do EA termina no horário real do sinal (unix em segundos),
-  // ex.: "XAUUSD_M5_BUY_1781286600". Usa-o quando houver; senão, o created_at.
-  // (Corrige os horários iguais do lote de backfill enviado de uma vez.)
-  const m = /(\d{10})(?:\D*)$/.exec(s.signal_id || "");
-  const fromId = m ? new Date(parseInt(m[1], 10) * 1000) : null;
-  const d = (fromId && !isNaN(fromId.getTime())) ? fromId : new Date(s.created_at || Date.now());
-  const pad = (n) => String(n).padStart(2, "0");
-  const hhmm = `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  // Horário SEMPRE em Brasília (GMT-3), a partir do created_at (UTC real do
+  // servidor). Não usamos o signal_id porque vem no fuso do broker.
+  const d = new Date(s.created_at || Date.now());
+  const hhmm = BRT_TIME.format(d);
   // Rótulo com DIA + horário: "Hoje 14:32" · "Ontem 16:10" · "12/06 16:10".
-  const today = new Date(); today.setHours(0, 0, 0, 0);
-  const sigDay = new Date(d); sigDay.setHours(0, 0, 0, 0);
-  const dayDiff = Math.round((today.getTime() - sigDay.getTime()) / 86400000);
-  const dateLbl = dayDiff === 0 ? "Hoje" : dayDiff === 1 ? "Ontem" : `${pad(d.getDate())}/${pad(d.getMonth() + 1)}`;
+  const dDay = BRT_DAY.format(d);
+  const todayDay = BRT_DAY.format(new Date());
+  const yestDay = BRT_DAY.format(new Date(Date.now() - 86400000));
+  const dateLbl = dDay === todayDay ? "Hoje" : dDay === yestDay ? "Ontem" : BRT_DDMM.format(d);
   return {
     id: s.id, signalId: s.signal_id, asset: s.asset, dir: s.dir, tf: s.tf,
-    time: `${dateLbl} ${hhmm}`, hhmm, hour: d.getHours(),
+    time: `${dateLbl} ${hhmm}`, hhmm, hour: Number(hhmm.slice(0, 2)),
     ageMin: Math.round((Date.now() - d.getTime()) / 60000),
     status: s.status || "aberto",
     resultPips: s.result_pips,

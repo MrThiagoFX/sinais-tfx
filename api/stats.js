@@ -2,7 +2,7 @@
 // Calcula sobre public.signals (status, result_pips), respeitando as
 // preferências (ativos/timeframes) e a janela de horário do usuário.
 import { serviceClient, getUser, hasSupabase } from "./_lib/supabase.js";
-import { isEligible, signalTimeMs } from "./_lib/business.js";
+import { isEligible, startOfBrtDayMs } from "./_lib/business.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -46,9 +46,9 @@ export default async function handler(req, res) {
 
   const relevant = (rows || []).filter((s) => isEligible(s, profile));
 
-  // Acumulado geral + recortes de hoje e da semana (7 dias).
-  const startOfDay = new Date(); startOfDay.setHours(0, 0, 0, 0);
-  const weekAgo = new Date(Date.now() - 7 * 86400000);
+  // Acumulado geral + recortes de hoje (dia de Brasília) e da semana (7 dias).
+  const dayStart = startOfBrtDayMs();
+  const weekAgo = Date.now() - 7 * 86400000;
   const agg = (list) => {
     let g = 0, p = 0, pips = 0;
     for (const s of list) {
@@ -59,10 +59,9 @@ export default async function handler(req, res) {
     return { ganhos: g, perdas: p, total: tot, pips: Math.round(pips), assertividade: tot ? Math.round((g / tot) * 100) : 0 };
   };
 
-  // Usa o horário REAL do sinal (signal_id) — coerente com a tela Sinais.
   const geral = agg(relevant);
-  const dia = agg(relevant.filter((s) => signalTimeMs(s) >= startOfDay.getTime()));
-  const semana = agg(relevant.filter((s) => signalTimeMs(s) >= weekAgo.getTime()));
+  const dia = agg(relevant.filter((s) => new Date(s.created_at).getTime() >= dayStart));
+  const semana = agg(relevant.filter((s) => new Date(s.created_at).getTime() >= weekAgo));
 
   return res.status(200).json({
     assertividade: geral.total ? Math.round((geral.ganhos / geral.total) * 100) / 100 : 0,

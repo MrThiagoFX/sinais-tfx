@@ -46,17 +46,14 @@ export function computePips(asset, dir, entry, exit) {
   return Math.round((dir === "Compra" ? raw : -raw));
 }
 
-// Horário REAL do sinal (epoch ms). O signal_id do EA termina no horário do
-// sinal em unix-segundos (ex.: "XAUUSD_M5_BUY_1781286600"). Usa-o quando houver;
-// senão, o created_at. Serve para ordenar e datar de forma consistente — o
-// created_at é a hora de inserção (o backfill chega tudo junto e bagunça a ordem).
-export function signalTimeMs(s) {
-  const m = /(\d{10})\D*$/.exec(s?.signal_id || "");
-  if (m) {
-    const ms = parseInt(m[1], 10) * 1000;
-    if (Number.isFinite(ms)) return ms;
-  }
-  return new Date(s?.created_at || Date.now()).getTime();
+// Início do dia atual no fuso de Brasília (UTC-3 fixo), em epoch ms.
+// Usado pelos recortes "hoje" — meia-noite BRT = 03:00 UTC do mesmo dia.
+export function startOfBrtDayMs() {
+  const OFFSET = 3 * 3600 * 1000; // BRT = UTC-3
+  const d = new Date(Date.now() - OFFSET); // relógio de Brasília
+  const sinceMidnight =
+    ((d.getUTCHours() * 60 + d.getUTCMinutes()) * 60 + d.getUTCSeconds()) * 1000 + d.getUTCMilliseconds();
+  return Date.now() - sinceMidnight;
 }
 
 // Cota diária de sinais: Free = configurável pelo admin (2 a 4) · Premium = 20.
