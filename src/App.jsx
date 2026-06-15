@@ -903,18 +903,19 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
   );
 };
 
-const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats }) => {
+const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, showMock, onToggleMock }) => {
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
   const quota = live?.quota ?? dailyQuota(plan);
-  const used = live?.delivered ?? Math.min(3, quota);
+  const used = live?.delivered ?? (showMock ? Math.min(3, quota) : 0);
   const info = PLAN_INFO[plan];
   const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
-  const recent3 = (liveSignals
-    || SIGNALS_DATA.filter(s => selectedAssets.includes(s.asset))
-    ).slice(0, 3);
-  const recent = recent3.length ? recent3 : SIGNALS_DATA.slice(0, 3);
-  const assertTxt = stats ? `${Math.round((stats.assertividade || 0) * 100)}%` : "71%";
-  const acumTxt = stats ? `${stats.acumulado_pips >= 0 ? "+" : ""}${stats.acumulado_pips} pips` : "+313 pips";
+  // Sinais reais quando há; senão mock só se "dados fictícios" estiver ligado.
+  const mockRecent = SIGNALS_DATA.filter(s => selectedAssets.includes(s.asset)).slice(0, 3);
+  const recent = liveSignals
+    ? liveSignals.slice(0, 3)
+    : (showMock ? (mockRecent.length ? mockRecent : SIGNALS_DATA.slice(0, 3)) : []);
+  const assertTxt = stats ? `${Math.round((stats.assertividade || 0) * 100)}%` : (showMock ? "71%" : "—");
+  const acumTxt = stats ? `${stats.acumulado_pips >= 0 ? "+" : ""}${stats.acumulado_pips} pips` : (showMock ? "+313 pips" : "—");
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <Scroll>
@@ -939,6 +940,16 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
             </div>
           </div>
 
+          <button onClick={onToggleMock} style={{
+            width: "100%", marginBottom: 14, cursor: "pointer",
+            background: showMock ? t.accentSoft : t.card,
+            border: `1.5px solid ${showMock ? t.accent : t.bdr}`,
+            borderRadius: 12, padding: "10px 14px",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            color: showMock ? t.accent : t.sub, fontSize: 12.5, fontWeight: 700, fontFamily: FONT }}>
+            🧪 {showMock ? "Dados fictícios ATIVOS — toque para ocultar" : "Exibir dados fictícios"}
+          </button>
+
           <div style={{ background: t.card2, border: `1.5px solid ${t.accentBdr}`,
             borderRadius: 22, padding: "20px 20px 18px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
@@ -957,7 +968,13 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
           </div>
 
           <Label t={t} style={{ marginBottom: 10 }}>Últimos sinais</Label>
-          {recent.map((s, i) => (
+          {recent.length === 0 ? (
+            <Card t={t} style={{ textAlign: "center", padding: "24px 18px" }}>
+              <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
+                Nenhum sinal ainda hoje.<br />Você será avisado quando chegar um.
+              </p>
+            </Card>
+          ) : recent.map((s, i) => (
             <DashSignalCard key={s.id ?? i} s={s} t={t}
               onClick={() => { onOpenSignal(s); onNav("signal-detail"); }} />
           ))}
@@ -980,18 +997,19 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
   );
 };
 
-const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live }) => {
+const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live, showMock }) => {
   const [filter, setFilter] = useState("Todos");
   const inWindow = h => schedule.allDay || (h >= parseInt(schedule.start) && h < parseInt(schedule.end));
   // Com backend, o /api já devolve os sinais filtrados por plano/ativos/janela/cota.
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
-  const base = liveSignals || (plan === "free"
+  const mockBase = plan === "free"
     ? SIGNALS_DATA.filter(s => inWindow(s.hour)).slice(0, 4)
     : SIGNALS_DATA.filter(s =>
         selectedAssets.includes(s.asset) &&
         (tfPerAsset[s.asset] || []).includes(s.tf) &&
         inWindow(s.hour)
-      ));
+      );
+  const base = liveSignals || (showMock ? mockBase : []);
   const shown = base.filter(s =>
     filter === "Todos" || (filter === "Compras" ? s.dir === "Compra" : s.dir === "Venda"));
   return (
@@ -1038,8 +1056,28 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
 };
 
 /* DETALHE — agora com navegação inferior */
-const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme }) => {
-  const s = signal || SIGNALS_DATA[0];
+const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme, showMock }) => {
+  const s = signal || (showMock ? SIGNALS_DATA[0] : null);
+  if (!s) {
+    return (
+      <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+        <Scroll>
+          <div style={{ padding: "16px 24px 24px" }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 18 }}>
+              <BackBtn onClick={onBack} t={t} />
+              <ThemeToggle t={t} onToggle={onToggleTheme} />
+            </div>
+            <Card t={t} style={{ textAlign: "center", padding: "28px 18px" }}>
+              <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
+                Sinal indisponível.
+              </p>
+            </Card>
+          </div>
+        </Scroll>
+        <BottomNav active="signals" onNav={onNav} t={t} />
+      </div>
+    );
+  }
   const buy = s.dir === "Compra";
   const ac = buy ? t.buy : t.sell;
   // Só dá para copiar/entrar dentro da janela de 10 min após o sinal.
@@ -1181,8 +1219,8 @@ const MOCK_BREAKDOWN = [
   { asset: "GBPUSD", tf: "M15", assertividade: 58, pips: 40,  total: 15 },
 ];
 
-const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerAsset, plan, breakdown, locked, nextChange, onPick }) => {
-  const data = breakdown?.breakdown?.length ? breakdown.breakdown : MOCK_BREAKDOWN;
+const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerAsset, plan, breakdown, locked, nextChange, onPick, showMock }) => {
+  const data = breakdown?.breakdown?.length ? breakdown.breakdown : (showMock ? MOCK_BREAKDOWN : []);
   const tfs = tfOptionsForPlan(plan);
   const daysLeft = nextChange ? Math.max(1, Math.ceil((nextChange.getTime() - Date.now()) / 86400000)) : 0;
   const statFor = (a, tf) => data.find(d => d.asset === a && d.tf === tf);
@@ -1254,19 +1292,24 @@ const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerA
   );
 };
 
-const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, onTfPerf }) => {
+const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, onTfPerf, showMock }) => {
   const lineData = [38,52,45,68,62,78,72,88,82,91,85,94];
   const metrics = stats ? [
     { label: "Assertividade",       value: `${Math.round((stats.assertividade || 0) * 100)}%`, color: t.accent },
     { label: "Ganhos",              value: String(stats.ganhos ?? 0),  color: t.buy  },
     { label: "Perdas",              value: String(stats.perdas ?? 0),  color: t.sell },
     { label: "Resultado acumulado", value: `${stats.acumulado_pips >= 0 ? "+" : ""}${stats.acumulado_pips} pips`, color: t.buy },
-  ] : [
+  ] : (showMock ? [
     { label: "Assertividade",       value: "71%",       color: t.accent },
     { label: "Ganhos",              value: "142",       color: t.buy    },
     { label: "Perdas",              value: "58",        color: t.sell   },
     { label: "Resultado acumulado", value: "+313 pips", color: t.buy    },
-  ];
+  ] : [
+    { label: "Assertividade",       value: "—",      color: t.accent },
+    { label: "Ganhos",              value: "0",      color: t.buy    },
+    { label: "Perdas",              value: "0",      color: t.sell   },
+    { label: "Resultado acumulado", value: "+0 pips", color: t.buy   },
+  ]);
   const maxV = Math.max(...lineData);
   const W = 300, H = 80;
   const pts = lineData.map((v,i)=>`${(i/(lineData.length-1))*W},${H-(v/maxV)*(H-8)}`).join(" ");
@@ -1295,6 +1338,7 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, onTfPerf 
             </div>
             <span style={{ color: t.accent, fontSize: 18 }}>›</span>
           </Card>
+          {showMock && (<>
           <Card t={t} style={{ marginBottom: 12 }}>
             <Label t={t} style={{ marginBottom: 14 }}>Evolução — últimos 30 dias</Label>
             <svg width="100%" height={H+10} viewBox={`0 0 ${W} ${H+10}`} style={{ overflow: "visible" }}>
@@ -1336,6 +1380,7 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, onTfPerf 
               );
             })}
           </Card>
+          </>)}
         </div>
       </Scroll>
       <BottomNav active="performance" onNav={onNav} t={t} />
@@ -1343,10 +1388,11 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, onTfPerf 
   );
 };
 
-const History = ({ t, onNav, onToggleTheme, schedule, selectedAssets, plan }) => {
+const History = ({ t, onNav, onToggleTheme, schedule, selectedAssets, plan, showMock }) => {
   const [tab, setTab] = useState("Todos");
   const inWindow = h => schedule.allDay || (h >= parseInt(schedule.start) && h < parseInt(schedule.end));
-  const base = HISTORY_DATA.filter(s =>
+  const source = showMock ? HISTORY_DATA : [];
+  const base = source.filter(s =>
     inWindow(s.hour) && (plan === "free" || selectedAssets.includes(s.asset)));
   const shown = base.filter(s =>
     tab === "Todos" || (tab === "Ganhos" ? s.pips >= 0 : s.pips < 0));
@@ -1377,7 +1423,13 @@ const History = ({ t, onNav, onToggleTheme, schedule, selectedAssets, plan }) =>
         </Card>
       </div>
       <Scroll style={{ padding: "0 24px" }}>
-        {shown.map((s,i) => <SignalRow key={i} s={s} t={t} pips={s.pips} />)}
+        {shown.length === 0 ? (
+          <Card t={t} style={{ textAlign: "center", padding: "28px 18px" }}>
+            <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
+              Nenhuma operação no período.<br />Seu histórico aparece aqui conforme os sinais são fechados.
+            </p>
+          </Card>
+        ) : shown.map((s,i) => <SignalRow key={i} s={s} t={t} pips={s.pips} />)}
         <div style={{ height: 16 }} />
       </Scroll>
       <BottomNav active="history" onNav={onNav} t={t} />
@@ -2051,6 +2103,17 @@ export default function App() {
   const [tfChangedAt, setTfChangedAt] = useState(null);
   const [breakdown, setBreakdown] = useState(null);
 
+  // Dados fictícios (mock) para ajustar a UI. Padrão: DESLIGADO → as telas
+  // mostram só dados reais (e estados vazios). Ligado por um botão na Home.
+  const [showMock, setShowMock] = useState(() => {
+    try { return localStorage.getItem("tfx_show_mock") === "1"; } catch { return false; }
+  });
+  const toggleMock = useCallback(() => setShowMock(v => {
+    const nv = !v;
+    try { localStorage.setItem("tfx_show_mock", nv ? "1" : "0"); } catch { /* ignore */ }
+    return nv;
+  }), []);
+
   // Captura ?ref=CODE da URL (link de indicação) ao abrir o app.
   useEffect(() => { api.captureRefFromUrl(); }, []);
 
@@ -2178,13 +2241,13 @@ export default function App() {
       case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
       case "timeframes":    return <Timeframes {...common} onNext={(changed) => { if (changed) stampTfChange(); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
-      case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
-      case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} />;
-      case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} />;
+      case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} showMock={showMock} onToggleMock={toggleMock} />;
+      case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} showMock={showMock} />;
+      case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} showMock={showMock} />;
       case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} />;
-      case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} onTfPerf={() => go("tf-perf")} />;
-      case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} />;
-      case "history":       return <History {...common} onNav={nav} {...bizState} />;
+      case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} onTfPerf={() => go("tf-perf")} showMock={showMock} />;
+      case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
+      case "history":       return <History {...common} onNav={nav} {...bizState} showMock={showMock} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
       case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
