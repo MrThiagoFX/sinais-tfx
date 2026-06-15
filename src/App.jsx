@@ -641,12 +641,13 @@ const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot }) => {
   const [busy, setBusy] = useState(false);
 
   // Sem backend (modo demo) → apenas avança. Com backend → autentica de verdade.
+  // onNext recebe isSignup: cadastro novo → tela de planos; login → home.
   const handle = async (isSignup) => {
-    if (!onAuth) return onNext();
+    if (!onAuth) return onNext(isSignup);
     setErr(""); setNotice(""); setBusy(true);
     const r = await onAuth(email.trim(), pass, isSignup, coupon.trim());
     setBusy(false);
-    if (r?.ok) onNext();
+    if (r?.ok) onNext(isSignup);
     else setErr(r?.error || "Não foi possível entrar. Verifique os dados.");
   };
 
@@ -2053,10 +2054,14 @@ export default function App() {
   // Captura ?ref=CODE da URL (link de indicação) ao abrir o app.
   useEffect(() => { api.captureRefFromUrl(); }, []);
 
-  // Restaura a sessão salva ao abrir o app.
+  // Restaura a sessão salva ao abrir o app. Se já estiver logado, entra direto
+  // no app (home) em vez de mostrar o onboarding (splash/welcome/login).
   useEffect(() => {
     if (!hasSupabase) return;
-    api.getSession().then(setSession);
+    api.getSession().then((s) => {
+      setSession(s);
+      if (s) setScreen("home");
+    });
   }, []);
 
   // Ao autenticar: hidrata as preferências do perfil e registra o push.
@@ -2169,7 +2174,7 @@ export default function App() {
       case "splash":        return <Splash {...common} onNext={() => go("welcome")} />;
       case "welcome":       return <Welcome {...common} onNext={() => go("risk")} onLogin={() => go("login")} />;
       case "risk":          return <RiskWarning {...common} onNext={() => go("login")} />;
-      case "login":         return <Login {...common} onNext={() => go("plans")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} />;
+      case "login":         return <Login {...common} onNext={(isSignup) => go(isSignup ? "plans" : "home")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} />;
       case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
       case "timeframes":    return <Timeframes {...common} onNext={(changed) => { if (changed) stampTfChange(); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
