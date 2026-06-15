@@ -2,9 +2,14 @@
 // Reutilizadas por signals.js (filtro/cota/elegibilidade) e stats.js.
 
 export const ASSETS = ["EURUSD", "GBPUSD", "XAUUSD", "NAS100", "US30"];
-// M5/M15 para todos; M1 é exclusivo do plano Anual. H1 removido.
+// M5/M15 para todos; M1 é exclusivo dos planos "estilo anual". H1 removido.
 export const TFS = ["M1", "M5", "M15"];
 export const DIRS = ["Compra", "Venda"];
+
+// Planos "estilo anual" (M1 + dia todo): anual + categorias internas aluno/influencer.
+export function isAnualLike(plan) {
+  return plan === "anual" || plan === "aluno" || plan === "influencer";
+}
 
 // Tamanho do "pip"/ponto por ativo, para calcular result_pips no fechamento.
 export const PIP_SIZE = { EURUSD: 0.0001, GBPUSD: 0.0001, XAUUSD: 0.1, NAS100: 1, US30: 1 };
@@ -62,7 +67,7 @@ export const FREE_WINDOW = { start: 8, end: 18 };
 // Free → janela fixa. Anual com schedule_all_day = true → 24h. Demais → janela escolhida.
 export function inWindow(date, profile) {
   if (!profile) return true;
-  if (profile.plan === "anual" && profile.schedule_all_day) return true;
+  if (isAnualLike(profile.plan) && profile.schedule_all_day) return true;
   const h = date.getHours();
   if (profile.plan === "free") return h >= FREE_WINDOW.start && h < FREE_WINDOW.end;
   const start = hourOf(profile.schedule_start || "08:00");
@@ -75,8 +80,8 @@ export function inWindow(date, profile) {
 //   premium→ asset ∈ profile.assets E tf ∈ profile.tf_per_asset[asset]
 // Em ambos os casos respeita a janela de horário (sobre created_at do sinal).
 export function isEligible(signal, profile) {
-  // M1 é exclusivo do plano Anual.
-  if (signal.tf === "M1" && profile?.plan !== "anual") return false;
+  // M1 é exclusivo dos planos "estilo anual".
+  if (signal.tf === "M1" && !isAnualLike(profile?.plan)) return false;
   const created = new Date(signal.created_at || Date.now());
   if (!inWindow(created, profile)) return false;
   if (!profile || profile.plan === "free") return true;

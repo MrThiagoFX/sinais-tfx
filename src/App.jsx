@@ -313,16 +313,26 @@ const ASSET_NAMES = {
   EURUSD: "Euro / Dólar", GBPUSD: "Libra / Dólar",
   XAUUSD: "Ouro / Dólar", NAS100: "Nasdaq 100", US30: "Dow Jones 30",
 };
-// Timeframes: base M5/M15 (mensal e free). M1 é exclusivo do plano Anual. H1 removido.
+// Planos premium (acesso completo) e planos "estilo anual" (M1 + dia todo).
+// aluno e influencer são categorias internas (só o admin cadastra).
+const PREMIUM_PLANS = ["mensal", "anual", "aluno", "influencer"];
+const ANUAL_LIKE = ["anual", "aluno", "influencer"];
+const isPremiumPlan = (p) => PREMIUM_PLANS.includes(p);
+const isAnualLikePlan = (p) => ANUAL_LIKE.includes(p);
+
+// Timeframes: base M5/M15. M1 é exclusivo dos planos "estilo anual". H1 removido.
 const TIMEFRAMES = ["M5", "M15"];
-const tfOptionsForPlan = (plan) => (plan === "anual" ? ["M1", "M5", "M15"] : ["M5", "M15"]);
+const tfOptionsForPlan = (plan) => (isAnualLikePlan(plan) ? ["M1", "M5", "M15"] : ["M5", "M15"]);
 const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
 
 const PLAN_INFO = {
-  free:   { name: "Free",            price: "Grátis" },
-  mensal: { name: "Premium Mensal",  price: "R$ 99/mês" },
-  anual:  { name: "Premium Anual",   price: "R$ 79/mês" },
+  free:       { name: "Free",            price: "Grátis" },
+  mensal:     { name: "Premium Mensal",  price: "R$ 99/mês" },
+  anual:      { name: "Premium Anual",   price: "R$ 79/mês" },
+  aluno:      { name: "Aluno",           price: "Acesso de aluno" },
+  influencer: { name: "Influencer",      price: "Parceria" },
 };
+const PLAN_BADGE = { free: "FREE", mensal: "PREMIUM", anual: "ANUAL", aluno: "ALUNO", influencer: "INFLUENCER" };
 
 // Plano Free tem horário FIXO (não personalizável). Premium escolhe a janela.
 const FREE_SCHEDULE = { start: "08:00", end: "18:00", allDay: false };
@@ -921,7 +931,7 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
                 borderRadius: 12, padding: "6px 12px", display: "flex", alignItems: "center", gap: 6 }}>
                 <div style={{ width: 7, height: 7, borderRadius: "50%", background: t.accent }} />
                 <span style={{ color: t.accent, fontSize: 11, fontWeight: 800, fontFamily: FONT }}>
-                  {plan === "free" ? "FREE" : plan === "mensal" ? "PREMIUM" : "ANUAL"}
+                  {PLAN_BADGE[plan] || "FREE"}
                 </span>
               </div>
               <ThemeToggle t={t} onToggle={onToggleTheme} />
@@ -1615,7 +1625,13 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   const [histDate, setHistDate] = useState("");
   const [freeQuota, setFreeQuota] = useState(4);
   const [q, setQ] = useState("");
-  const PLANS = ["free", "mensal", "anual"];
+  const PLANS = ["free", "mensal", "anual", "aluno", "influencer"];
+  const fmtExp = (iso) => {
+    if (!iso) return "sem limite";
+    const d = new Date(iso);
+    const dias = Math.ceil((d.getTime() - Date.now()) / 86400000);
+    return `${d.toLocaleDateString("pt-BR")} (${dias > 0 ? dias + "d" : "vencido"})`;
+  };
 
   useEffect(() => {
     let alive = true;
@@ -1632,6 +1648,13 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
     const r = await api.adminSetFreeQuota(v);
     setMsg(r.ok ? `✓ Cota Free = ${v} operações/dia` : (r.error || "erro"));
     setTimeout(() => setMsg(""), 2500);
+  };
+
+  const setExpiry = async (userId, days) => {
+    const r = await api.adminSetExpiry(userId, days);
+    setMsg(r.ok ? (days > 0 ? `✓ Validade: +${days} dias` : "✓ Sem limite") : (r.error || "erro"));
+    if (r.ok) setData(d => ({ ...d, users: d.users.map(u => u.id === userId ? { ...u, plan_expires_at: r.plan_expires_at } : u) }));
+    setTimeout(() => setMsg(""), 2000);
   };
 
   const setPlan = async (userId, plan) => {
@@ -1706,19 +1729,31 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
                     whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{u.name || u.email.split("@")[0]}</div>
                   <div style={{ fontSize: 11, color: t.sub, marginTop: 2, fontFamily: FONT }}>{u.email}</div>
                   <div style={{ fontSize: 10.5, color: t.muted, marginTop: 3, fontFamily: FONT }}>
-                    cód: {u.referral_code || "—"} · indicados: {u.referral_count}
+                    cód: {u.referral_code || "—"} · <span style={{ color: u.referral_count > 0 ? t.accent : t.muted, fontWeight: 700 }}>leads: {u.referral_count}</span>
                     {u.referred_by ? ` · veio de: ${u.referred_by}` : ""}
+                  </div>
+                  <div style={{ fontSize: 10.5, color: t.muted, marginTop: 2, fontFamily: FONT }}>
+                    validade: {fmtExp(u.plan_expires_at)}
                   </div>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: 6 }}>
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 {PLANS.map(p => (
                   <button key={p} onClick={() => setPlan(u.id, p)} style={{
-                    flex: 1, padding: "7px 0", borderRadius: 9, fontSize: 11, fontWeight: 800,
+                    flex: "1 0 28%", padding: "7px 0", borderRadius: 9, fontSize: 10.5, fontWeight: 800,
                     cursor: "pointer", fontFamily: FONT, textTransform: "uppercase",
                     border: `1.5px solid ${u.plan === p ? t.accent : t.bdr}`,
                     background: u.plan === p ? t.accent : "transparent",
                     color: u.plan === p ? t.activeText : t.sub }}>{p}</button>
+                ))}
+              </div>
+              <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center" }}>
+                <span style={{ fontSize: 10.5, color: t.muted, fontFamily: FONT, flexShrink: 0 }}>Validade:</span>
+                {[["+15d", 15], ["+30d", 30], ["Sem limite", 0]].map(([lbl, d]) => (
+                  <button key={lbl} onClick={() => setExpiry(u.id, d)} style={{
+                    flex: 1, padding: "6px 0", borderRadius: 8, fontSize: 10.5, fontWeight: 700,
+                    cursor: "pointer", fontFamily: FONT, border: `1px solid ${t.bdr}`,
+                    background: "transparent", color: t.sub }}>{lbl}</button>
                 ))}
               </div>
             </Card>
@@ -1744,7 +1779,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
   };
   const info = PLAN_INFO[plan];
   const quota = dailyQuota(plan);
-  const isAnual = plan === "anual";
+  const isAnual = isAnualLikePlan(plan);
   const isFree = plan === "free";
   const items = [
     { id: "termos",  icon: "📄", label: "Termos de uso",

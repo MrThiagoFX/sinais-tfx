@@ -24,6 +24,7 @@ export default async function handler(req, res) {
         id: u.id, email: u.email, created_at: u.created_at,
         name: p.name || u.user_metadata?.name || "",
         plan: p.plan || "free",
+        plan_expires_at: p.plan_expires_at || null,
         referral_code: p.referral_code || "",
         referral_count: p.referral_count || 0,
         referred_by: p.referred_by || "",
@@ -45,10 +46,22 @@ export default async function handler(req, res) {
 
     if (action === "set-plan") {
       const { userId, plan } = req.body;
-      if (!["free", "mensal", "anual"].includes(plan)) return res.status(400).json({ error: "plano inválido" });
+      if (!["free", "mensal", "anual", "aluno", "influencer"].includes(plan))
+        return res.status(400).json({ error: "plano inválido" });
       const { error } = await sb.from("profiles").update({ plan }).eq("id", userId);
       if (error) return res.status(500).json({ error: error.message });
       return res.status(200).json({ ok: true });
+    }
+
+    // Define a validade do plano: days>0 → agora+days; days=0/null → sem limite.
+    if (action === "set-expiry") {
+      const { userId } = req.body;
+      const days = parseInt(req.body.days, 10);
+      let expires = null;
+      if (days > 0) expires = new Date(Date.now() + days * 86400000).toISOString();
+      const { error } = await sb.from("profiles").update({ plan_expires_at: expires }).eq("id", userId);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ ok: true, plan_expires_at: expires });
     }
 
     if (action === "set-history") {
