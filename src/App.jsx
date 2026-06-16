@@ -2024,6 +2024,8 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
 const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
+  const [schedSaved, setSchedSaved] = useState(false);
+  const confirmSched = () => { setSchedSaved(true); setTimeout(() => setSchedSaved(false), 1800); };
   const refCode = referral?.code || "SEUCODIGO";
   const refLink = `https://sinais-tfx.vercel.app/?ref=${refCode}`;
   const copyRef = () => {
@@ -2158,6 +2160,26 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
                       onChange={v => setSchedule(s => ({ ...s, end: v }))} t={t} />
                   </div>
                 </div>
+                {parseInt(schedule.end) <= parseInt(schedule.start) ? (
+                  <p style={{ fontSize: 11.5, color: t.sell, fontWeight: 700, margin: "12px 0 0", fontFamily: FONT }}>
+                    ⚠️ O fim ({schedule.end}) precisa ser depois do início ({schedule.start}).
+                  </p>
+                ) : (
+                  <>
+                    <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "12px 0 10px" }}>
+                      <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>
+                        Recebendo sinais das <span style={{ fontWeight: 800, color: t.text }}>{schedule.start}</span> às <span style={{ fontWeight: 800, color: t.text }}>{schedule.end}</span>.
+                      </span>
+                    </div>
+                    <button onClick={confirmSched} style={{
+                      width: "100%", height: 44, borderRadius: 12, cursor: "pointer", border: "none",
+                      fontWeight: 800, fontSize: 14, fontFamily: FONT,
+                      background: schedSaved ? t.buy : t.accent, color: t.activeText,
+                      transition: "background .2s" }}>
+                      {schedSaved ? "✓ Horário confirmado" : "Confirmar horário"}
+                    </button>
+                  </>
+                )}
                 {!isAnual && (
                   <p style={{ fontSize: 11, color: t.muted, margin: "10px 0 0", fontFamily: FONT }}>
                     💡 No Premium Anual você desbloqueia sinais o dia todo.
