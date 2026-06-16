@@ -2076,6 +2076,14 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
     setTimeout(() => setMsg(""), 2800);
   };
 
+  const closeStuck = async (signalId, outcome) => {
+    const r = await api.adminCloseStuck(signalId, outcome);
+    if (r.ok) setData(d => ({ ...d, openSignals: (d.openSignals || []).filter(s => s.signal_id !== signalId) }));
+    setMsg(r.ok ? `✓ Reconciliado: ${outcome === "tp" ? "TP" : "STOP"} (${r.result_pips >= 0 ? "+" : ""}${r.result_pips} pips)` : (r.error || "erro"));
+    setTimeout(() => setMsg(""), 2800);
+  };
+  const hrs = (iso) => Math.floor((Date.now() - new Date(iso).getTime()) / 3600000);
+
   const setExpiry = async (userId, days) => {
     const r = await api.adminSetExpiry(userId, days);
     setMsg(r.ok ? (days > 0 ? `✓ Validade: +${days} dias` : "✓ Sem limite") : (r.error || "erro"));
@@ -2153,6 +2161,44 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
               background: t.accent, color: t.activeText }}>Salvar</button>
           </div>
         </Card>
+
+        {(data?.openSignals || []).length > 0 && (
+          <Card t={t} accent style={{ marginBottom: 14 }}>
+            <Label t={t} style={{ marginBottom: 8 }}>🔧 Operações abertas (reconciliar)</Label>
+            <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
+              Se o CLOSE se perdeu (EA reiniciou), feche aqui pelo que aconteceu na VPS. Acima de 12h some do app sozinho.
+            </p>
+            <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+              {data.openSignals.map(s => {
+                const old = hrs(s.created_at) >= 12;
+                return (
+                  <div key={s.id} style={{ background: t.card, border: `1px solid ${old ? t.warn : t.bdr}`,
+                    borderRadius: 12, padding: "10px 12px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
+                      <span style={{ fontSize: 13, fontWeight: 800, color: t.text, fontFamily: FONT }}>
+                        {s.asset} {s.tf} · {s.dir}
+                      </span>
+                      <span style={{ fontSize: 10.5, color: old ? t.warn : t.muted, fontWeight: 700, fontFamily: FONT }}>
+                        {hrs(s.created_at)}h {old ? "⚠️" : ""}
+                      </span>
+                    </div>
+                    <div style={{ fontSize: 10.5, color: t.sub, marginBottom: 8, fontFamily: FONT }}>
+                      entrada {s.entry} · alvo {s.tp} · stop {s.sl}
+                    </div>
+                    <div style={{ display: "flex", gap: 8 }}>
+                      <button onClick={() => closeStuck(s.signal_id, "tp")} style={{ flex: 1, height: 38, borderRadius: 10,
+                        cursor: "pointer", fontWeight: 800, fontSize: 12, fontFamily: FONT, border: "none",
+                        background: t.buy, color: "#04130B" }}>✓ Bateu TP</button>
+                      <button onClick={() => closeStuck(s.signal_id, "sl")} style={{ flex: 1, height: 38, borderRadius: 10,
+                        cursor: "pointer", fontWeight: 800, fontSize: 12, fontFamily: FONT, border: "none",
+                        background: t.sell, color: "#fff" }}>✗ Bateu Stop</button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </Card>
+        )}
 
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <Label t={t}>Usuários ({data?.count ?? "…"})</Label>

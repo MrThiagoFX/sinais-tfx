@@ -233,6 +233,7 @@ async function adminPost(body) {
   return res.ok ? { ok: true, ...json } : { ok: false, error: json.error || "falhou" };
 }
 export const adminSetAlunoCoupon = (value) => adminPost({ action: "set-aluno-coupon", value });
+export const adminCloseStuck = (signalId, outcome) => adminPost({ action: "close-stuck", signalId, outcome });
 export const adminSetPlan = (userId, plan) => adminPost({ action: "set-plan", userId, plan });
 export const adminSetHistory = (date) => adminPost({ action: "set-history", date });
 export const adminSetFreeQuota = (value) => adminPost({ action: "set-free-quota", value });

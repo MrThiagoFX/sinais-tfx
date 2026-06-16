@@ -2,6 +2,7 @@
 // GET  → lista usuários (e-mail, plano, indicados) + a data de ativação do histórico.
 // POST → { action: "set-plan", userId, plan } | { action: "set-history", date }
 import { serviceClient, getUser, isAdmin, hasSupabase } from "./_lib/supabase.js";
+import { computePips } from "./_lib/business.js";
 
 export default async function handler(req, res) {
   if (!hasSupabase) return res.status(503).json({ error: "Supabase não configurado" });
@@ -39,7 +40,16 @@ export default async function handler(req, res) {
       aluno_coupon = cfg?.aluno_coupon || "";
     } catch { /* ignore */ }
 
-    return res.status(200).json({ users, settings: { history_start_date, free_quota, aluno_coupon }, count: users.length });
+    // Operações ainda abertas — para o admin reconciliar manualmente (anti-bug).
+    let openSignals = [];
+    try {
+      const { data: op } = await sb.from("signals")
+        .select("id, signal_id, asset, dir, tf, entry, sl, tp, created_at")
+        .eq("status", "aberto").order("created_at", { ascending: true }).limit(50);
+      openSignals = op || [];
+    } catch { /* ignore */ }
+
+    return res.status(200).json({ users, settings: { history_start_date, free_quota, aluno_coupon }, openSignals, count: users.length });
   }
 
   if (req.method === "POST") {
@@ -79,6 +89,19 @@ export default async function handler(req, res) {
       const { error } = await sb.from("app_settings").upsert({ id: 1, free_quota: v });
       if (error) return res.status(500).json({ error: error.message });
       return res.status(200).json({ ok: true });
+    }
+
+    // Reconcilia uma operação presa em aberto (CLOSE perdido): fecha como TP ou SL.
+    if (action === "close-stuck") {
+      const { signalId, outcome } = req.body; // outcome: "tp" | "sl"
+      const { data: sig } = await sb.from("signals").select("*").eq("signal_id", signalId).eq("status", "aberto").maybeSingle();
+      if (!sig) return res.status(404).json({ error: "operação aberta não encontrada" });
+      const exit = outcome === "tp" ? Number(sig.tp) : Number(sig.sl);
+      const pips = computePips(sig.asset, sig.dir, Number(sig.entry), exit);
+      const status = outcome === "tp" ? "ganho" : "perda";
+      const { error } = await sb.from("signals").update({ status, result_pips: pips }).eq("id", sig.id);
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ ok: true, status, result_pips: pips });
     }
 
     // Define/edita o cupom de aluno (quem se cadastrar com ele vira aluno 15d).
