@@ -1378,14 +1378,21 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
             {isAdmin ? "Como admin, você troca quando quiser." : "Você pode trocar 1× por semana."}
           </p>
 
-          {locked && !isAdmin && (
-            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14,
-              background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "10px 14px" }}>
+          {locked && !isAdmin && nextChange && (
+            <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 14,
+              background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "11px 14px" }}>
               <span style={{ fontSize: 16 }}>🔒</span>
-              <span style={{ fontSize: 12, color: t.warn, fontFamily: FONT }}>
-                Travado — próxima troca em <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
+              <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.55, fontFamily: FONT }}>
+                Você escolheu em <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(new Date(nextChange.getTime() - 7 * 86400000))}</span> —
+                poderá trocar a partir de <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} dia{daysLeft !== 1 ? "s" : ""}).
+                A troca é 1× por semana pra manter o histórico correto. Precisa antes? Fale no suporte — o admin pode ajustar.
               </span>
             </div>
+          )}
+          {!locked && !isAdmin && (
+            <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 14px", lineHeight: 1.5, fontFamily: FONT }}>
+              ⚠️ Ao trocar o timeframe de um ativo, ele fica <span style={{ fontWeight: 700, color: t.text }}>travado por 7 dias</span> (pra contar o histórico de forma correta).
+            </p>
           )}
 
           <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -1463,12 +1470,14 @@ const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerA
         <p style={{ fontSize: 12.5, color: t.sub, margin: "0 0 12px", lineHeight: 1.55, fontFamily: FONT }}>
           Veja qual tempo rende mais em cada ativo e escolha o melhor. Lembre: <span style={{ fontWeight: 700, color: t.text }}>1 troca por semana</span>.
         </p>
-        {locked && (
-          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 12,
-            background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "10px 14px" }}>
+        {locked && nextChange && (
+          <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 12,
+            background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "11px 14px" }}>
             <span style={{ fontSize: 16 }}>🔒</span>
-            <span style={{ fontSize: 12, color: t.warn, fontFamily: FONT }}>
-              Travado — próxima troca em <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
+            <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.55, fontFamily: FONT }}>
+              Escolhido em <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(new Date(nextChange.getTime() - 7 * 86400000))}</span> —
+              troca liberada em <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} dia{daysLeft !== 1 ? "s" : ""}).
+              Precisa antes? O admin pode ajustar a pedido.
             </span>
           </div>
         )}
