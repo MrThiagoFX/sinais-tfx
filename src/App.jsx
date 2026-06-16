@@ -1174,22 +1174,22 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
           const pos = (d.pips || 0) >= 0;
           return (
             <div style={{ flex: 1, minWidth: 0, background: t.card, border: `1px solid ${t.bdr}`,
-              borderRadius: 13, padding: "9px 8px", display: "flex",
-              flexDirection: "column", gap: 1 }}>
-              <span style={{ fontSize: 10.5, color: t.sub, fontFamily: FONT, fontWeight: 600 }}>{label}</span>
-              <span style={{ fontSize: 15, fontWeight: 800, color: pos ? t.buy : t.sell, fontFamily: FONT,
+              borderRadius: 14, padding: "11px 10px", display: "flex",
+              flexDirection: "column", gap: 2 }}>
+              <span style={{ fontSize: 11, color: t.sub, fontFamily: FONT, fontWeight: 600 }}>{label}</span>
+              <span style={{ fontSize: 17, fontWeight: 800, color: pos ? t.buy : t.sell, fontFamily: FONT,
                 whiteSpace: "nowrap" }}>
                 {pos ? "+" : ""}{d.pips || 0}
-                <span style={{ fontSize: 10, fontWeight: 600, color: t.sub }}> pips</span>
+                <span style={{ fontSize: 10.5, fontWeight: 600, color: t.sub }}> pips</span>
               </span>
-              <span style={{ fontSize: 10, color: t.sub, fontFamily: FONT }}>
+              <span style={{ fontSize: 10.5, color: t.sub, fontFamily: FONT }}>
                 {d.total || 0} ops · {d.assertividade || 0}%
               </span>
             </div>
           );
         };
         return (
-          <div style={{ padding: "0 24px", marginBottom: 10, flexShrink: 0,
+          <div style={{ padding: "0 16px", marginBottom: 10, flexShrink: 0,
             display: "flex", gap: 8 }}>
             {row("Hoje", dia)}
             {row("Semana", semana)}
@@ -1524,7 +1524,23 @@ const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerA
   );
 };
 
-const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, onTfPerf, showMock }) => {
+const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown, tfPerAsset = {}, onTfPerf, showMock }) => {
+  // Agrega o desempenho por TIMEFRAME (M5, M15) e o geral — a partir do
+  // breakdown por ativo×tf. Deixa claro de onde vem o número acumulado.
+  const bd = breakdown?.breakdown || [];
+  const aggTf = (tf) => {
+    const rows = tf ? bd.filter(d => d.tf === tf) : bd;
+    const ganhos = rows.reduce((a, d) => a + (d.ganhos || 0), 0);
+    const perdas = rows.reduce((a, d) => a + (d.perdas || 0), 0);
+    const pips = rows.reduce((a, d) => a + (d.pips || 0), 0);
+    const total = ganhos + perdas;
+    return { pips, total, assert: total ? Math.round((ganhos / total) * 100) : 0 };
+  };
+  const tfRows = [
+    { label: "M5", d: aggTf("M5") },
+    { label: "M15", d: aggTf("M15") },
+    { label: "Geral (todos)", d: aggTf(null), accent: true },
+  ].filter(r => r.accent || r.d.total > 0);
   const lineData = [38,52,45,68,62,78,72,88,82,91,85,94];
   const metrics = stats ? [
     { label: "Assertividade",       value: `${Math.round((stats.assertividade || 0) * 100)}%`, color: t.accent },
@@ -1559,6 +1575,34 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, onTfPerf,
               </Card>
             ))}
           </div>
+
+          {/* Resultado discriminado por timeframe — clareza total do acumulado. */}
+          {tfRows.length > 0 && (
+            <Card t={t} style={{ marginBottom: 16 }}>
+              <Label t={t} style={{ marginBottom: 4 }}>Resultado por timeframe</Label>
+              <p style={{ fontSize: 11, color: t.sub, margin: "0 0 12px", lineHeight: 1.5, fontFamily: FONT }}>
+                Acumulado de cada tempo gráfico e o geral (soma de todos).
+              </p>
+              {tfRows.map(({ label, d, accent }) => {
+                const pos = d.pips >= 0;
+                return (
+                  <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "9px 0", borderTop: accent ? `1px solid ${t.bdr}` : "none" }}>
+                    <span style={{ fontSize: 13, fontWeight: accent ? 800 : 700,
+                      color: accent ? t.accent : t.text, fontFamily: FONT, width: 100 }}>{label}</span>
+                    <span style={{ fontSize: 11.5, color: t.sub, fontFamily: FONT, flex: 1, textAlign: "center" }}>
+                      {d.total} ops · {d.assert}%
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: pos ? t.buy : t.sell, fontFamily: FONT,
+                      width: 96, textAlign: "right", whiteSpace: "nowrap" }}>
+                      {pos ? "+" : ""}{d.pips} pips
+                    </span>
+                  </div>
+                );
+              })}
+            </Card>
+          )}
+
           <Card t={t} accent onClick={onTfPerf} style={{ marginBottom: 16, display: "flex",
             alignItems: "center", justifyContent: "space-between", cursor: "pointer" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
@@ -2535,7 +2579,7 @@ export default function App() {
 
   // Busca o desempenho por timeframe ao abrir a tela.
   useEffect(() => {
-    if (!hasSupabase || !session || screen !== "tf-perf") return;
+    if (!hasSupabase || !session || !["tf-perf", "performance"].includes(screen)) return;
     api.fetchBreakdown().then((b) => { if (b) setBreakdown(b); });
   }, [screen, session]);
 
@@ -2623,7 +2667,7 @@ export default function App() {
       case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} stats={stats} showMock={showMock} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} showMock={showMock} />;
       case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} tfPerAsset={tfPerAsset} onPick={pickTimeframe} locked={tfLocked} nextChange={tfNextChange} isAdmin={isAdmin} />;
-      case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} onTfPerf={() => go("tf-perf")} showMock={showMock} />;
+      case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} breakdown={breakdown} tfPerAsset={tfPerAsset} onTfPerf={() => go("tf-perf")} showMock={showMock} />;
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
       case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;

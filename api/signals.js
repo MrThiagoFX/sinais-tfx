@@ -143,8 +143,9 @@ async function getSignals(req, res) {
   const todayEligible = eligible.filter((s) => new Date(s.created_at).getTime() >= dayStart);
   const signals = todayEligible.slice(0, quota);
 
-  // Operações recentes (qualquer dia) → tela Sinais, Histórico e Dashboard.
-  const recent = eligible.slice(0, 24);
+  // Operações recentes (toda a janela) → Sinais, Histórico e Dashboard.
+  // Sem truncar: o Histórico precisa bater com o Desempenho (mesmo conjunto).
+  const recent = eligible.slice(0, 300);
 
   return res.status(200).json({
     plan: profile?.plan || "free",
