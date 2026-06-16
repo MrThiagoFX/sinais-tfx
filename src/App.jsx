@@ -507,7 +507,9 @@ const SignalRow = ({ s, t, onClick, pips, fav, onToggleFav }) => {
           <AssetIcon asset={s.asset} />
           <div>
             <div style={{ fontWeight: 800, fontSize: 16, color: t.text, fontFamily: FONT }}>{s.asset}</div>
-            <div style={{ fontSize: 12, color: t.sub, marginTop: 2, fontFamily: FONT }}>{s.time}</div>
+            <div style={{ fontSize: 12, color: t.sub, marginTop: 2, fontFamily: FONT }}>
+              {s.time} · <span style={{ color: t.blue, fontWeight: 700 }}>{s.tf}</span>
+            </div>
           </div>
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
@@ -1303,12 +1305,16 @@ const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme, showMock }) => 
   );
 };
 
-const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan }) => {
-  const [asset, setAsset] = useState("Todos");
-  const [tf, setTf] = useState("Todos");
-  const [type, setType] = useState("Todos");
-  const [saved, setSaved] = useState(false);
-  const save = () => { setSaved(true); setTimeout(() => { setSaved(false); onBack(); }, 700); };
+const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerAsset = {}, onPick, locked, nextChange, isAdmin }) => {
+  const tfs = tfOptionsForPlan(plan);
+  const daysLeft = nextChange ? Math.max(1, Math.ceil((nextChange.getTime() - Date.now()) / 86400000)) : 0;
+  const canChange = isAdmin || !locked;
+  const [toast, setToast] = useState("");
+  const pick = (a, tf) => {
+    if (!canChange) return;
+    onPick && onPick(a, tf);
+    setToast(`${a} → ${tf}`); setTimeout(() => setToast(""), 1400);
+  };
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <Scroll>
@@ -1317,34 +1323,65 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan }) => {
             <BackBtn onClick={onBack} t={t} />
             <ThemeToggle t={t} onToggle={onToggleTheme} />
           </div>
-          <div style={{ marginBottom: 6 }}><Badge text="PREMIUM" color={t.accent} /></div>
-          <h1 style={{ fontSize: 26, fontWeight: 900, margin: "8px 0 22px", letterSpacing: -0.5,
-            color: t.text, fontFamily: FONT }}>Filtros de sinais</h1>
-          <div style={{ marginBottom: 22 }}>
-            <Label t={t} style={{ marginBottom: 10 }}>Ativo (somente os seus)</Label>
-            <div style={{ display: "flex", flexWrap: "wrap", gap: 8 }}>
-              {["Todos", ...selectedAssets].map(a => (
-                <Chip key={a} label={a} active={asset === a} onClick={() => setAsset(a)} t={t} />
-              ))}
+          <div style={{ marginBottom: 6 }}><Badge text={isAdmin ? "ADMIN" : "PREMIUM"} color={t.accent} /></div>
+          <h1 style={{ fontSize: 26, fontWeight: 900, margin: "8px 0 8px", letterSpacing: -0.5,
+            color: t.text, fontFamily: FONT }}>Timeframe por ativo</h1>
+          <p style={{ fontSize: 12.5, color: t.sub, margin: "0 0 18px", lineHeight: 1.55, fontFamily: FONT }}>
+            Você recebe os sinais no timeframe escolhido para cada ativo — <span style={{ fontWeight: 700, color: t.text }}>1 por ativo</span>.{" "}
+            {isAdmin ? "Como admin, você troca quando quiser." : "Você pode trocar 1× por semana."}
+          </p>
+
+          {locked && !isAdmin && (
+            <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14,
+              background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "10px 14px" }}>
+              <span style={{ fontSize: 16 }}>🔒</span>
+              <span style={{ fontSize: 12, color: t.warn, fontFamily: FONT }}>
+                Travado — próxima troca em <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
+              </span>
             </div>
+          )}
+
+          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+            {selectedAssets.map(a => {
+              const cur = (tfPerAsset[a] || [])[0];
+              return (
+                <Card key={a} t={t}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 11, marginBottom: 12 }}>
+                    <AssetIcon asset={a} />
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 800, fontSize: 15, color: t.text, fontFamily: FONT }}>{a}</div>
+                      <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>{ASSET_NAMES[a] || a}</div>
+                    </div>
+                    <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>
+                      atual: <span style={{ fontWeight: 800, color: t.accent }}>{cur || "—"}</span>
+                    </div>
+                  </div>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    {tfs.map(tf => {
+                      const active = cur === tf;
+                      return (
+                        <button key={tf} onClick={() => pick(a, tf)} disabled={!canChange && !active}
+                          style={{ flex: 1, height: 42, borderRadius: 11, cursor: canChange ? "pointer" : "default",
+                            fontWeight: 800, fontSize: 14, fontFamily: FONT,
+                            border: `1.5px solid ${active ? t.accent : t.bdr}`,
+                            background: active ? t.accent : "transparent",
+                            color: active ? t.activeText : (canChange ? t.text : t.muted),
+                            opacity: (!canChange && !active) ? 0.5 : 1 }}>{tf}</button>
+                      );
+                    })}
+                  </div>
+                </Card>
+              );
+            })}
           </div>
-          <div style={{ marginBottom: 22 }}>
-            <Label t={t} style={{ marginBottom: 10 }}>Timeframe</Label>
-            <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
-              {["Todos", ...tfOptionsForPlan(plan)].map(x => (
-                <Chip key={x} label={x} active={tf === x} onClick={() => setTf(x)} t={t} />
-              ))}
-            </div>
-          </div>
-          <div style={{ marginBottom: 28 }}>
-            <Label t={t} style={{ marginBottom: 10 }}>Tipo de sinal</Label>
-            <div style={{ display: "flex", gap: 8 }}>
-              {["Compra", "Venda", "Todos"].map(x => (
-                <Chip key={x} label={x} active={type === x} onClick={() => setType(x)} t={t} />
-              ))}
-            </div>
-          </div>
-          <Btn t={t} onClick={save}>{saved ? "✓ Filtros salvos" : "Salvar filtros"}</Btn>
+
+          {toast && (
+            <p style={{ marginTop: 14, fontSize: 13, fontWeight: 700, textAlign: "center",
+              color: t.buy, fontFamily: FONT }}>✓ Timeframe atualizado: {toast}</p>
+          )}
+          <p style={{ marginTop: 16, fontSize: 11.5, color: t.muted, lineHeight: 1.55, fontFamily: FONT }}>
+            Para comparar qual timeframe rende mais em cada ativo, veja <span style={{ color: t.accent, fontWeight: 700 }}>Desempenho → Histórico por timeframe</span>.
+          </p>
         </div>
       </Scroll>
       <BottomNav active="signals" onNav={onNav} t={t} />
@@ -2460,7 +2497,7 @@ export default function App() {
       case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} />;
       case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} stats={stats} showMock={showMock} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} showMock={showMock} />;
-      case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} />;
+      case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} tfPerAsset={tfPerAsset} onPick={pickTimeframe} locked={tfLocked} nextChange={tfNextChange} isAdmin={isAdmin} />;
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} onTfPerf={() => go("tf-perf")} showMock={showMock} />;
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
       case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} />;
