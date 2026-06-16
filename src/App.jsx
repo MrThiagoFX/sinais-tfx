@@ -1034,6 +1034,7 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
 };
 
 const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, closeAlerts = [], onToggleCloseAlert }) => {
+  const [dashTf, setDashTf] = useState("Todos");
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
   const recentSignals = live?.recent?.length ? live.recent.map(mapSignal) : null;
   const quota = live?.quota ?? dailyQuota(plan);
@@ -1041,7 +1042,9 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
   const info = PLAN_INFO[plan];
   const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
   // Últimos sinais: os de hoje quando há; senão as operações recentes do servidor.
-  const recent = (liveSignals || recentSignals || []).slice(0, 3);
+  // Filtra por timeframe (M5/M15/Todos) e mostra os 3 mais recentes.
+  const recentAll = liveSignals || recentSignals || [];
+  const recent = recentAll.filter(s => dashTf === "Todos" || s.tf === dashTf).slice(0, 3);
   const assertTxt = stats ? `${Math.round((stats.assertividade || 0) * 100)}%` : "—";
   const acumTxt = stats ? `${stats.acumulado_pips >= 0 ? "+" : ""}${stats.acumulado_pips} pips` : "—";
   return (
@@ -1085,11 +1088,24 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
             </p>
           </div>
 
-          <Label t={t} style={{ marginBottom: 10 }}>Últimos sinais</Label>
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
+            <Label t={t}>Últimos sinais</Label>
+            <div style={{ display: "flex", gap: 6 }}>
+              {["Todos", "M5", "M15"].map(f => {
+                const on = dashTf === f;
+                return (
+                  <button key={f} onClick={() => setDashTf(f)} style={{
+                    padding: "4px 10px", borderRadius: 8, cursor: "pointer", fontFamily: FONT,
+                    fontSize: 11, fontWeight: 800, border: `1.5px solid ${on ? t.accent : t.bdr}`,
+                    background: on ? t.accent : "transparent", color: on ? t.activeText : t.sub }}>{f}</button>
+                );
+              })}
+            </div>
+          </div>
           {recent.length === 0 ? (
             <Card t={t} style={{ textAlign: "center", padding: "24px 18px" }}>
               <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-                Nenhum sinal ainda hoje.<br />Você será avisado quando chegar um.
+                {dashTf === "Todos" ? <>Nenhum sinal ainda hoje.<br />Você será avisado quando chegar um.</> : `Nenhum sinal em ${dashTf} agora.`}
               </p>
             </Card>
           ) : recent.map((s, i) => (
@@ -1142,35 +1158,58 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
         const zero = { pips: 0, assertividade: 0, total: 0 };
         const dia = stats?.dia || zero;
         const semana = stats?.semana || zero;
+        // Mês = acumulado geral (janela de 30 dias) vindo do stats.
+        const mes = stats
+          ? { pips: stats.acumulado_pips || 0, assertividade: Math.round((stats.assertividade || 0) * 100), total: stats.amostra || 0 }
+          : zero;
         const row = (label, d) => {
           const pos = (d.pips || 0) >= 0;
           return (
-            <div style={{ flex: 1, background: t.card, border: `1px solid ${t.bdr}`,
-              borderRadius: 14, padding: "10px 12px", display: "flex",
-              flexDirection: "column", gap: 2 }}>
-              <span style={{ fontSize: 11, color: t.sub, fontFamily: FONT, fontWeight: 600 }}>{label}</span>
-              <span style={{ fontSize: 18, fontWeight: 800, color: pos ? t.buy : t.sell, fontFamily: FONT }}>
-                {pos ? "+" : ""}{d.pips || 0} pips
+            <div style={{ flex: 1, minWidth: 0, background: t.card, border: `1px solid ${t.bdr}`,
+              borderRadius: 13, padding: "9px 8px", display: "flex",
+              flexDirection: "column", gap: 1 }}>
+              <span style={{ fontSize: 10.5, color: t.sub, fontFamily: FONT, fontWeight: 600 }}>{label}</span>
+              <span style={{ fontSize: 15, fontWeight: 800, color: pos ? t.buy : t.sell, fontFamily: FONT,
+                whiteSpace: "nowrap" }}>
+                {pos ? "+" : ""}{d.pips || 0}
+                <span style={{ fontSize: 10, fontWeight: 600, color: t.sub }}> pips</span>
               </span>
-              <span style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>
-                {d.total || 0} ops · {d.assertividade || 0}% acerto
+              <span style={{ fontSize: 10, color: t.sub, fontFamily: FONT }}>
+                {d.total || 0} ops · {d.assertividade || 0}%
               </span>
             </div>
           );
         };
         return (
           <div style={{ padding: "0 24px", marginBottom: 10, flexShrink: 0,
-            display: "flex", gap: 10 }}>
+            display: "flex", gap: 8 }}>
             {row("Hoje", dia)}
             {row("Semana", semana)}
+            {row("Mês", mes)}
           </div>
         );
       })()}
       <div style={{ padding: "0 24px", marginBottom: 10, flexShrink: 0 }}>
-        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10, alignItems: "center" }}>
           {["Todos", "Compras", "Vendas"].map(f => (
             <Chip key={f} label={f} active={filter === f} onClick={() => setFilter(f)} t={t} />
           ))}
+          {(() => {
+            // Resultado líquido (=) das operações FECHADAS no filtro atual.
+            const closedShown = shown.filter(s => s.status === "ganho" || s.status === "perda");
+            const net = closedShown.reduce((a, s) => a + (s.resultPips || 0), 0);
+            const pos = net >= 0;
+            return (
+              <div title="Resultado das operações fechadas no filtro" style={{ marginLeft: "auto",
+                display: "flex", alignItems: "center", gap: 5, background: `${(pos ? t.buy : t.sell)}1A`,
+                border: `1px solid ${(pos ? t.buy : t.sell)}55`, borderRadius: 999, padding: "5px 11px" }}>
+                <span style={{ fontSize: 13, fontWeight: 800, color: t.sub, fontFamily: FONT }}>=</span>
+                <span style={{ fontSize: 13, fontWeight: 800, color: pos ? t.buy : t.sell, fontFamily: FONT, whiteSpace: "nowrap" }}>
+                  {pos ? "+" : ""}{net} pips
+                </span>
+              </div>
+            );
+          })()}
         </div>
         {plan === "free" && (
           <div style={{ background: `${t.warn}10`, border: `1px solid ${t.warn}30`,
@@ -1523,6 +1562,26 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, onTfPerf,
             </div>
             <span style={{ color: t.accent, fontSize: 18 }}>›</span>
           </Card>
+
+          {/* Bloco de marca (preenche o espaço; espaço reservado para logo/identidade). */}
+          <div style={{ marginTop: 30, marginBottom: 8, display: "flex", flexDirection: "column",
+            alignItems: "center", textAlign: "center", gap: 10, opacity: 0.92 }}>
+            <div style={{ width: 64, height: 64, borderRadius: 20,
+              background: t.accentSoft, border: `2px solid ${t.accentBdr}`,
+              display: "flex", alignItems: "center", justifyContent: "center" }}>
+              <BoltLogo t={t} size={36} />
+            </div>
+            <div style={{ fontSize: 18, fontWeight: 900, letterSpacing: -0.4, color: t.text, fontFamily: FONT }}>
+              Infinity <span style={{ color: t.accent }}>Signals</span>
+            </div>
+            <div style={{ fontSize: 11.5, color: t.sub, fontFamily: FONT, letterSpacing: 1, textTransform: "uppercase" }}>
+              Desempenho real · operações verificadas
+            </div>
+            <div style={{ fontSize: 10.5, color: t.muted, fontFamily: FONT, marginTop: 2 }}>
+              © {new Date().getFullYear()} MrThiagoFX · Todos os direitos reservados
+            </div>
+          </div>
+
           {showMock && (<>
           <Card t={t} style={{ marginBottom: 12 }}>
             <Label t={t} style={{ marginBottom: 14 }}>Evolução — últimos 30 dias</Label>
