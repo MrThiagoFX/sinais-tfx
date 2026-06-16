@@ -775,6 +775,8 @@ const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount }) => {
   const [coupon, setCoupon] = useState(() => {
     try { return localStorage.getItem("tfx_ref") || ""; } catch { return ""; }
   });
+  const [hasAluno, setHasAluno] = useState(false);
+  const [alunoCoupon, setAlunoCoupon] = useState("");
   const [err, setErr] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -788,6 +790,11 @@ const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount }) => {
     if (pass.length < 6) { setErr("A senha deve ter pelo menos 6 caracteres."); return; }
     if (pass !== pass2) { setErr("As senhas não conferem."); return; }
     setErr(""); setNotice(""); setBusy(true);
+    // Guarda o cupom de aluno para resgatar logo após a autenticação.
+    try {
+      if (hasAluno && alunoCoupon.trim()) localStorage.setItem("tfx_aluno_coupon", alunoCoupon.trim());
+      else localStorage.removeItem("tfx_aluno_coupon");
+    } catch { /* ignore */ }
     const r = await onSignup({ name: name.trim(), email: email.trim(), phone: phone.trim(), pass, coupon: coupon.trim() });
     setBusy(false);
     if (r?.ok && r?.needsConfirm) { setNotice("Conta criada! Confirme seu e-mail (veja a caixa de entrada/spam) e depois faça login."); return; }
@@ -824,6 +831,25 @@ const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount }) => {
         {field("Senha", pass, setPass, { type: "password", placeholder: "mín. 6 caracteres" })}
         {field("Confirmar senha", pass2, setPass2, { type: "password", placeholder: "repita a senha" })}
         {field("Cupom de convite (opcional)", coupon, setCoupon, { placeholder: "código de quem te indicou" })}
+
+        {/* Cupom de aluno: libera acesso de aluno (15 dias) automaticamente. */}
+        <div onClick={() => setHasAluno(v => !v)} style={{ display: "flex", alignItems: "center", gap: 10,
+          cursor: "pointer", padding: "10px 4px", marginBottom: hasAluno ? 8 : 4 }}>
+          <div style={{ width: 22, height: 22, borderRadius: 6, flexShrink: 0,
+            border: `1.5px solid ${hasAluno ? t.accent : t.bdr}`, background: hasAluno ? t.accent : "transparent",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            color: t.activeText, fontSize: 14, fontWeight: 900 }}>{hasAluno ? "✓" : ""}</div>
+          <span style={{ fontSize: 13, color: t.text, fontWeight: 700, fontFamily: FONT }}>🎓 Tenho cupom de aluno</span>
+        </div>
+        {hasAluno && (
+          <>
+            {field("Cupom de aluno", alunoCoupon, setAlunoCoupon, { placeholder: "digite o cupom" })}
+            <p style={{ fontSize: 11, color: t.sub, margin: "-4px 2px 10px", lineHeight: 1.5, fontFamily: FONT }}>
+              Com um cupom válido, seu acesso de <span style={{ fontWeight: 700, color: t.text }}>aluno é liberado por 15 dias</span> automaticamente.
+            </p>
+          </>
+        )}
+
         <p style={{ fontSize: 11, color: t.muted, margin: "-4px 2px 8px", lineHeight: 1.5, fontFamily: FONT }}>
           🔒 Seus dados são protegidos e usados só para o serviço. Ao criar conta você concorda com os Termos e a Política de Privacidade.
         </p>
@@ -1385,7 +1411,7 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
               <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.55, fontFamily: FONT }}>
                 Você escolheu em <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(new Date(nextChange.getTime() - 7 * 86400000))}</span> —
                 poderá trocar a partir de <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} dia{daysLeft !== 1 ? "s" : ""}).
-                A troca é 1× por semana pra manter o histórico correto. Precisa antes? Fale no suporte — o admin pode ajustar.
+                A troca é 1× por semana pra manter o histórico correto.
               </span>
             </div>
           )}
@@ -1477,7 +1503,6 @@ const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerA
             <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.55, fontFamily: FONT }}>
               Escolhido em <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(new Date(nextChange.getTime() - 7 * 86400000))}</span> —
               troca liberada em <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} dia{daysLeft !== 1 ? "s" : ""}).
-              Precisa antes? O admin pode ajustar a pedido.
             </span>
           </div>
         )}
@@ -2016,6 +2041,7 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   const [msg, setMsg] = useState("");
   const [histDate, setHistDate] = useState("");
   const [freeQuota, setFreeQuota] = useState(4);
+  const [alunoCoupon, setAlunoCoupon] = useState("");
   const [q, setQ] = useState("");
   const PLANS = ["free", "mensal", "anual", "aluno", "influencer"];
   const fmtExp = (iso) => {
@@ -2031,6 +2057,7 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
       setData(d);
       setHistDate(d.settings?.history_start_date?.slice(0, 10) || "");
       setFreeQuota(d.settings?.free_quota || 4);
+      setAlunoCoupon(d.settings?.aluno_coupon || "");
     } });
     return () => { alive = false; };
   }, []);
@@ -2040,6 +2067,13 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
     const r = await api.adminSetFreeQuota(v);
     setMsg(r.ok ? `✓ Cota Free = ${v} operações/dia` : (r.error || "erro"));
     setTimeout(() => setMsg(""), 2500);
+  };
+
+  const saveAlunoCoupon = async () => {
+    const r = await api.adminSetAlunoCoupon(alunoCoupon);
+    if (r.ok) setAlunoCoupon(r.aluno_coupon || "");
+    setMsg(r.ok ? (r.aluno_coupon ? `✓ Cupom de aluno: ${r.aluno_coupon}` : "✓ Cupom de aluno removido") : (r.error || "erro"));
+    setTimeout(() => setMsg(""), 2800);
   };
 
   const setExpiry = async (userId, days) => {
@@ -2102,6 +2136,21 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
                 background: freeQuota === v ? t.accent : "transparent",
                 color: freeQuota === v ? t.activeText : t.text }}>{v}</button>
             ))}
+          </div>
+        </Card>
+
+        <Card t={t} accent style={{ marginBottom: 14 }}>
+          <Label t={t} style={{ marginBottom: 8 }}>🎓 Cupom de aluno</Label>
+          <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
+            Quem se cadastrar com este cupom vira <span style={{ fontWeight: 700, color: t.text }}>aluno por 15 dias</span> automático. Depois você muda pra "sem limite" no usuário. Vazio = desativa.
+          </p>
+          <div style={{ display: "flex", gap: 8 }}>
+            <input value={alunoCoupon} placeholder="ex.: aluno2026" onChange={e => setAlunoCoupon(e.target.value)}
+              style={{ flex: 1, height: 44, background: t.card, border: `1.5px solid ${t.bdr}`,
+                borderRadius: 12, padding: "0 14px", color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
+            <button onClick={saveAlunoCoupon} style={{ flexShrink: 0, height: 44, padding: "0 16px", borderRadius: 12,
+              cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: FONT, border: "none",
+              background: t.accent, color: t.activeText }}>Salvar</button>
           </div>
         </Card>
 
@@ -2543,6 +2592,15 @@ export default function App() {
         });
         setTfChangedAt(p.tf_changed_at || null);
         if (Array.isArray(p.close_alerts)) setCloseAlerts(p.close_alerts);
+
+        // Resgata o cupom de aluno pendente (do cadastro) — libera aluno 15 dias.
+        let pendingAluno = "";
+        try { pendingAluno = localStorage.getItem("tfx_aluno_coupon") || ""; } catch { /* ignore */ }
+        if (pendingAluno && (!p.plan || p.plan === "free")) {
+          const r = await api.redeemAluno(pendingAluno);
+          if (r?.ok && r?.plan) { if (alive) setPlan(r.plan); }
+          try { localStorage.removeItem("tfx_aluno_coupon"); } catch { /* ignore */ }
+        }
       }
       if (alive) setProfileLoaded(true);
       api.registerPush();

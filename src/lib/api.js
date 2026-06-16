@@ -153,6 +153,20 @@ export async function saveProfile(prefs) {
   return { ok: true };
 }
 
+// Resgata o cupom de aluno: se válido, libera o plano aluno por 15 dias.
+export async function redeemAluno(coupon) {
+  if (!hasSupabase) return { ok: false };
+  try {
+    const res = await fetch("/api/redeem-aluno", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+      body: JSON.stringify({ coupon }),
+    });
+    const json = await res.json().catch(() => ({}));
+    return res.ok ? json : { ok: false, error: json.error || "falhou" };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
 /* ── Dados (/api) ── */
 export async function fetchSignals() {
   if (!hasSupabase) return null;
@@ -218,6 +232,7 @@ async function adminPost(body) {
   const json = await res.json().catch(() => ({}));
   return res.ok ? { ok: true, ...json } : { ok: false, error: json.error || "falhou" };
 }
+export const adminSetAlunoCoupon = (value) => adminPost({ action: "set-aluno-coupon", value });
 export const adminSetPlan = (userId, plan) => adminPost({ action: "set-plan", userId, plan });
 export const adminSetHistory = (date) => adminPost({ action: "set-history", date });
 export const adminSetFreeQuota = (value) => adminPost({ action: "set-free-quota", value });

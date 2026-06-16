@@ -31,14 +31,15 @@ export default async function handler(req, res) {
       };
     }).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-    let history_start_date = null, free_quota = 4;
+    let history_start_date = null, free_quota = 4, aluno_coupon = "";
     try {
-      const { data: cfg } = await sb.from("app_settings").select("history_start_date, free_quota").eq("id", 1).maybeSingle();
+      const { data: cfg } = await sb.from("app_settings").select("history_start_date, free_quota, aluno_coupon").eq("id", 1).maybeSingle();
       history_start_date = cfg?.history_start_date || null;
       if (cfg?.free_quota) free_quota = cfg.free_quota;
+      aluno_coupon = cfg?.aluno_coupon || "";
     } catch { /* ignore */ }
 
-    return res.status(200).json({ users, settings: { history_start_date, free_quota }, count: users.length });
+    return res.status(200).json({ users, settings: { history_start_date, free_quota, aluno_coupon }, count: users.length });
   }
 
   if (req.method === "POST") {
@@ -78,6 +79,14 @@ export default async function handler(req, res) {
       const { error } = await sb.from("app_settings").upsert({ id: 1, free_quota: v });
       if (error) return res.status(500).json({ error: error.message });
       return res.status(200).json({ ok: true });
+    }
+
+    // Define/edita o cupom de aluno (quem se cadastrar com ele vira aluno 15d).
+    if (action === "set-aluno-coupon") {
+      const code = String(req.body.value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
+      const { error } = await sb.from("app_settings").upsert({ id: 1, aluno_coupon: code || null });
+      if (error) return res.status(500).json({ error: error.message });
+      return res.status(200).json({ ok: true, aluno_coupon: code });
     }
 
     return res.status(400).json({ error: "ação desconhecida" });
