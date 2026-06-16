@@ -1,7 +1,7 @@
 // Disparo de Web Push (VAPID) para os usuários elegíveis a um sinal.
 import webpush from "web-push";
 import { serviceClient } from "./supabase.js";
-import { isEligible, dailyQuota } from "./business.js";
+import { isEligible, dailyQuota, startOfBrtDayMs } from "./business.js";
 
 const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = process.env;
 
@@ -123,4 +123,51 @@ export async function notifyClose(signal) {
     }
   }
   return { sent };
+}
+
+// Boletim diário: no fim do dia, envia a cada usuário o resumo das SUAS
+// operações fechadas hoje (ganhos/perdas/pips), respeitando o que ele segue.
+export async function sendDailyBulletin() {
+  if (!hasVapid) return { sent: 0, skipped: "VAPID ausente" };
+  const sb = serviceClient();
+
+  const { data: profiles, error: pErr } = await sb.from("profiles").select("*");
+  if (pErr || !profiles) return { sent: 0, error: pErr?.message };
+
+  // Operações fechadas hoje (dia de Brasília).
+  const dayStart = startOfBrtDayMs();
+  const { data: rows } = await sb
+    .from("signals").select("*")
+    .in("status", ["ganho", "perda"])
+    .gte("created_at", new Date(dayStart).toISOString())
+    .limit(2000);
+  const closedToday = rows || [];
+
+  let sent = 0, users = 0;
+  for (const profile of profiles) {
+    const { data: subs } = await sb
+      .from("push_subscriptions").select("id, subscription").eq("user_id", profile.id);
+    if (!subs?.length) continue;
+
+    const mine = closedToday.filter((s) => isEligible(s, profile));
+    const g = mine.filter((s) => s.status === "ganho").length;
+    const p = mine.filter((s) => s.status === "perda").length;
+    const pips = Math.round(mine.reduce((a, s) => a + (Number(s.result_pips) || 0), 0));
+    const body = (g + p) > 0
+      ? `Hoje: ${g} ✓ · ${p} ✗ · ${pips >= 0 ? "+" : ""}${pips} pips`
+      : "Hoje sem operações fechadas. Até amanhã! 📈";
+    const payload = JSON.stringify({ title: "📊 Boletim diário — Infinity Signals", body, url: "/" });
+
+    let any = false;
+    for (const row of subs) {
+      try { await webpush.sendNotification(row.subscription, payload); sent++; any = true; }
+      catch (err) {
+        if (err.statusCode === 404 || err.statusCode === 410) {
+          await sb.from("push_subscriptions").delete().eq("id", row.id);
+        }
+      }
+    }
+    if (any) users++;
+  }
+  return { sent, users };
 }
