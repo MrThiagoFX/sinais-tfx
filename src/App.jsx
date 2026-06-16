@@ -400,6 +400,13 @@ const rrText = (entry, sl, tp) => {
 const BRT_TIME = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false });
 const BRT_DDMM = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" });
 const BRT_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" });
+// Início do dia atual em Brasília (epoch ms) — para o filtro "Hoje".
+const brtDayStartMs = () => {
+  const o = 3 * 3600 * 1000; // UTC-3
+  const d = new Date(Date.now() - o);
+  const since = ((d.getUTCHours() * 60 + d.getUTCMinutes()) * 60 + d.getUTCSeconds()) * 1000 + d.getUTCMilliseconds();
+  return Date.now() - since;
+};
 
 const mapSignal = (s) => {
   // Horário SEMPRE em Brasília (GMT-3), a partir do created_at (UTC real do
@@ -414,6 +421,7 @@ const mapSignal = (s) => {
   return {
     id: s.id, signalId: s.signal_id, asset: s.asset, dir: s.dir, tf: s.tf,
     time: `${dateLbl} ${hhmm}`, hhmm, hour: Number(hhmm.slice(0, 2)),
+    ts: d.getTime(),
     ageMin: Math.round((Date.now() - d.getTime()) / 60000),
     status: s.status || "aberto",
     resultPips: s.result_pips,
@@ -1634,44 +1642,58 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, onTfPerf,
 
 const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
   const [tab, setTab] = useState("Todos");
+  const [period, setPeriod] = useState("Mês");
   // Operações fechadas reais enviadas pelo MT4/VPS ao servidor (já filtradas
   // pelo backend por plano/ativos/timeframe). `recent` traz qualquer dia.
   const closed = (live?.recent || [])
     .filter(r => r.status === "ganho" || r.status === "perda")
     .map(mapSignal);
-  const shown = closed.filter(s =>
+  // Filtra pelo PERÍODO (hoje / 7 dias / 30 dias) usando o horário de Brasília.
+  const periodStart = period === "Hoje" ? brtDayStartMs()
+    : period === "Semana" ? Date.now() - 7 * 86400000 : 0;
+  const periodLbl = period === "Hoje" ? "hoje" : period === "Semana" ? "últimos 7 dias" : "últimos 30 dias";
+  const inPeriod = closed.filter(s => (s.ts || 0) >= periodStart);
+  const shown = inPeriod.filter(s =>
     tab === "Todos" || (tab === "Ganhos" ? s.status === "ganho" : s.status === "perda"));
   const total = shown.reduce((a, s) => a + (s.resultPips || 0), 0);
   const wins = shown.filter(s => s.status === "ganho").length;
-  const losses = shown.length - wins;
-  const winRate = shown.length ? Math.round((wins / shown.length) * 100) : 0;
+  const losses = shown.filter(s => s.status === "perda").length;
+  const winRate = (wins + losses) ? Math.round((wins / (wins + losses)) * 100) : 0;
   const schedTxt = schedule.allDay ? "dia todo" : `${schedule.start}–${schedule.end}`;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <ScreenHeader title="Histórico" t={t} onToggleTheme={onToggleTheme} />
       <div style={{ padding: "0 24px", flexShrink: 0 }}>
+        {/* Período: Hoje / Semana / Mês */}
+        <Label t={t} style={{ marginBottom: 8 }}>Período</Label>
+        <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
+          {["Hoje", "Semana", "Mês"].map(x => (
+            <Chip key={x} label={x} active={period === x} onClick={() => setPeriod(x)} t={t} />
+          ))}
+        </div>
+        {/* Resultado: Todos / Ganhos / Perdas */}
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           {["Todos","Ganhos","Perdas"].map(x => (
             <Chip key={x} label={x} active={tab === x} onClick={() => setTab(x)} t={t} />
           ))}
         </div>
-        <Card t={t} style={{ marginBottom: 12, padding: "10px 16px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
-            <span style={{ fontSize: 13, color: t.sub, fontFamily: FONT }}>
-              Total · {shown.length} operações
+        <Card t={t} style={{ marginBottom: 12, padding: "12px 16px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
+            <span style={{ fontSize: 13, color: t.text, fontWeight: 700, fontFamily: FONT }}>
+              {period} · {shown.length} operações
             </span>
-            <span style={{ fontSize: 15, fontWeight: 800,
+            <span style={{ fontSize: 16, fontWeight: 900,
               color: total >= 0 ? t.buy : t.sell, fontFamily: FONT }}>
               {total >= 0 ? "+" : ""}{total} pips
             </span>
           </div>
-          <div style={{ display: "flex", gap: 12, marginBottom: 4 }}>
-            <span style={{ fontSize: 12, color: t.buy, fontWeight: 700, fontFamily: FONT }}>{wins} ganhos</span>
-            <span style={{ fontSize: 12, color: t.sell, fontWeight: 700, fontFamily: FONT }}>{losses} perdas</span>
-            <span style={{ fontSize: 12, color: t.sub, fontWeight: 700, fontFamily: FONT }}>{winRate}% acerto</span>
+          <div style={{ display: "flex", gap: 12, marginBottom: 5 }}>
+            <span style={{ fontSize: 12.5, color: t.buy, fontWeight: 800, fontFamily: FONT }}>✓ {wins} ganhos</span>
+            <span style={{ fontSize: 12.5, color: t.sell, fontWeight: 800, fontFamily: FONT }}>✗ {losses} perdas</span>
+            <span style={{ fontSize: 12.5, color: t.accent, fontWeight: 800, fontFamily: FONT }}>{winRate}% acerto</span>
           </div>
           <p style={{ fontSize: 11, color: t.muted, margin: 0, fontFamily: FONT }}>
-            🕐 Contabilizado no seu horário: {schedTxt}
+            📅 {periodLbl} · 🕐 horário: {schedTxt}
           </p>
         </Card>
       </div>
@@ -1694,7 +1716,17 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
 };
 
 const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, selectedAssets = [], tfPerAsset = {} }) => {
-  const [tog, setTog] = useState({ rt: true, daily: false, fav: true, sound: true });
+  // Preferências de notificação — persistem no aparelho (não resetam ao voltar).
+  const [tog, setTog] = useState(() => {
+    const def = { rt: true, daily: true, fav: true, sound: true };
+    try { return { ...def, ...JSON.parse(localStorage.getItem("tfx_notif") || "{}") }; }
+    catch { return def; }
+  });
+  const setTogV = (id, v) => setTog(s => {
+    const n = { ...s, [id]: v };
+    try { localStorage.setItem("tfx_notif", JSON.stringify(n)); } catch { /* ignore */ }
+    return n;
+  });
   const [expanded, setExpanded] = useState(null);
   const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
   const isFree = plan === "free";
@@ -1736,7 +1768,7 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
                 <div style={{ fontWeight: 700, fontSize: 14, color: t.text, marginBottom: 3, fontFamily: FONT }}>{label}</div>
                 <div style={{ fontSize: 11, color: t.sub, lineHeight: 1.45, fontFamily: FONT }}>{sub}</div>
               </div>
-              <Toggle on={tog[id]} onChange={v => setTog(s => ({ ...s, [id]: v }))} t={t} />
+              <Toggle on={tog[id]} onChange={v => setTogV(id, v)} t={t} />
             </Card>
           ))}
           <Label t={t} style={{ marginTop: 22, marginBottom: 12 }}>Mais opções</Label>
@@ -2248,7 +2280,17 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
             )}
           </Card>
 
-          <Btn t={t} style={{ marginBottom: 10 }} onClick={onUpgrade}>Upgrade de plano</Btn>
+          {isAnual ? (
+            <div style={{ marginBottom: 10, background: t.card, border: `1.5px solid ${t.accentBdr}`,
+              borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
+              <span style={{ fontSize: 18 }}>👑</span>
+              <span style={{ fontSize: 12.5, color: t.text, fontFamily: FONT, lineHeight: 1.45 }}>
+                Você já está no <span style={{ fontWeight: 800, color: t.accent }}>plano máximo</span> — acesso completo liberado.
+              </span>
+            </div>
+          ) : (
+            <Btn t={t} style={{ marginBottom: 10 }} onClick={onUpgrade}>Upgrade de plano</Btn>
+          )}
           <Btn t={t} variant="secondary" style={{ marginBottom: isAdmin ? 10 : 20 }} onClick={onOpenNotifications}>
             🔔 Notificações
           </Btn>
@@ -2257,9 +2299,10 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
               onClick={onAdmin}>🛠️ Painel admin</Btn>
           )}
 
+          {isAdmin && (
           <Card t={t} accent style={{ marginBottom: 20 }}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <Label t={t}>🎁 Convide e ganhe</Label>
+              <Label t={t}>🎁 Convide e ganhe <span style={{ fontSize: 10, color: t.muted }}>(só admin)</span></Label>
               <span style={{ fontSize: 18, fontWeight: 900, color: t.accent, fontFamily: FONT }}>30%</span>
             </div>
             <p style={{ fontSize: 12, color: t.sub, margin: "0 0 14px", lineHeight: 1.55, fontFamily: FONT }}>
@@ -2292,6 +2335,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
               A comissão é creditada quando o indicado assina um plano pago (ativa junto com o pagamento).
             </p>
           </Card>
+          )}
 
           <Label t={t} style={{ marginBottom: 12 }}>Conta</Label>
           {items.map(({ id, icon, label, body }) => {
