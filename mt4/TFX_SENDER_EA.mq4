@@ -17,8 +17,13 @@
 //|        adicione:  https://sinais-tfx.vercel.app                  |
 //+------------------------------------------------------------------+
 #property strict
-#property version "1.00"
-#property description "Envia os sinais do TFXINFINITY para o app Infinity Signals."
+#property version "1.10"
+#property description "Envia os sinais do TFXINFINITY para o app Infinity Signals (com dupla conferencia de fechamento)."
+
+// v1.10 — DUPLA CONFERENCIA: alem de obedecer o fechamento marcado pelo
+// indicador, o EA confere o PRECO AO VIVO de cada operacao aberta contra o
+// TP/SL e fecha sozinho quando o preco cruza. Assim nenhuma operacao fica
+// pendurada se o indicador perder o evento de fechamento.
 
 input string ServidorUrl       = "https://sinais-tfx.vercel.app/api/signals";
 input string Token             = "0393df6d014741badd6a55f12b62f69627168dabf17f60dd63af1fa9fdd9cebf";
@@ -158,6 +163,7 @@ void Varrer()
    string pref = "TFXI_" + Contexto() + "_";   // ex.: TFXI_TFXINFINITY_
    int total = GlobalVariablesTotal();
    int setups = 0;
+   int pendentes = 0;   // abertas que ainda nao bateram TP/SL
 
    for(int i = 0; i < total; i++)
    {
@@ -209,7 +215,7 @@ void Varrer()
          }
       }
 
-      // 2) Fechamento
+      // 2) Fechamento PRIMARIO — o indicador marcou (exitT/mot).
       if(fechado && JaEnviado("OPEN:" + id) && !JaEnviado("CLOSE:" + id))
       {
          if(Post(JsonFechamento(id, symbol, tf, dir, entry, exitP, mot)))
@@ -219,12 +225,39 @@ void Varrer()
             g_ultimaAcao = "FECHAMENTO " + symbol + " " + tf + " (" + MotivoTexto(mot) + ")";
          }
       }
+      // 2b) DUPLA CONFERENCIA — o indicador NAO marcou, mas o preco ja cruzou
+      //     o TP/SL: o EA fecha sozinho (nada fica pendurado).
+      else if(!fechado && target > 0 && JaEnviado("OPEN:" + id) && !JaEnviado("CLOSE:" + id))
+      {
+         double preco = MarketInfo(symbol, MODE_BID);
+         int    motAuto = 0; double exitAuto = 0;
+         if(preco > 0)
+         {
+            if(dir > 0) {           // BUY
+               if(preco >= target)      { motAuto = 1; exitAuto = target; }  // TP
+               else if(preco <= stop)   { motAuto = 2; exitAuto = stop;   }  // STOP
+            } else {                // SELL
+               if(preco <= target)      { motAuto = 1; exitAuto = target; }  // TP
+               else if(preco >= stop)   { motAuto = 2; exitAuto = stop;   }  // STOP
+            }
+         }
+         if(motAuto > 0)
+         {
+            if(Post(JsonFechamento(id, symbol, tf, dir, entry, exitAuto, motAuto)))
+            {
+               Marcar("CLOSE:" + id);
+               g_totalEnviados++;
+               g_ultimaAcao = "AUTO-FECHAMENTO " + symbol + " " + tf + " (" + MotivoTexto(motAuto) + ")";
+            }
+         }
+         else pendentes++;   // realmente aberta (preco ainda entre TP e SL, ou indisponivel)
+      }
    }
 
    if(MostrarStatus)
    {
-      string s = "TFX SENDER — Infinity Signals\n";
-      s += "Indicador: " + NomeDoIndicador + "  |  setups na memoria: " + IntegerToString(setups) + "\n";
+      string s = "TFX SENDER — Infinity Signals (v1.10 dupla conferencia)\n";
+      s += "Indicador: " + NomeDoIndicador + "  |  setups: " + IntegerToString(setups) + "  |  abertas: " + IntegerToString(pendentes) + "\n";
       s += "Enviados nesta sessao: " + IntegerToString(g_totalEnviados) + "\n";
       s += "Ultima acao: " + g_ultimaAcao + "\n";
       if(StringLen(g_ultimoErro) > 0) s += "ATENCAO: " + g_ultimoErro + "\n";
