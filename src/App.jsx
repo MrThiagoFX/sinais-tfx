@@ -1067,7 +1067,7 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
   );
 };
 
-const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, closeAlerts = [], onToggleCloseAlert }) => {
+const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, closeAlerts = [], onToggleCloseAlert, userName }) => {
   const [dashTf, setDashTf] = useState("Todos");
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
   const recentSignals = live?.recent?.length ? live.recent.map(mapSignal) : null;
@@ -1089,7 +1089,7 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <BoltLogo t={t} size={32} />
               <div>
-                <div style={{ fontSize: 13, color: t.sub, fontFamily: FONT }}>Olá, Trader 👋</div>
+                <div style={{ fontSize: 13, color: t.sub, fontFamily: FONT }}>Olá, {userName || "Trader"} 👋</div>
                 <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5, color: t.text, fontFamily: FONT }}>Dashboard</div>
               </div>
             </div>
@@ -1728,8 +1728,11 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
     .map(mapSignal);
   // Filtra pelo PERÍODO. "Hoje" = dia do mercado (zera 21:00 BRT).
   const periodStart = period === "Hoje" ? forexDayStartMs()
-    : period === "Semana" ? Date.now() - 7 * 86400000 : 0;
-  const periodLbl = period === "Hoje" ? "hoje" : period === "Semana" ? "últimos 7 dias" : "últimos 30 dias";
+    : period === "Semana" ? Date.now() - 7 * 86400000
+    : period === "Mês" ? Date.now() - 30 * 86400000 : 0;
+  const periodLbl = period === "Hoje" ? "hoje"
+    : period === "Semana" ? "últimos 7 dias"
+    : period === "Mês" ? "últimos 30 dias" : "últimos 90 dias";
   const inPeriod = closed.filter(s => (s.ts || 0) >= periodStart);
   const shown = inPeriod.filter(s =>
     tab === "Todos" || (tab === "Ganhos" ? s.status === "ganho" : s.status === "perda"));
@@ -1745,7 +1748,7 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
         {/* Período: Hoje / Semana / Mês */}
         <Label t={t} style={{ marginBottom: 8 }}>Período</Label>
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
-          {["Hoje", "Semana", "Mês"].map(x => (
+          {["Hoje", "Semana", "Mês", "3 meses"].map(x => (
             <Chip key={x} label={x} active={period === x} onClick={() => setPeriod(x)} t={t} />
           ))}
         </div>
@@ -2262,7 +2265,7 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   );
 };
 
-const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset }) => {
+const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock }) => {
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
   const [schedSaved, setSchedSaved] = useState(false);
@@ -2274,7 +2277,9 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
     setCopied(true); setTimeout(() => setCopied(false), 1500);
   };
   const info = PLAN_INFO[plan];
-  const quota = dailyQuota(plan);
+  // Cota e "usados hoje" reais (do backend); fallback p/ mock só com dados fictícios ON.
+  const quota = live?.quota ?? dailyQuota(plan);
+  const used = live?.delivered ?? (showMock ? Math.min(3, quota) : 0);
   const isAnual = isAnualLikePlan(plan);
   const isFree = plan === "free";
   const items = [
@@ -2323,10 +2328,10 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
             <AvatarCircle url={profile?.avatar_url} t={t} />
             <div>
               <div style={{ fontWeight: 900, fontSize: 18, color: t.text, fontFamily: FONT }}>
-                {profile?.name || (userEmail ? userEmail.split("@")[0] : "João Trader")}
+                {profile?.name || (userEmail ? userEmail.split("@")[0] : "Trader")}
               </div>
               <div style={{ fontSize: 13, color: t.sub, marginTop: 3, fontFamily: FONT }}>
-                {profile?.username ? `@${profile.username.replace(/^@/, "")}` : (userEmail || "joao@email.com")}
+                {profile?.username ? `@${profile.username.replace(/^@/, "")}` : (userEmail || "—")}
               </div>
             </div>
           </div>
@@ -2344,9 +2349,9 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
                 fontSize: 11, fontWeight: 800, color: t.accent, fontFamily: FONT }}>ATIVO</div>
             </div>
             <Label t={t} style={{ marginBottom: 8 }}>Sinais usados hoje</Label>
-            <Bar pct={(3 / quota) * 100} t={t} />
+            <Bar pct={quota ? (used / quota) * 100 : 0} t={t} />
             <p style={{ fontSize: 12, color: t.sub, margin: "7px 0 0", fontFamily: FONT }}>
-              3 de {quota} sinais
+              {used} de {quota} sinais
             </p>
           </div>
 
@@ -2667,7 +2672,7 @@ export default function App() {
   // Cobre o caso de bater TP/SL com o app aberto ou ao tocar na notificação.
   useEffect(() => {
     if (!hasSupabase || !session) return;
-    if (!["home", "signals", "performance", "history"].includes(screen)) return;
+    if (!["home", "signals", "performance", "history", "profile"].includes(screen)) return;
     let alive = true;
     const pull = async () => {
       const [s, st] = await Promise.all([api.fetchSignals(), api.fetchStats()]);
@@ -2778,7 +2783,7 @@ export default function App() {
       case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
       case "timeframes":    return <Timeframes {...common} onNext={(changed) => { if (changed) stampTfChange(); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
-      case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} />;
+      case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} userName={profileData?.name || (session?.user?.email ? session.user.email.split("@")[0] : "")} />;
       case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} stats={stats} showMock={showMock} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} showMock={showMock} />;
       case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} tfPerAsset={tfPerAsset} onPick={pickTimeframe} locked={tfLocked} nextChange={tfNextChange} isAdmin={isAdmin} />;
@@ -2786,7 +2791,7 @@ export default function App() {
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
       case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
       case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;

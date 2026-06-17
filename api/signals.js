@@ -110,8 +110,8 @@ async function getSignals(req, res) {
 
   const { data: profile } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
   let freeQuota = 4;
-  // Janela base para "operações recentes": últimos 30 dias…
-  let cutoff = new Date(Date.now() - 30 * 86400000);
+  // Janela base para "operações recentes" (histórico consultável): últimos 90 dias…
+  let cutoff = new Date(Date.now() - 90 * 86400000);
   try {
     const { data: cfg } = await sb.from("app_settings").select("free_quota, history_start_date").eq("id", 1).maybeSingle();
     if (cfg?.free_quota) freeQuota = cfg.free_quota;
@@ -123,13 +123,13 @@ async function getSignals(req, res) {
   } catch { /* colunas ainda não criadas */ }
   const quota = dailyQuota(profile, freeQuota);
 
-  // Lê os sinais recentes (até 30 dias) e filtra na aplicação pelas preferências.
+  // Lê os sinais recentes (até 90 dias) e filtra na aplicação pelas preferências.
   const { data: rows, error } = await sb
     .from("signals")
     .select("*")
     .gte("created_at", cutoff.toISOString())
     .order("created_at", { ascending: false })
-    .limit(300);
+    .limit(1000);
   if (error) return serverError(res, "Falha ao ler sinais", error);
 
   // Anti-travamento: um "aberto" com mais de 12h é resíduo (o CLOSE se perdeu
@@ -150,9 +150,9 @@ async function getSignals(req, res) {
   const todayEligible = eligible.filter((s) => new Date(s.created_at).getTime() >= dayStart);
   const signals = todayEligible.slice(0, quota);
 
-  // Operações recentes (toda a janela) → Sinais, Histórico e Dashboard.
+  // Operações recentes (toda a janela de 90 dias) → Sinais, Histórico e Dashboard.
   // Sem truncar: o Histórico precisa bater com o Desempenho (mesmo conjunto).
-  const recent = eligible.slice(0, 300);
+  const recent = eligible.slice(0, 1000);
 
   return res.status(200).json({
     plan: profile?.plan || "free",
