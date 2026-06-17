@@ -1,7 +1,7 @@
 // Disparo de Web Push (VAPID) para os usuários elegíveis a um sinal.
 import webpush from "web-push";
 import { serviceClient } from "./supabase.js";
-import { isEligible, dailyQuota, startOfBrtDayMs } from "./business.js";
+import { isEligible, dailyQuota, startOfForexDayMs } from "./business.js";
 
 const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = process.env;
 
@@ -135,7 +135,7 @@ export async function sendDailyBulletin() {
   if (pErr || !profiles) return { sent: 0, error: pErr?.message };
 
   // Operações fechadas hoje (dia de Brasília).
-  const dayStart = startOfBrtDayMs();
+  const dayStart = startOfForexDayMs();
   const { data: rows } = await sb
     .from("signals").select("*")
     .in("status", ["ganho", "perda"])

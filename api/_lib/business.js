@@ -46,14 +46,14 @@ export function computePips(asset, dir, entry, exit) {
   return Math.round((dir === "Compra" ? raw : -raw));
 }
 
-// Início do dia atual no fuso de Brasília (UTC-3 fixo), em epoch ms.
-// Usado pelos recortes "hoje" — meia-noite BRT = 03:00 UTC do mesmo dia.
-export function startOfBrtDayMs() {
-  const OFFSET = 3 * 3600 * 1000; // BRT = UTC-3
-  const d = new Date(Date.now() - OFFSET); // relógio de Brasília
-  const sinceMidnight =
-    ((d.getUTCHours() * 60 + d.getUTCMinutes()) * 60 + d.getUTCSeconds()) * 1000 + d.getUTCMilliseconds();
-  return Date.now() - sinceMidnight;
+// Início do "dia" do mercado, em epoch ms. O mercado Forex vira o dia à
+// MEIA-NOITE UTC, que é 21:00 de Brasília — é nesse horário que o indicador
+// zera e reinicia. Por isso o "Hoje" e o boletim diário usam esse corte
+// (21:00 BRT), e não a meia-noite civil de Brasília.
+export function startOfForexDayMs() {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0); // 00:00 UTC = 21:00 BRT
+  return d.getTime();
 }
 
 // Cota diária de sinais: Free = configurável pelo admin (2 a 4) · Premium = 20.

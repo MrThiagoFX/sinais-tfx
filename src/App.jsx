@@ -400,12 +400,12 @@ const rrText = (entry, sl, tp) => {
 const BRT_TIME = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", minute: "2-digit", hour12: false });
 const BRT_DDMM = new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit" });
 const BRT_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/Sao_Paulo", year: "numeric", month: "2-digit", day: "2-digit" });
-// Início do dia atual em Brasília (epoch ms) — para o filtro "Hoje".
-const brtDayStartMs = () => {
-  const o = 3 * 3600 * 1000; // UTC-3
-  const d = new Date(Date.now() - o);
-  const since = ((d.getUTCHours() * 60 + d.getUTCMinutes()) * 60 + d.getUTCSeconds()) * 1000 + d.getUTCMilliseconds();
-  return Date.now() - since;
+// Início do "dia" do mercado (epoch ms) — meia-noite UTC = 21:00 de Brasília,
+// quando o Forex/indicador vira o dia. É o corte do "Hoje".
+const forexDayStartMs = () => {
+  const d = new Date();
+  d.setUTCHours(0, 0, 0, 0); // 00:00 UTC = 21:00 BRT
+  return d.getTime();
 };
 
 const mapSignal = (s) => {
@@ -1726,8 +1726,8 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
   const closed = (live?.recent || [])
     .filter(r => r.status === "ganho" || r.status === "perda")
     .map(mapSignal);
-  // Filtra pelo PERÍODO (hoje / 7 dias / 30 dias) usando o horário de Brasília.
-  const periodStart = period === "Hoje" ? brtDayStartMs()
+  // Filtra pelo PERÍODO. "Hoje" = dia do mercado (zera 21:00 BRT).
+  const periodStart = period === "Hoje" ? forexDayStartMs()
     : period === "Semana" ? Date.now() - 7 * 86400000 : 0;
   const periodLbl = period === "Hoje" ? "hoje" : period === "Semana" ? "últimos 7 dias" : "últimos 30 dias";
   const inPeriod = closed.filter(s => (s.ts || 0) >= periodStart);
@@ -1813,7 +1813,7 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
     : "nenhum ativo selecionado";
   const toggles = [
     { id: "rt",    label: "Sinais em tempo real", sub: "Alerta assim que o sinal for detectado" },
-    { id: "daily", label: "Boletim diário",        sub: "Resumo de desempenho do dia" },
+    { id: "daily", label: "Boletim diário",        sub: "Resumo do dia, enviado às 21:00 (fecha o dia do mercado)" },
     { id: "fav",   label: "Sinais favoritos",       sub: "Notificações dos ativos preferidos" },
     { id: "sound", label: "Som e vibração",         sub: "Feedback tátil ao receber alertas" },
   ];
@@ -1828,6 +1828,8 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
       body: isFree
         ? "Free recebe sinais sortidos dos 5 ativos. No Premium você escolhe."
         : `Você monitora: ${ativosTxt}.` },
+    { id: "diaforex", label: "Por que o dia zera às 21:00?",
+      body: "O mercado Forex vira o dia à meia-noite do horário do mercado, que dá 21:00 no Brasil. Por isso o contador 'Hoje' zera todo dia às 21:00 e reinicia na hora — e o boletim diário é enviado nesse momento, fechando o resultado do dia que terminou. As estatísticas de Semana e Mês não zeram, só acumulam." },
   ];
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>

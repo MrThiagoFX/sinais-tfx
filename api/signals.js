@@ -4,7 +4,7 @@
 //   entry/stop/target, signal_id) e também o formato legado {asset,dir,tf,entry,sl,tp}.
 // GET → app lista sinais do usuário.
 import {
-  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, startOfBrtDayMs,
+  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, startOfForexDayMs,
 } from "./_lib/business.js";
 import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
 import { notifyEligibleUsers, notifyClose } from "./_lib/push.js";
@@ -139,7 +139,7 @@ async function getSignals(req, res) {
     .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
   // Sinais de HOJE (dia de Brasília) → contador "sinais hoje" + cota.
-  const dayStart = startOfBrtDayMs();
+  const dayStart = startOfForexDayMs();
   const todayEligible = eligible.filter((s) => new Date(s.created_at).getTime() >= dayStart);
   const signals = todayEligible.slice(0, quota);
 

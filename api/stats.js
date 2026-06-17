@@ -2,7 +2,7 @@
 // Calcula sobre public.signals (status, result_pips), respeitando as
 // preferências (ativos/timeframes) e a janela de horário do usuário.
 import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
-import { isEligible, startOfBrtDayMs } from "./_lib/business.js";
+import { isEligible, startOfForexDayMs } from "./_lib/business.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -49,7 +49,7 @@ export default async function handler(req, res) {
   const relevant = (rows || []).filter((s) => admin || isEligible(s, profile));
 
   // Acumulado geral + recortes de hoje (dia de Brasília) e da semana (7 dias).
-  const dayStart = startOfBrtDayMs();
+  const dayStart = startOfForexDayMs();
   const weekAgo = Date.now() - 7 * 86400000;
   const agg = (list) => {
     let g = 0, p = 0, pips = 0;
