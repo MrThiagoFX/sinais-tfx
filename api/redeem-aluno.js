@@ -2,6 +2,7 @@
 // Se bater com o app_settings.aluno_coupon, libera o plano "aluno" por 15 dias.
 // (O admin pode depois mudar para "sem limite" no painel.)
 import { serviceClient, getUser, hasSupabase } from "./_lib/supabase.js";
+import { serverError } from "./_lib/http.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -72,7 +73,7 @@ export default async function handler(req, res) {
   const expires = new Date(Date.now() + 15 * 86400000).toISOString();
   const { error } = await sb.from("profiles")
     .update({ plan: "aluno", plan_expires_at: expires }).eq("id", user.id);
-  if (error) return res.status(500).json({ error: error.message });
+  if (error) return serverError(res, "Falha ao liberar o plano", error);
 
   return res.status(200).json({ ok: true, plan: "aluno", plan_expires_at: expires });
 }

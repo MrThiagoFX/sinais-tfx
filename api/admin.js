@@ -3,6 +3,7 @@
 // POST → { action: "set-plan", userId, plan } | { action: "set-history", date }
 import { serviceClient, getUser, isAdmin, hasSupabase } from "./_lib/supabase.js";
 import { computePips } from "./_lib/business.js";
+import { serverError } from "./_lib/http.js";
 
 export default async function handler(req, res) {
   if (!hasSupabase) return res.status(503).json({ error: "Supabase não configurado" });
@@ -60,7 +61,7 @@ export default async function handler(req, res) {
       if (!["free", "mensal", "anual", "aluno", "influencer"].includes(plan))
         return res.status(400).json({ error: "plano inválido" });
       const { error } = await sb.from("profiles").update({ plan }).eq("id", userId);
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) return serverError(res, "Falha na operação", error);
       return res.status(200).json({ ok: true });
     }
 
@@ -71,7 +72,7 @@ export default async function handler(req, res) {
       let expires = null;
       if (days > 0) expires = new Date(Date.now() + days * 86400000).toISOString();
       const { error } = await sb.from("profiles").update({ plan_expires_at: expires }).eq("id", userId);
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) return serverError(res, "Falha na operação", error);
       return res.status(200).json({ ok: true, plan_expires_at: expires });
     }
 
@@ -79,7 +80,7 @@ export default async function handler(req, res) {
       const { date } = req.body; // ISO string ou null
       const { error } = await sb.from("app_settings")
         .upsert({ id: 1, history_start_date: date || null });
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) return serverError(res, "Falha na operação", error);
       return res.status(200).json({ ok: true });
     }
 
@@ -87,7 +88,7 @@ export default async function handler(req, res) {
       let v = parseInt(req.body.value, 10);
       if (!(v >= 2 && v <= 4)) return res.status(400).json({ error: "cota Free deve ser 2, 3 ou 4" });
       const { error } = await sb.from("app_settings").upsert({ id: 1, free_quota: v });
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) return serverError(res, "Falha na operação", error);
       return res.status(200).json({ ok: true });
     }
 
@@ -100,7 +101,7 @@ export default async function handler(req, res) {
       const pips = computePips(sig.asset, sig.dir, Number(sig.entry), exit);
       const status = outcome === "tp" ? "ganho" : "perda";
       const { error } = await sb.from("signals").update({ status, result_pips: pips }).eq("id", sig.id);
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) return serverError(res, "Falha na operação", error);
       return res.status(200).json({ ok: true, status, result_pips: pips });
     }
 
@@ -108,7 +109,7 @@ export default async function handler(req, res) {
     if (action === "set-aluno-coupon") {
       const code = String(req.body.value || "").trim().toLowerCase().replace(/[^a-z0-9]/g, "");
       const { error } = await sb.from("app_settings").upsert({ id: 1, aluno_coupon: code || null });
-      if (error) return res.status(500).json({ error: error.message });
+      if (error) return serverError(res, "Falha na operação", error);
       return res.status(200).json({ ok: true, aluno_coupon: code });
     }
 

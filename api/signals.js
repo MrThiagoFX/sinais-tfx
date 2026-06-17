@@ -8,6 +8,7 @@ import {
 } from "./_lib/business.js";
 import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
 import { notifyEligibleUsers, notifyClose } from "./_lib/push.js";
+import { serverError } from "./_lib/http.js";
 
 export default async function handler(req, res) {
   if (req.method === "POST") return postSignal(req, res);
@@ -56,13 +57,13 @@ async function postSignal(req, res) {
     q = signalId ? q.eq("signal_id", signalId)
                  : q.eq("asset", asset).eq("tf", tf).eq("dir", dir).eq("status", "aberto");
     const { data, error } = await q.select();
-    if (error) return res.status(500).json({ error: "Falha ao fechar sinal", detail: error.message });
+    if (error) return serverError(res, "Falha ao fechar sinal", error);
 
     // Notifica o fechamento (TP/SL) aos usuários elegíveis.
     let push = { sent: 0 };
     if (data?.length) {
       try { push = await notifyClose(data[0]); }
-      catch (e) { push = { sent: 0, error: e.message }; }
+      catch (e) { console.error("[api] push:", e?.message); push = { sent: 0, error: "falha ao notificar" }; }
     }
     return res.status(200).json({ ok: true, event, closed: data?.length || 0, result_pips: pips, status, push });
   }
@@ -81,11 +82,11 @@ async function postSignal(req, res) {
   const row = { asset, dir, tf, entry, sl, tp, status: "aberto" };
   if (signalId) row.signal_id = signalId;
   const { data, error } = await sb.from("signals").insert(row).select().single();
-  if (error) return res.status(500).json({ error: "Falha ao gravar sinal", detail: error.message });
+  if (error) return serverError(res, "Falha ao gravar sinal", error);
 
   let push = { sent: 0 };
   try { push = await notifyEligibleUsers(data); }
-  catch (e) { push = { sent: 0, error: e.message }; }
+  catch (e) { console.error("[api] push:", e?.message); push = { sent: 0, error: "falha ao notificar" }; }
 
   return res.status(201).json({ ok: true, event, signal: data, push });
 }
@@ -123,7 +124,7 @@ async function getSignals(req, res) {
     .gte("created_at", cutoff.toISOString())
     .order("created_at", { ascending: false })
     .limit(300);
-  if (error) return res.status(500).json({ error: "Falha ao ler sinais", detail: error.message });
+  if (error) return serverError(res, "Falha ao ler sinais", error);
 
   // Anti-travamento: um "aberto" com mais de 12h é resíduo (o CLOSE se perdeu
   // ou o EA reiniciou) — M5/M15 não ficam abertos tanto tempo. Não exibe.

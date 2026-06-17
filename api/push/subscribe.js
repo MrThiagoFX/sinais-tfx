@@ -1,6 +1,7 @@
 // POST /api/push/subscribe — registra a PushSubscription do usuário logado.
 // Body: { subscription: <objeto retornado por pushManager.subscribe> }
 import { serviceClient, getUser, hasSupabase } from "../_lib/supabase.js";
+import { serverError } from "../_lib/http.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -27,7 +28,7 @@ export default async function handler(req, res) {
       { user_id: user.id, subscription },
       { onConflict: "user_id,subscription" }
     );
-  if (error) return res.status(500).json({ error: "Falha ao salvar inscrição", detail: error.message });
+  if (error) return serverError(res, "Falha ao salvar inscrição", error);
 
   return res.status(201).json({ ok: true });
 }

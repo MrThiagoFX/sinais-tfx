@@ -3,6 +3,7 @@
 // preferências (ativos/timeframes) e a janela de horário do usuário.
 import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
 import { isEligible, startOfForexDayMs } from "./_lib/business.js";
+import { serverError } from "./_lib/http.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -42,7 +43,7 @@ export default async function handler(req, res) {
     .gte("created_at", cutoff.toISOString())
     .in("status", ["ganho", "perda"])
     .limit(5000);
-  if (error) return res.status(500).json({ error: "Falha ao ler sinais", detail: error.message });
+  if (error) return serverError(res, "Falha ao ler sinais", error);
 
   // Admin conta todos os ativos/timeframes; cliente, só o que escolheu.
   const admin = isAdmin(user);

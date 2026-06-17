@@ -1,6 +1,7 @@
 // POST /api/avatar — recebe a foto (data URL base64) do usuário logado,
 // salva no bucket 'avatars' via service role e devolve a URL pública.
 import { serviceClient, getUser, hasSupabase } from "./_lib/supabase.js";
+import { serverError } from "./_lib/http.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -26,7 +27,7 @@ export default async function handler(req, res) {
   const { error } = await sb.storage.from("avatars").upload(path, buffer, {
     contentType, upsert: true,
   });
-  if (error) return res.status(500).json({ error: "Falha no upload", detail: error.message });
+  if (error) return serverError(res, "Falha no upload", error);
 
   const { data } = sb.storage.from("avatars").getPublicUrl(path);
   // cache-buster para a foto atualizar na hora

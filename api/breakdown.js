@@ -2,6 +2,7 @@
 // o melhor tempo pelo histórico. Respeita a data de ativação (app_settings).
 import { serviceClient, getUser, hasSupabase } from "./_lib/supabase.js";
 import { ASSETS, TFS } from "./_lib/business.js";
+import { serverError } from "./_lib/http.js";
 
 export default async function handler(req, res) {
   if (req.method !== "GET") {
@@ -31,7 +32,7 @@ export default async function handler(req, res) {
     .gte("created_at", cutoff.toISOString())
     .in("status", ["ganho", "perda"])
     .limit(5000);
-  if (error) return res.status(500).json({ error: "Falha ao ler sinais", detail: error.message });
+  if (error) return serverError(res, "Falha ao ler sinais", error);
 
   // Agrega por asset+tf
   const map = {};
