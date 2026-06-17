@@ -2,6 +2,7 @@
 // salva no bucket 'avatars' via service role e devolve a URL pública.
 import { serviceClient, getUser, hasSupabase } from "./_lib/supabase.js";
 import { serverError } from "./_lib/http.js";
+import { rateLimit, tooMany } from "./_lib/ratelimit.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -12,6 +13,9 @@ export default async function handler(req, res) {
 
   const user = await getUser(req);
   if (!user) return res.status(401).json({ error: "Não autenticado" });
+
+  const rl = await rateLimit(`avatar:${user.id}`, 10, 3600000); // 10/hora por usuário
+  if (!rl.ok) return tooMany(res, rl.retryAfterSec);
 
   const { image } = req.body || {};
   const m = typeof image === "string" && image.match(/^data:(image\/(png|jpeg|webp));base64,(.+)$/);

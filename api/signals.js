@@ -9,6 +9,7 @@ import {
 import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
 import { notifyEligibleUsers, notifyClose } from "./_lib/push.js";
 import { serverError } from "./_lib/http.js";
+import { rateLimit, tooMany } from "./_lib/ratelimit.js";
 
 export default async function handler(req, res) {
   if (req.method === "POST") return postSignal(req, res);
@@ -25,6 +26,11 @@ async function postSignal(req, res) {
   if (!process.env.MT4_TOKEN || token !== process.env.MT4_TOKEN) {
     return res.status(401).json({ error: "Token inválido" });
   }
+
+  // Teto global de ingestão: mesmo com token válido, limita a 120 sinais/min
+  // (muito acima do EA normal) — barra flood caso o token vaze.
+  const rl = await rateLimit("signals:post", 120, 60000);
+  if (!rl.ok) return tooMany(res, rl.retryAfterSec);
 
   const b = req.body || {};
   const event = (b.event || "SIGNAL_OPEN").toUpperCase();

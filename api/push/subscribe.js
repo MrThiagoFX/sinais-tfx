@@ -2,6 +2,7 @@
 // Body: { subscription: <objeto retornado por pushManager.subscribe> }
 import { serviceClient, getUser, hasSupabase } from "../_lib/supabase.js";
 import { serverError } from "../_lib/http.js";
+import { rateLimit, tooMany } from "../_lib/ratelimit.js";
 
 export default async function handler(req, res) {
   if (req.method !== "POST") {
@@ -20,6 +21,9 @@ export default async function handler(req, res) {
 
   const user = await getUser(req);
   if (!user) return res.status(401).json({ error: "Não autenticado" });
+
+  const rl = await rateLimit(`push:${user.id}`, 30, 3600000); // 30/hora por usuário
+  if (!rl.ok) return tooMany(res, rl.retryAfterSec);
 
   const sb = serviceClient();
   const { error } = await sb
