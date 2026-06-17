@@ -141,6 +141,11 @@ O indicador **não envia HTTP** (no MT4 indicador não pode `WebRequest`). Ele s
 > `Sanitiza(symbol) + "_" + TF + "_" + ("BUY"/"SELL") + "_" + SIG_EPOCH`
 > (Sanitiza = troca tudo que não for `[A-Za-z0-9]` por `_`.)
 
+6. **Fluxo natural por ativo+TF:** o indicador deve mandar o **`CLOSE` da entrada
+   anterior antes de abrir uma nova** no mesmo ativo+timeframe (1 posição por
+   gráfico). Se por algum motivo o `CLOSE` se perder, **não tem problema**: o
+   backend trata isso sozinho (ver seção 7) — a próxima abertura limpa a órfã.
+
 ## 5. Responsabilidades do **SENDER** (para o Claude do amigo escrever)
 
 Loop a cada N segundos (ex.: 2–5s):
@@ -172,6 +177,12 @@ Loop a cada N segundos (ex.: 2–5s):
 > O `<MT4_TOKEN>` do header **tem que ser igual** à env var `MT4_TOKEN`
 > configurada no Vercel (produção). Não versionar esse valor em texto puro.
 
+> ⚠️ **O sender NÃO controla "quantas entradas estão ativas".** Ele não rastreia
+> estado, não consulta o que está aberto, não decide o que fechar. Ele só
+> **entrega arquivo → apaga no 2xx**. A garantia de "1 entrada ativa por ativo+TF"
+> é **100% do backend** (seção 7). Colocar esse controle no sender reintroduz
+> estado/corrida e quebra a confiabilidade — não faça.
+
 ## 6. Contrato do backend `/api/signals` (referência)
 
 `POST https://sinais-tfx.vercel.app/api/signals` — header `X-TFX-Token`.
@@ -190,7 +201,32 @@ Loop a cada N segundos (ex.: 2–5s):
 Regra mental do sender: **qualquer 2xx = apaga. 4xx = problema do payload/auth
 (não reenviar cegamente). 5xx/429/rede = manter e tentar de novo.**
 
-## 7. Casos de borda (por que não perde)
+## 7. Garantia de estado — no máximo 1 entrada ativa por ativo+TF
+
+Invariante do sistema: **para cada (ativo, timeframe) existe no máximo 1 sinal
+`aberto` por vez.** Quem garante isso é o **backend** (fonte única da verdade),
+de forma atômica — não o sender, não o indicador.
+
+Como o backend mantém isso:
+- **Índice único parcial:** `unique (asset, tf) where status = 'aberto'` →
+  fisicamente impossível ter 2 abertos no mesmo ativo+TF.
+- **OPEN supersede:** se chega uma abertura para um ativo+TF que já tem uma
+  aberta (porque o `CLOSE` anterior se perdeu), o backend **encerra a antiga como
+  `expirado`** (sem contar em estatística — resultado real desconhecido) e insere
+  a nova, numa transação. Auto-cura da órfã.
+- **CLOSE sync:** o fechamento encerra a aberta daquele ativo+TF (casa por
+  `signal_id`; se faltar, por ativo+TF+aberto).
+- **Backstop:** sinais `aberto` há +12h são tratados como resíduo (sweeper).
+
+Efeito prático: **não importa ordem de chegada, duplicata ou perda** — o estado
+no banco sempre reflete "0 ou 1 ativa por ativo+TF". O sender continua burro e
+idempotente; o indicador continua só produzindo eventos.
+
+> Status: a invariante depende do índice único + da lógica de supersede no
+> `/api/signals`. Se ainda não estiver aplicada, é o item a implementar no backend
+> (migration + handler de abertura).
+
+## 8. Casos de borda (por que não perde)
 
 - **Sender reinicia:** os arquivos pendentes continuam na pasta → reprocessa.
 - **Sender cai no meio do envio:** o arquivo só some após o 2xx → será reenviado
