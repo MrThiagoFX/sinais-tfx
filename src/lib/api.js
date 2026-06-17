@@ -141,8 +141,10 @@ export async function saveProfile(prefs) {
   if (!supabase) return { ok: true, demo: true };
   const session = await getSession();
   if (!session) return { ok: false, error: "sem sessão" };
+  // NÃO enviar `plan` daqui: a coluna é protegida no banco (trigger) e só o
+  // backend muda o plano (admin/cupom/pagamento). O cliente grava apenas as
+  // preferências abaixo.
   const { error } = await supabase.from("profiles").update({
-    plan: prefs.plan,
     assets: prefs.selectedAssets,
     tf_per_asset: prefs.tfPerAsset,
     schedule_start: prefs.schedule.start,
@@ -211,7 +213,7 @@ export async function fetchBreakdown() {
 export async function isAdminUser() {
   const session = await getSession();
   const u = session?.user;
-  return !!(u && (u.app_metadata?.role === "admin" || u.user_metadata?.is_admin === true));
+  return !!(u && u.app_metadata?.role === "admin");
 }
 
 export async function adminList() {

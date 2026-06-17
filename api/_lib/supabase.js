@@ -14,9 +14,12 @@ export function serviceClient() {
   });
 }
 
-// O usuário é admin? (marcado no metadata da conta).
+// O usuário é admin? Usa SOMENTE app_metadata.role, que é gravável apenas
+// pelo backend (service_role). NUNCA confiar em user_metadata: o próprio
+// usuário consegue editá-lo via supabase.auth.updateUser({ data }), o que
+// permitiria auto-promoção a admin.
 export function isAdmin(user) {
-  return user?.app_metadata?.role === "admin" || user?.user_metadata?.is_admin === true;
+  return user?.app_metadata?.role === "admin";
 }
 
 // Valida o JWT do usuário (header Authorization: Bearer <token>) e devolve o user.

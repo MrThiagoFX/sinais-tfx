@@ -2727,7 +2727,7 @@ export default function App() {
   const closeUpgrade = useCallback(() => { setUpgradeFrom(null); setScreen("profile"); }, []);
 
   // Admin (conta interna) tem privilégios: troca o timeframe quando quiser.
-  const isAdmin = !!(session?.user && (session.user.app_metadata?.role === "admin" || session.user.user_metadata?.is_admin === true));
+  const isAdmin = !!(session?.user && session.user.app_metadata?.role === "admin");
 
   // Trava de timeframe: 1 troca por semana (mantém o histórico limpo).
   // O admin não é travado — pode alternar M5/M15 sem esperar a semana.
