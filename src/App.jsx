@@ -962,9 +962,10 @@ const Plans = ({ t, onNext, onBack, onToggleTheme, plan, setPlan, currentPlan })
   );
 };
 
-const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected }) => {
-  const toggle = a => setSelected(s => s.includes(a) ? s.filter(x => x !== a) : [...s, a]);
+const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected, locked, nextChange }) => {
+  const toggle = a => { if (locked) return; setSelected(s => s.includes(a) ? s.filter(x => x !== a) : [...s, a]); };
   const n = selected.length;
+  const daysLeft = nextChange ? Math.max(1, Math.ceil((nextChange.getTime() - Date.now()) / 86400000)) : 0;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <ScreenHeader title="Seus ativos" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
@@ -972,6 +973,16 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected }) => 
         <p style={{ fontSize: 13, color: t.sub, margin: "0 0 14px", fontFamily: FONT }}>
           Os sinais exibidos serão apenas dos ativos que você escolher aqui.
         </p>
+        {locked && (
+          <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14,
+            background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "10px 14px" }}>
+            <span style={{ fontSize: 16 }}>🔒</span>
+            <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.5, fontFamily: FONT }}>
+              <span style={{ fontWeight: 800 }}>Atenção:</span> você só pode alterar ativos/timeframes 1 vez a cada 7 dias.
+              Poderá alterar de novo em <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
+            </span>
+          </div>
+        )}
         <Card t={t} accent style={{ marginBottom: 14, padding: "12px 16px" }}>
           <p style={{ fontSize: 12, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
             <span style={{ fontWeight: 800, color: t.accent }}>1 timeframe fixo por ativo.</span> Você
@@ -986,7 +997,8 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected }) => 
                 background: t.card, borderRadius: 16, padding: "14px 16px",
                 border: `1.5px solid ${on ? t.accent : t.bdr}`,
                 display: "flex", alignItems: "center", justifyContent: "space-between",
-                cursor: "pointer" }}>
+                opacity: locked && !on ? 0.5 : 1,
+                cursor: locked ? "not-allowed" : "pointer" }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
                   <AssetIcon asset={a} />
                   <div>
@@ -2279,7 +2291,7 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   );
 };
 
-const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock }) => {
+const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onEditAssets, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock }) => {
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
   const [schedSaved, setSchedSaved] = useState(false);
@@ -2459,6 +2471,11 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onUpgra
             </div>
           ) : (
             <Btn t={t} style={{ marginBottom: 10 }} onClick={onUpgrade}>Upgrade de plano</Btn>
+          )}
+          {onEditAssets && (
+            <Btn t={t} variant="secondary" style={{ marginBottom: 10 }} onClick={onEditAssets}>
+              📊 Editar ativos e timeframes
+            </Btn>
           )}
           <Btn t={t} variant="secondary" style={{ marginBottom: isAdmin ? 10 : 20 }} onClick={onOpenNotifications}>
             🔔 Notificações
@@ -2750,6 +2767,11 @@ export default function App() {
   const openUpgrade = useCallback(() => { setUpgradeFrom(plan); setScreen("plans"); }, [plan]);
   const closeUpgrade = useCallback(() => { setUpgradeFrom(null); setScreen("profile"); }, []);
 
+  // Edição de config (ativos/timeframes) pós-onboarding: entra pela tela de
+  // Ativos e volta pro Perfil. A trava de 7 dias (tfLocked) vale aqui também.
+  const [editingConfig, setEditingConfig] = useState(false);
+  const openEditAssets = useCallback(() => { setEditingConfig(true); setScreen("assets"); }, []);
+
   // Admin (conta interna) tem privilégios: troca o timeframe quando quiser.
   const isAdmin = !!(session?.user && session.user.app_metadata?.role === "admin");
 
@@ -2800,8 +2822,8 @@ export default function App() {
       case "login":         return <Login {...common} onNext={() => go("home")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} onCreateAccount={() => go("signup")} />;
       case "signup":        return <Signup {...common} onNext={() => go("plans")} onSignup={hasSupabase ? handleSignup : undefined} onHaveAccount={() => go("login")} />;
       case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
-      case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
-      case "timeframes":    return <Timeframes {...common} onNext={(changed) => { if (changed) stampTfChange(); api.updateProfileFields({ onboarded: true }); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
+      case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go(editingConfig ? "profile" : "plans")} selected={selectedAssets} setSelected={setSelectedAssets} locked={tfLocked} nextChange={tfNextChange} />;
+      case "timeframes":    return <Timeframes {...common} onNext={() => { if (!tfLocked) stampTfChange(); api.updateProfileFields({ onboarded: true }); setEditingConfig(false); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
       case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} userName={profileData?.name || (session?.user?.email ? session.user.email.split("@")[0] : "")} />;
       case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} stats={stats} showMock={showMock} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} showMock={showMock} />;
@@ -2810,7 +2832,7 @@ export default function App() {
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
       case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onEditAssets={openEditAssets} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
       case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;
