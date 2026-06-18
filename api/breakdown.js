@@ -1,5 +1,6 @@
 // GET /api/breakdown — desempenho por ATIVO × TIMEFRAME, para o usuário escolher
-// o melhor tempo pelo histórico. Respeita a data de ativação (app_settings).
+// o melhor tempo pelo histórico. Lê os resumos pré-agregados de stats_daily
+// (mantidos por trigger no fechamento), somando por (ativo, timeframe) na janela.
 import { serviceClient, getUser, hasSupabase } from "./_lib/supabase.js";
 import { ASSETS, TFS } from "./_lib/business.js";
 import { serverError } from "./_lib/http.js";
@@ -16,7 +17,7 @@ export default async function handler(req, res) {
 
   const sb = serviceClient();
 
-  // Janela: últimos 90 dias, ou a data de ativação do histórico (o que for mais recente).
+  // Janela: últimos 90 dias, ou a data de ativação do histórico (a mais recente).
   let cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 90);
   try {
     const { data: cfg } = await sb.from("app_settings").select("history_start_date").eq("id", 1).maybeSingle();
@@ -25,23 +26,24 @@ export default async function handler(req, res) {
       if (d > cutoff) cutoff = d;
     }
   } catch { /* tabela ainda não criada */ }
+  const cutoffDay = cutoff.toISOString().slice(0, 10);
 
   const { data: rows, error } = await sb
-    .from("signals")
-    .select("asset,tf,status,result_pips")
-    .gte("created_at", cutoff.toISOString())
-    .in("status", ["ganho", "perda"])
+    .from("stats_daily")
+    .select("asset,tf,ganhos,perdas,pips")
+    .gte("day", cutoffDay)
     .limit(5000);
-  if (error) return serverError(res, "Falha ao ler sinais", error);
+  if (error) return serverError(res, "Falha ao ler estatísticas", error);
 
-  // Agrega por asset+tf
+  // Soma os buckets diários por asset+tf.
   const map = {};
-  for (const s of rows || []) {
-    if (!ASSETS.includes(s.asset) || !TFS.includes(s.tf)) continue;
-    const k = `${s.asset}|${s.tf}`;
-    const m = (map[k] = map[k] || { asset: s.asset, tf: s.tf, ganhos: 0, perdas: 0, pips: 0 });
-    m.pips += Number(s.result_pips) || 0;
-    if (s.status === "ganho") m.ganhos++; else m.perdas++;
+  for (const r of rows || []) {
+    if (!ASSETS.includes(r.asset) || !TFS.includes(r.tf)) continue;
+    const k = `${r.asset}|${r.tf}`;
+    const m = (map[k] = map[k] || { asset: r.asset, tf: r.tf, ganhos: 0, perdas: 0, pips: 0 });
+    m.ganhos += r.ganhos || 0;
+    m.perdas += r.perdas || 0;
+    m.pips += Number(r.pips) || 0;
   }
   const breakdown = Object.values(map).map((m) => {
     const total = m.ganhos + m.perdas;
