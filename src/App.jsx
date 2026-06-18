@@ -1823,22 +1823,6 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
     return n;
   });
   const [expanded, setExpanded] = useState(null);
-  // Ativação de push por TOQUE (gesto do usuário) — confiável em mobile/iOS,
-  // ao contrário do registro automático pós-login.
-  const [pushMsg, setPushMsg] = useState("");
-  const [pushBusy, setPushBusy] = useState(false);
-  const enablePush = async () => {
-    setPushBusy(true); setPushMsg("");
-    const r = await api.registerPush();
-    setPushBusy(false);
-    if (r.ok) { setPushMsg("✓ Notificações ativadas neste aparelho!"); return; }
-    const map = {
-      "permissão negada": "Permissão negada. Ative nas configurações do navegador/aparelho.",
-      "sem suporte a push": "Sem suporte a push aqui. No iPhone, instale o app na tela inicial (Compartilhar → Adicionar à Tela de Início) e tente de novo.",
-      "sem backend": "Servidor indisponível. Tente pelo app publicado (não pelo localhost).",
-    };
-    setPushMsg(map[r.reason] || ("Não foi possível ativar: " + (r.reason || "erro")));
-  };
   const schedTxt = schedule.allDay ? "Dia todo" : `${schedule.start} – ${schedule.end}`;
   const isFree = plan === "free";
   const ativosTxt = selectedAssets.length
@@ -1874,20 +1858,6 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
           </div>
           <h1 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 20px", letterSpacing: -0.5,
             color: t.text, fontFamily: FONT }}>Notificações</h1>
-          <Card t={t} accent style={{ marginBottom: 14 }}>
-            <div style={{ fontWeight: 800, fontSize: 14, color: t.text, marginBottom: 4, fontFamily: FONT }}>
-              🔔 Ativar notificações neste aparelho
-            </div>
-            <div style={{ fontSize: 11.5, color: t.sub, lineHeight: 1.5, marginBottom: 10, fontFamily: FONT }}>
-              Toque para permitir os alertas de sinais. No iPhone, instale o app na tela inicial primeiro.
-            </div>
-            <Btn t={t} onClick={enablePush} disabled={pushBusy}>
-              {pushBusy ? "Ativando…" : "Ativar notificações"}
-            </Btn>
-            {pushMsg && (
-              <p style={{ fontSize: 12, color: t.sub, margin: "10px 0 0", lineHeight: 1.5, fontFamily: FONT }}>{pushMsg}</p>
-            )}
-          </Card>
           {toggles.map(({ id, label, sub }) => (
             <Card key={id} t={t} style={{ display: "flex", justifyContent: "space-between",
               alignItems: "center", marginBottom: 10 }}>
