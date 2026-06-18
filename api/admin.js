@@ -100,7 +100,7 @@ export default async function handler(req, res) {
       const exit = outcome === "tp" ? Number(sig.tp) : Number(sig.sl);
       const pips = computePips(sig.asset, sig.dir, Number(sig.entry), exit);
       const status = outcome === "tp" ? "ganho" : "perda";
-      const { error } = await sb.from("signals").update({ status, result_pips: pips }).eq("id", sig.id);
+      const { error } = await sb.from("signals").update({ status, result_pips: pips, closed_at: new Date().toISOString() }).eq("id", sig.id);
       if (error) return serverError(res, "Falha na operação", error);
       return res.status(200).json({ ok: true, status, result_pips: pips });
     }

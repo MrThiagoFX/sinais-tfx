@@ -422,6 +422,7 @@ const mapSignal = (s) => {
     id: s.id, signalId: s.signal_id, asset: s.asset, dir: s.dir, tf: s.tf,
     time: `${dateLbl} ${hhmm}`, hhmm, hour: Number(hhmm.slice(0, 2)),
     ts: d.getTime(),
+    closedTs: s.closed_at ? new Date(s.closed_at).getTime() : null,
     ageMin: Math.round((Date.now() - d.getTime()) / 60000),
     status: s.status || "aberto",
     resultPips: s.result_pips,
@@ -430,6 +431,17 @@ const mapSignal = (s) => {
     est: s.result_pips != null ? `${s.result_pips >= 0 ? "+" : ""}${s.result_pips} pips` : "—",
     perf: 70,
   };
+};
+
+// Ordem lógica da lista de sinais:
+//  1) EM ANDAMENTO (aberto) no topo — por criação, mais novos primeiro;
+//  2) FECHADOS abaixo — por data de ENCERRAMENTO desc (os que fecharam por
+//     último em cima), com a criação desc como desempate.
+const sortSignals = (a, b) => {
+  const aOpen = a.status === "aberto", bOpen = b.status === "aberto";
+  if (aOpen !== bOpen) return aOpen ? -1 : 1;
+  if (aOpen) return (b.ts || 0) - (a.ts || 0);
+  return (b.closedTs || b.ts || 0) - (a.closedTs || a.ts || 0) || (b.ts || 0) - (a.ts || 0);
 };
 
 // Card de sinal do Dashboard: mostra "em andamento" (com painel), ✓ ganho ou ✗ perda.
@@ -1078,7 +1090,7 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
   // Últimos sinais: os de hoje quando há; senão as operações recentes do servidor.
   // Filtra por timeframe (M5/M15/Todos) e mostra os 3 mais recentes.
   const recentAll = liveSignals || recentSignals || [];
-  const recent = recentAll.filter(s => dashTf === "Todos" || s.tf === dashTf).slice(0, 3);
+  const recent = recentAll.filter(s => dashTf === "Todos" || s.tf === dashTf).sort(sortSignals).slice(0, 3);
   const assertTxt = stats ? `${Math.round((stats.assertividade || 0) * 100)}%` : "—";
   const acumTxt = stats ? `${stats.acumulado_pips >= 0 ? "+" : ""}${stats.acumulado_pips} pips` : "—";
   return (
@@ -1176,8 +1188,9 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
   const recentSignals = live?.recent?.length ? live.recent.map(mapSignal) : null;
   const base = liveSignals || recentSignals || [];
-  const shown = base.filter(s =>
-    filter === "Todos" || (filter === "Compras" ? s.dir === "Compra" : s.dir === "Venda"));
+  const shown = base
+    .filter(s => filter === "Todos" || (filter === "Compras" ? s.dir === "Compra" : s.dir === "Venda"))
+    .sort(sortSignals);
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <ScreenHeader title="Sinais" t={t} onToggleTheme={onToggleTheme}
@@ -1734,8 +1747,9 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
     : period === "Semana" ? "últimos 7 dias"
     : period === "Mês" ? "últimos 30 dias" : "últimos 90 dias";
   const inPeriod = closed.filter(s => (s.ts || 0) >= periodStart);
-  const shown = inPeriod.filter(s =>
-    tab === "Todos" || (tab === "Ganhos" ? s.status === "ganho" : s.status === "perda"));
+  const shown = inPeriod
+    .filter(s => tab === "Todos" || (tab === "Ganhos" ? s.status === "ganho" : s.status === "perda"))
+    .sort(sortSignals);
   const total = shown.reduce((a, s) => a + (s.resultPips || 0), 0);
   const wins = shown.filter(s => s.status === "ganho").length;
   const losses = shown.filter(s => s.status === "perda").length;

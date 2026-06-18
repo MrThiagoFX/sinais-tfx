@@ -59,7 +59,7 @@ async function postSignal(req, res) {
     const status = (String(b.close_reason || "").toUpperCase() === "STOP")
       ? "perda" : (pips >= 0 ? "ganho" : "perda");
 
-    let q = sb.from("signals").update({ result_pips: pips, status });
+    let q = sb.from("signals").update({ result_pips: pips, status, closed_at: new Date().toISOString() });
     q = signalId ? q.eq("signal_id", signalId)
                  : q.eq("asset", asset).eq("tf", tf).eq("dir", dir).eq("status", "aberto");
     const { data, error } = await q.select();
