@@ -2668,6 +2668,11 @@ export default function App() {
           if (r?.ok && r?.plan) { if (alive) setPlan(r.plan); }
           try { localStorage.removeItem("tfx_aluno_coupon"); } catch { /* ignore */ }
         }
+
+        // Onboarding: se o perfil ainda não passou pela escolha de ativos/TF
+        // (flag onboarded = false), leva ao onboarding em vez de cair na home.
+        // (=== false: se a coluna ainda não existir, não redireciona ninguém.)
+        if (alive && p.onboarded === false) setScreen("plans");
       }
       if (alive) setProfileLoaded(true);
       api.registerPush();
@@ -2796,7 +2801,7 @@ export default function App() {
       case "signup":        return <Signup {...common} onNext={() => go("plans")} onSignup={hasSupabase ? handleSignup : undefined} onHaveAccount={() => go("login")} />;
       case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go("plans")} selected={selectedAssets} setSelected={setSelectedAssets} />;
-      case "timeframes":    return <Timeframes {...common} onNext={(changed) => { if (changed) stampTfChange(); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
+      case "timeframes":    return <Timeframes {...common} onNext={(changed) => { if (changed) stampTfChange(); api.updateProfileFields({ onboarded: true }); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
       case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} userName={profileData?.name || (session?.user?.email ? session.user.email.split("@")[0] : "")} />;
       case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} stats={stats} showMock={showMock} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} showMock={showMock} />;
