@@ -1604,7 +1604,58 @@ const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerA
   );
 };
 
-const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown, tfPerAsset = {}, onTfPerf, showMock }) => {
+// Curva de capital (equity): pips ACUMULADOS ao longo do tempo, a partir dos
+// sinais fechados. Reutilizável (Desempenho + boletim). `closed` = lista já
+// mapeada (mapSignal) com .ts/.resultPips/.status.
+const EquityCurve = ({ t, closed, height = 120 }) => {
+  const ordered = (closed || [])
+    .filter(s => s.status === "ganho" || s.status === "perda")
+    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
+  if (ordered.length < 2) return null; // sem dados suficientes p/ uma curva
+
+  let cum = 0;
+  const serie = ordered.map(s => (cum += (s.resultPips || 0)));
+  const min = Math.min(0, ...serie);
+  const max = Math.max(0, ...serie);
+  const range = (max - min) || 1;
+  const W = 320, H = height, pad = 8;
+  const x = i => (i / (serie.length - 1)) * W;
+  const y = v => H - pad - ((v - min) / range) * (H - 2 * pad);
+  const line = serie.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+  const area = `0,${H} ${line} ${W},${H}`;
+  const final = serie[serie.length - 1];
+  const pos = final >= 0;
+  const col = pos ? t.buy : t.sell;
+  const zeroY = y(0).toFixed(1);
+
+  return (
+    <Card t={t} style={{ marginBottom: 16 }}>
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
+        <Label t={t}>Curva de capital</Label>
+        <span style={{ fontSize: 16, fontWeight: 900, color: col, fontFamily: FONT }}>
+          {pos ? "+" : ""}{Math.round(final)} pips
+        </span>
+      </div>
+      <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
+        <defs>
+          <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={col} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={col} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        {/* linha do zero (break-even) */}
+        <line x1="0" y1={zeroY} x2={W} y2={zeroY} stroke={t.bdr} strokeWidth="1" strokeDasharray="3 4" />
+        <polygon points={area} fill="url(#eqGrad)" />
+        <polyline points={line} fill="none" stroke={col} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+      <p style={{ fontSize: 10.5, color: t.muted, margin: "8px 0 0", fontFamily: FONT }}>
+        Pips acumulados em {ordered.length} operações fechadas (laudo da ferramenta).
+      </p>
+    </Card>
+  );
+};
+
+const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown, tfPerAsset = {}, onTfPerf, showMock, live }) => {
   // Agrega o desempenho por TIMEFRAME (M5, M15) e o geral — a partir do
   // breakdown por ativo×tf. Deixa claro de onde vem o número acumulado.
   const bd = breakdown?.breakdown || [];
@@ -1694,6 +1745,9 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown
             </div>
             <span style={{ color: t.accent, fontSize: 18 }}>›</span>
           </Card>
+
+          {/* Curva de capital — pips acumulados do laudo (abaixo do histórico por tf). */}
+          <EquityCurve t={t} closed={(live?.recentAll || []).map(mapSignal)} />
 
           {/* Bloco de marca (preenche o espaço; espaço reservado para logo/identidade). */}
           <div style={{ marginTop: 30, marginBottom: 8, display: "flex", flexDirection: "column",
@@ -2927,7 +2981,7 @@ export default function App() {
       case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} stats={stats} showMock={showMock} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} showMock={showMock} />;
       case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} tfPerAsset={tfPerAsset} onPick={pickTimeframe} locked={tfLocked} nextChange={tfNextChange} isAdmin={isAdmin} />;
-      case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} breakdown={breakdown} tfPerAsset={tfPerAsset} onTfPerf={() => go("tf-perf")} showMock={showMock} />;
+      case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} breakdown={breakdown} tfPerAsset={tfPerAsset} onTfPerf={() => go("tf-perf")} showMock={showMock} live={live} />;
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
       case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
