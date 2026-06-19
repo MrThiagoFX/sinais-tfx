@@ -155,6 +155,19 @@ export async function saveProfile(prefs) {
   return { ok: true };
 }
 
+// Cancela o próprio plano (downgrade self-service para Free). Só rebaixa.
+export async function cancelPlan() {
+  if (!hasSupabase) return { ok: false };
+  try {
+    const res = await fetch("/api/cancel-plan", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...(await authHeader()) },
+    });
+    const json = await res.json().catch(() => ({}));
+    return res.ok ? json : { ok: false, error: json.error || "falhou" };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
+
 // Resgata o cupom de aluno: se válido, libera o plano aluno por 15 dias.
 export async function redeemAluno(coupon) {
   if (!hasSupabase) return { ok: false };

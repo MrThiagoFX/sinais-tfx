@@ -2377,6 +2377,15 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onEditA
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
   const [schedSaved, setSchedSaved] = useState(false);
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+  const doCancel = async () => {
+    setCancelling(true);
+    const r = await api.cancelPlan();
+    setCancelling(false);
+    if (r?.ok) window.location.reload(); // recarrega p/ refletir Free em todo o app
+    else { setCancelling(false); alert(r?.error || "Não foi possível cancelar agora."); }
+  };
   const confirmSched = () => { setSchedSaved(true); setTimeout(() => setSchedSaved(false), 1800); };
   const refCode = referral?.code || "SEUCODIGO";
   const refLink = `https://sinais-tfx.vercel.app/?ref=${refCode}`;
@@ -2594,6 +2603,39 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onEditA
               </div>
             );
           })}
+
+          {!isFree && !isAdmin && (
+            <div style={{ marginTop: 16 }}>
+              {!confirmCancel ? (
+                <button onClick={() => setConfirmCancel(true)} style={{
+                  width: "100%", padding: "11px", background: "transparent",
+                  border: `1px solid ${t.bdr}`, borderRadius: 14, cursor: "pointer",
+                  color: t.muted, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
+                  Cancelar plano (voltar ao Free)
+                </button>
+              ) : (
+                <div style={{ background: t.card, border: `1.5px solid ${t.sell}55`,
+                  borderRadius: 16, padding: "14px 16px" }}>
+                  <p style={{ fontSize: 12.5, color: t.text, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
+                    Cancelar agora rebaixa sua conta para o <b>Free</b> imediatamente (você perde o acesso premium). Tem certeza?
+                  </p>
+                  <div style={{ display: "flex", gap: 8 }}>
+                    <button onClick={doCancel} disabled={cancelling} style={{
+                      flex: 1, padding: "10px", background: t.sell, border: "none", borderRadius: 12,
+                      cursor: "pointer", color: "#fff", fontSize: 13, fontWeight: 800, fontFamily: FONT,
+                      opacity: cancelling ? 0.6 : 1 }}>
+                      {cancelling ? "Cancelando…" : "Sim, cancelar"}
+                    </button>
+                    <button onClick={() => setConfirmCancel(false)} disabled={cancelling} style={{
+                      flex: 1, padding: "10px", background: "transparent", border: `1px solid ${t.bdr}`,
+                      borderRadius: 12, cursor: "pointer", color: t.text, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
+                      Manter plano
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           <div style={{ marginTop: 16 }}>
             <Btn t={t} variant="danger" onClick={onLogout}>Sair da conta</Btn>
