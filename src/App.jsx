@@ -39,11 +39,14 @@ const THEMES = {
 /* CSS global: scroll fino + reset */
 const GlobalStyle = ({ t }) => (
   <style>{`
-    html, body, #root { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
-    /* Fundo da página = COR DO MENU (bg1): se o wrapper "site->app" reservar a
-       área do home-indicator e essa faixa aparecer atrás do app, ela se funde com
-       o menu (parece que o menu vai até a borda) em vez de ficar uma faixa preta. */
-    html, body, #root { background: ${t.bg1}; }
+    /* Tela cheia no iOS standalone: documento em FLUXO com 100dvh (não usar
+       position:fixed no root — tira o documento do fluxo e o iOS pinta as áreas
+       de status bar / home-indicator com o preto dele = faixas). */
+    html, body, #root { height: 100%; min-height: 100dvh; margin: 0; overflow: hidden; overscroll-behavior: none; }
+    /* Fundo da página = fundo do app (bg0), igual ao conteúdo: qualquer região de
+       safe-area fica da mesma cor, sem faixa destacada. */
+    html, body, #root { background: ${t.bg0}; }
+    body { background: ${t.bg0}; }
     * { box-sizing: border-box; }
 
     /* ── Safe area do rodapé do menu (home-indicator) ──
@@ -2937,11 +2940,11 @@ export default function App() {
   // rodapé (nada de "flutuar" por causa de 100dvh menor que a área visível).
   if (edgeToEdge) {
     return (
-      // position:fixed + inset:0 prende o app nas 4 bordas da viewport real,
-      // preenchendo exatamente a área visível (sem depender de 100dvh/innerHeight,
-      // que em alguns wrappers não batem com a tela). O menu, em fluxo no fim da
-      // coluna, fica colado na borda inferior.
-      <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column",
+      // Container em FLUXO com 100dvh (padrão que funciona no iOS standalone):
+      // ocupa a tela inteira, status bar e home-indicator ficam por baixo do app
+      // (edge-to-edge via viewport-fit=cover). O menu, no fim da coluna, encosta
+      // na borda; safe-area só como padding.
+      <div style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
         <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
