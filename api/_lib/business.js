@@ -2,13 +2,22 @@
 // Reutilizadas por signals.js (filtro/cota/elegibilidade) e stats.js.
 
 export const ASSETS = ["XAUUSD", "NAS100", "US30"];
-// M5/M15 para todos; M1 é exclusivo dos planos "estilo anual". H1 removido.
-export const TFS = ["M1", "M5", "M15"];
+// Apenas M5 e M15 (M1 e H1 removidos do produto).
+export const TFS = ["M5", "M15"];
 export const DIRS = ["Compra", "Venda"];
 
-// Planos "estilo anual" (M1 + dia todo): anual + categorias internas aluno/influencer.
+// Planos "estilo anual" (dia todo): anual + categorias internas aluno/influencer.
 export function isAnualLike(plan) {
   return plan === "anual" || plan === "aluno" || plan === "influencer";
+}
+
+// Plano EFETIVO: se a validade (plan_expires_at) já passou, o usuário cai
+// automaticamente no Free — não pagou/renovou, perde o acesso premium.
+export function effectivePlan(profile) {
+  if (!profile) return "free";
+  const exp = profile.plan_expires_at;
+  if (exp && new Date(exp).getTime() < Date.now()) return "free";
+  return profile.plan || "free";
 }
 
 // Tamanho do "pip"/ponto por ativo, para calcular result_pips no fechamento.
@@ -57,8 +66,9 @@ export function startOfForexDayMs() {
 }
 
 // Cota diária de sinais: Free = configurável pelo admin (2 a 4) · Premium = 20.
+// Usa o plano EFETIVO (vencido = Free).
 export function dailyQuota(profile, freeQuota = 4) {
-  if (!profile || profile.plan === "free") {
+  if (effectivePlan(profile) === "free") {
     const q = parseInt(freeQuota, 10);
     return (q >= 2 && q <= 4) ? q : 4;
   }
@@ -87,24 +97,23 @@ export const FREE_WINDOW = { start: 8, end: 18 };
 // Free → janela fixa. Anual com schedule_all_day = true → 24h. Demais → janela escolhida.
 export function inWindow(date, profile) {
   if (!profile) return true;
-  if (isAnualLike(profile.plan) && profile.schedule_all_day) return true;
+  const plan = effectivePlan(profile);
+  if (isAnualLike(plan) && profile.schedule_all_day) return true;
   const h = hourInBrasilia(date);
-  if (profile.plan === "free") return h >= FREE_WINDOW.start && h < FREE_WINDOW.end;
+  if (plan === "free") return h >= FREE_WINDOW.start && h < FREE_WINDOW.end;
   const start = hourOf(profile.schedule_start || "08:00");
   const end = hourOf(profile.schedule_end || "18:00");
   return h >= start && h < end;
 }
 
-// Um sinal é elegível para este usuário?
+// Um sinal é elegível para este usuário? (usa o plano EFETIVO — vencido = free)
 //   free   → qualquer ativo/tf (a seleção é ignorada; o teto de 4/dia limita)
 //   premium→ asset ∈ profile.assets E tf ∈ profile.tf_per_asset[asset]
 // Em ambos os casos respeita a janela de horário (sobre created_at do sinal).
 export function isEligible(signal, profile) {
-  // M1 é exclusivo dos planos "estilo anual".
-  if (signal.tf === "M1" && !isAnualLike(profile?.plan)) return false;
   const created = new Date(signal.created_at || Date.now());
   if (!inWindow(created, profile)) return false;
-  if (!profile || profile.plan === "free") return true;
+  if (effectivePlan(profile) === "free") return true;
   const assets = profile.assets || [];
   const tfMap = profile.tf_per_asset || {};
   if (!assets.includes(signal.asset)) return false;

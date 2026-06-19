@@ -4,7 +4,7 @@
 //   entry/stop/target, signal_id) e também o formato legado {asset,dir,tf,entry,sl,tp}.
 // GET → app lista sinais do usuário.
 import {
-  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, startOfForexDayMs,
+  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, startOfForexDayMs, effectivePlan,
 } from "./_lib/business.js";
 import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
 import { notifyEligibleUsers, notifyClose } from "./_lib/push.js";
@@ -142,7 +142,8 @@ async function getSignals(req, res) {
   // Quem vê TODOS os timeframes: admin (monitoramento) e ALUNO. Cliente comum
   // (mensal/anual) vê só o que escolheu; free vê variado (sem filtro de tf).
   const admin = isAdmin(user);
-  const seeAll = admin || profile?.plan === "aluno";
+  const planEf = effectivePlan(profile);
+  const seeAll = admin || planEf === "aluno";
   const byTime = (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 
   // Feed PERSONALIZADO (Sinais/Dashboard) — respeita o plano do usuário.
@@ -162,7 +163,8 @@ async function getSignals(req, res) {
   const recent = eligible.slice(0, 1000);
 
   return res.status(200).json({
-    plan: profile?.plan || "free",
+    plan: planEf,
+    plan_expires_at: profile?.plan_expires_at || null,
     quota,
     delivered: signals.length,
     admin,

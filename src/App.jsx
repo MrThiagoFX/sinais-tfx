@@ -328,9 +328,9 @@ const ANUAL_LIKE = ["anual", "aluno", "influencer"];
 const isPremiumPlan = (p) => PREMIUM_PLANS.includes(p);
 const isAnualLikePlan = (p) => ANUAL_LIKE.includes(p);
 
-// Timeframes: base M5/M15. M1 é exclusivo dos planos "estilo anual". H1 removido.
+// Timeframes do produto: apenas M5 e M15 (M1 e H1 removidos).
 const TIMEFRAMES = ["M5", "M15"];
-const tfOptionsForPlan = (plan) => (isAnualLikePlan(plan) ? ["M1", "M5", "M15"] : ["M5", "M15"]);
+const tfOptionsForPlan = () => ["M5", "M15"];
 const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
 
 const PLAN_INFO = {
@@ -354,7 +354,7 @@ const dailyQuota = (plan) => (plan === "free" ? 4 : 20);
 
 // Agora é 1 timeframe fixo por ativo (o cliente escolhe o melhor pelo histórico).
 const maxTfPerAsset = () => 1;
-const ALL_TFS = ["M1", "M5", "M15"];
+const ALL_TFS = ["M5", "M15"];
 // Remove timeframes inválidos (ex.: H1 antigo) e mantém só 1 por ativo.
 const sanitizeTfPerAsset = (cfg) => {
   const out = {};
@@ -1127,6 +1127,26 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
               <ThemeToggle t={t} onToggle={onToggleTheme} />
             </div>
           </div>
+
+          {/* Aviso de vencimento: 3 dias antes (não-Free). Vencido → vira Free sozinho. */}
+          {(() => {
+            const exp = live?.plan_expires_at ? new Date(live.plan_expires_at).getTime() : 0;
+            if (!exp || plan === "free") return null;
+            const dias = Math.ceil((exp - Date.now()) / 86400000);
+            if (dias > 3) return null;
+            const venceu = dias <= 0;
+            return (
+              <div style={{ background: `${t.warn}14`, border: `1.5px solid ${t.warn}55`,
+                borderRadius: 16, padding: "12px 16px", marginBottom: 14, display: "flex", gap: 10, alignItems: "center" }}>
+                <span style={{ fontSize: 20 }}>⏳</span>
+                <span style={{ fontSize: 12.5, color: t.text, lineHeight: 1.45, fontFamily: FONT }}>
+                  {venceu
+                    ? <>Seu plano <b>venceu</b> — sua conta voltou para o <b style={{ color: t.warn }}>Free</b>. Renove para recuperar o acesso completo.</>
+                    : <>Seu plano vence em <b style={{ color: t.warn }}>{dias} dia{dias !== 1 ? "s" : ""}</b>. Renove para não cair no Free.</>}
+                </span>
+              </div>
+            );
+          })()}
 
           <div style={{ background: t.card2, border: `1.5px solid ${t.accentBdr}`,
             borderRadius: 22, padding: "20px 20px 18px", marginBottom: 14 }}>
