@@ -2682,20 +2682,21 @@ export default function App() {
   // para o app se adaptar a qualquer display: celular, iPad, desktop.
   const [vp, setVp] = useState(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 390,
-    h: typeof window !== "undefined" ? (window.visualViewport?.height || window.innerHeight) : 844,
+    h: typeof window !== "undefined" ? window.innerHeight : 844,
   }));
 
   useEffect(() => {
-    // visualViewport.height é a área REALMENTE visível (desconta teclado e barras
-    // dinâmicas); cai p/ innerHeight onde não houver. Atualiza ao girar/redimensionar.
-    const onResize = () => setVp({ w: window.innerWidth, h: window.visualViewport?.height || window.innerHeight });
+    // window.innerHeight = altura TOTAL da tela (inclui a safe-area inferior) em
+    // PWA/standalone. NÃO usar visualViewport.height aqui: ele DESCONTA a safe-area,
+    // o que deixava o container menor que a tela e o menu somava o inset de novo
+    // (safe-area dobrada → faixa preta embaixo). Aqui o container ocupa a tela
+    // inteira e o menu usa o inset só como padding interno.
+    const onResize = () => setVp({ w: window.innerWidth, h: window.innerHeight });
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
-    window.visualViewport?.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("orientationchange", onResize);
-      window.visualViewport?.removeEventListener("resize", onResize);
     };
   }, []);
 
