@@ -40,7 +40,21 @@ const THEMES = {
 const GlobalStyle = ({ t }) => (
   <style>{`
     html, body, #root { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
+    /* Fundo do app em html/body: se a webview (PWA iOS / wrapper Android) deixar
+       qualquer faixa fora da área medida, ela mistura com o app em vez de aparecer
+       preta/branca. */
+    html, body, #root { background: ${t.bg0}; }
     * { box-sizing: border-box; }
+
+    /* ── Safe area do rodapé do menu (home-indicator / barra de navegação) ── */
+    /* 8px base + inset real do dispositivo. */
+    .nav-safe { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
+    /* App instalado/standalone: garante um respiro mínimo (24px) mesmo quando o
+       wrapper não reporta o inset (retorna 0) — assim o menu sempre encosta no
+       fundo da tela em qualquer iPhone/Android. */
+    @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
+      .nav-safe { padding-bottom: max(calc(8px + env(safe-area-inset-bottom, 0px)), 24px); }
+    }
     .scrollarea {
       overflow-y: auto; overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
@@ -294,9 +308,8 @@ const NAV = [
 ];
 
 const BottomNav = ({ active, onNav, t }) => (
-  <div style={{ background: t.bg1, borderTop: `1px solid ${t.bdr}`,
-    display: "flex", paddingTop: 6, flexShrink: 0,
-    paddingBottom: "calc(8px + env(safe-area-inset-bottom, 0px))" }}>
+  <div className="nav-safe" style={{ background: t.bg1, borderTop: `1px solid ${t.bdr}`,
+    display: "flex", paddingTop: 6, flexShrink: 0 }}>
     {NAV.map(({ id, label, icon }) => (
       <button key={id} onClick={() => onNav(id)} style={{
         flex: 1, background: "none", border: "none", cursor: "pointer",
@@ -2603,16 +2616,20 @@ export default function App() {
   // para o app se adaptar a qualquer display: celular, iPad, desktop.
   const [vp, setVp] = useState(() => ({
     w: typeof window !== "undefined" ? window.innerWidth : 390,
-    h: typeof window !== "undefined" ? window.innerHeight : 844,
+    h: typeof window !== "undefined" ? (window.visualViewport?.height || window.innerHeight) : 844,
   }));
 
   useEffect(() => {
-    const onResize = () => setVp({ w: window.innerWidth, h: window.innerHeight });
+    // visualViewport.height é a área REALMENTE visível (desconta teclado e barras
+    // dinâmicas); cai p/ innerHeight onde não houver. Atualiza ao girar/redimensionar.
+    const onResize = () => setVp({ w: window.innerWidth, h: window.visualViewport?.height || window.innerHeight });
     window.addEventListener("resize", onResize);
     window.addEventListener("orientationchange", onResize);
+    window.visualViewport?.addEventListener("resize", onResize);
     return () => {
       window.removeEventListener("resize", onResize);
       window.removeEventListener("orientationchange", onResize);
+      window.visualViewport?.removeEventListener("resize", onResize);
     };
   }, []);
 
@@ -2856,7 +2873,10 @@ export default function App() {
   // rodapé (nada de "flutuar" por causa de 100dvh menor que a área visível).
   if (edgeToEdge) {
     return (
-      <div style={{ height: "100dvh", display: "flex", flexDirection: "column",
+      // Altura = a real medida da webview (window.innerHeight). Em PWA iOS e em
+      // wrappers Android/iOS "site convertido em app", 100dvh às vezes não bate
+      // com a área visível e sobra uma faixa; a altura medida sempre encaixa.
+      <div style={{ height: vp.h ? `${vp.h}px` : "100dvh", display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
         <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
