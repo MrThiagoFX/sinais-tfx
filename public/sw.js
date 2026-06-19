@@ -1,5 +1,5 @@
 /* Infinity Signals — Service Worker (cache do app shell + offline) */
-const CACHE = "infinity-signals-v1";
+const CACHE = "infinity-signals-v2";
 const ASSETS = ["/", "/index.html", "/manifest.json", "/icons/icon-192.png", "/icons/icon-512.png"];
 
 self.addEventListener("install", (e) => {

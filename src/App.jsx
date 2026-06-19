@@ -47,10 +47,11 @@ const GlobalStyle = ({ t }) => (
     * { box-sizing: border-box; }
 
     /* ── Safe area do rodapé do menu (home-indicator) ──
-       Inset real do aparelho, MAS limitado (cap 16px) para o menu ficar no
-       tamanho padrão. Em wrappers que já reservam o home-indicator (e ainda
-       expõem env=34px), sem o cap o menu fica grande demais + sobra faixa. */
-    .nav-safe { padding-bottom: calc(6px + min(env(safe-area-inset-bottom, 0px), 16px)); }
+       PWA da tela de início (standalone): usa o inset REAL (≈34px no iPhone),
+       então o FUNDO do menu preenche até a borda inferior e os ícones ficam
+       acima da barrinha do iPhone — visual de app nativo. No navegador o inset
+       é 0 (a barra do Safari ocupa o rodapé) e o menu fica compacto. */
+    .nav-safe { padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
     .scrollarea {
       overflow-y: auto; overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
