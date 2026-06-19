@@ -237,6 +237,16 @@ async function adminPost(body) {
 export const adminSetAlunoCoupon = (value) => adminPost({ action: "set-aluno-coupon", value });
 export const adminCloseStuck = (signalId, outcome) => adminPost({ action: "close-stuck", signalId, outcome });
 export const adminSetPlan = (userId, plan) => adminPost({ action: "set-plan", userId, plan });
+
+// Verificação de integridade do laudo (recomputa + reconstrói se divergir).
+export async function adminSelfcheck(rebuild = false) {
+  if (!hasSupabase) return { ok: false };
+  try {
+    const res = await fetch("/api/selfcheck" + (rebuild ? "?rebuild=1" : ""), { headers: await authHeader() });
+    const json = await res.json().catch(() => ({}));
+    return res.ok ? json : { ok: false, error: json.error || "falhou" };
+  } catch (e) { return { ok: false, error: e.message }; }
+}
 export const adminSetHistory = (date) => adminPost({ action: "set-history", date });
 export const adminSetFreeQuota = (value) => adminPost({ action: "set-free-quota", value });
 export const adminSetExpiry = (userId, days) => adminPost({ action: "set-expiry", userId, days });

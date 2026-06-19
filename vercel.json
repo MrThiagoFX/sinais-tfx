@@ -1,5 +1,8 @@
 {
-  "crons": [{ "path": "/api/cron/bulletin", "schedule": "0 0 * * *" }],
+  "crons": [
+    { "path": "/api/cron/bulletin", "schedule": "0 0 * * *" },
+    { "path": "/api/selfcheck", "schedule": "0 3 * * *" }
+  ],
   "rewrites": [{ "source": "/(.*)", "destination": "/index.html" }],
   "headers": [
     {

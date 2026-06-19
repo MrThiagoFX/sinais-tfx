@@ -2099,6 +2099,17 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   };
   const hrs = (iso) => Math.floor((Date.now() - new Date(iso).getTime()) / 3600000);
 
+  const [health, setHealth] = useState(null);
+  const [checking, setChecking] = useState(false);
+  const runCheck = async (rebuild) => {
+    setChecking(true);
+    const r = await api.adminSelfcheck(rebuild);
+    setChecking(false);
+    setHealth(r);
+    setMsg(r.ok ? "✓ Sistema íntegro" : (r.reconstruido ? "✓ Laudo reconstruído (estava divergente)" : (r.error || "verificado")));
+    setTimeout(() => setMsg(""), 3000);
+  };
+
   const setExpiry = async (userId, days) => {
     const r = await api.adminSetExpiry(userId, days);
     setMsg(r.ok ? (days > 0 ? `✓ Validade: +${days} dias` : "✓ Sem limite") : (r.error || "erro"));
@@ -2143,6 +2154,36 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
             <button onClick={saveHist} style={{ flexShrink: 0, height: 44, padding: "0 16px", borderRadius: 12,
               cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: FONT, border: "none",
               background: t.accent, color: t.activeText }}>Salvar</button>
+          </div>
+        </Card>
+
+        <Card t={t} accent style={{ marginBottom: 14 }}>
+          <Label t={t} style={{ marginBottom: 8 }}>🩺 Saúde do sistema (laudo)</Label>
+          <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
+            Recomputa o laudo a partir dos sinais e compara. Se divergir, reconstrói sozinho. Roda automático todo dia; aqui você força na hora.
+          </p>
+          {health && (
+            <div style={{ marginBottom: 10, background: t.card, border: `1px solid ${health.ok ? t.buy : t.warn}55`,
+              borderRadius: 12, padding: "10px 12px" }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: health.ok ? t.buy : t.warn, fontFamily: FONT, marginBottom: 4 }}>
+                {health.ok ? "✓ Tudo íntegro e consistente" : "⚠️ Corrigido / atenção"}
+              </div>
+              <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT, lineHeight: 1.6 }}>
+                Divergências: <b style={{ color: t.text }}>{health.divergencias ?? "—"}</b>{health.reconstruido ? " (reconstruído ✓)" : ""} ·
+                Presas: <b style={{ color: (health.presas ? t.warn : t.text) }}>{health.presas ?? "—"}</b><br />
+                Fechados: <b style={{ color: t.text }}>{health.fechados ?? "—"}</b> · Laudo: <b style={{ color: t.buy }}>{health.laudo_pips >= 0 ? "+" : ""}{health.laudo_pips} pips</b>
+              </div>
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 8 }}>
+            <button onClick={() => runCheck(false)} disabled={checking} style={{
+              flex: 1, height: 44, borderRadius: 12, cursor: "pointer", fontWeight: 800, fontSize: 13,
+              fontFamily: FONT, border: `1.5px solid ${t.accent}`, background: "transparent", color: t.accent }}>
+              {checking ? "Verificando…" : "Verificar agora"}</button>
+            <button onClick={() => runCheck(true)} disabled={checking} style={{
+              flex: 1, height: 44, borderRadius: 12, cursor: "pointer", fontWeight: 800, fontSize: 13,
+              fontFamily: FONT, border: "none", background: t.accent, color: t.activeText }}>
+              Reconstruir laudo</button>
           </div>
         </Card>
 
