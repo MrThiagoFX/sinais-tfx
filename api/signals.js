@@ -139,26 +139,36 @@ async function getSignals(req, res) {
   const fresh = (rows || []).filter(
     (s) => !(s.status === "aberto" && now - new Date(s.created_at).getTime() > STALE_OPEN_MS)
   );
-  // Admin vê TODOS os ativos/timeframes (monitoramento). Cliente, só o que escolheu.
+  // Quem vê TODOS os timeframes: admin (monitoramento) e ALUNO. Cliente comum
+  // (mensal/anual) vê só o que escolheu; free vê variado (sem filtro de tf).
   const admin = isAdmin(user);
-  const eligible = fresh
-    .filter((s) => admin || isEligible(s, profile))
-    .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  const seeAll = admin || profile?.plan === "aluno";
+  const byTime = (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime();
 
-  // Sinais de HOJE (dia de Brasília) → contador "sinais hoje" + cota.
+  // Feed PERSONALIZADO (Sinais/Dashboard) — respeita o plano do usuário.
+  const eligible = fresh.filter((s) => seeAll || isEligible(s, profile)).sort(byTime);
+
+  // LAUDO (Histórico/Desempenho) — track record COMPLETO da ferramenta, igual
+  // para todos: todas as operações, sem filtro por ativo/timeframe do usuário.
+  const recentAll = (rows || []).filter((s) => s.status !== "aberto").sort(byTime).slice(0, 1000);
+
+  // Sinais de HOJE (dia do mercado) → contador "sinais hoje" + cota.
+  // Admin não tem teto (vê todas as operações do dia).
   const dayStart = startOfForexDayMs();
   const todayEligible = eligible.filter((s) => new Date(s.created_at).getTime() >= dayStart);
-  const signals = todayEligible.slice(0, quota);
+  const signals = admin ? todayEligible : todayEligible.slice(0, quota);
 
-  // Operações recentes (toda a janela de 90 dias) → Sinais, Histórico e Dashboard.
-  // Sem truncar: o Histórico precisa bater com o Desempenho (mesmo conjunto).
+  // Operações recentes personalizadas → tela Sinais e Dashboard.
   const recent = eligible.slice(0, 1000);
 
   return res.status(200).json({
     plan: profile?.plan || "free",
     quota,
     delivered: signals.length,
+    admin,
+    seeAll,
     signals,
     recent,
+    recentAll,
   });
 }

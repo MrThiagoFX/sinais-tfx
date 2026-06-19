@@ -24,9 +24,11 @@ export default async function handler(req, res) {
   const { data: profile } = await sb.from("profiles").select("*").eq("id", user.id).maybeSingle();
   const admin = isAdmin(user);
 
-  // Janela: últimos 30 dias, ou a data de ativação do histórico (a mais recente).
+  // LAUDO: track record OFICIAL da ferramenta — IGUAL para todos os usuários.
+  // Janela: últimos 90 dias (p/ recorte de 3 meses), respeitando a data de
+  // ativação do histórico (o que for mais recente).
   let cutoff = new Date();
-  cutoff.setDate(cutoff.getDate() - 30);
+  cutoff.setDate(cutoff.getDate() - 90);
   try {
     const { data: cfg } = await sb.from("app_settings").select("history_start_date").eq("id", 1).maybeSingle();
     if (cfg?.history_start_date) {
@@ -43,18 +45,6 @@ export default async function handler(req, res) {
     .limit(5000);
   if (error) return serverError(res, "Falha ao ler estatísticas", error);
 
-  // Elegibilidade por ATIVO/TIMEFRAME (sem filtro de hora — é agregado por dia).
-  //   admin / free → todos os ativos · premium → só o que escolheu.
-  //   M1 é exclusivo dos planos "estilo anual".
-  const eligible = (r) => {
-    if (r.tf === "M1" && !isAnualLike(profile?.plan)) return false;
-    if (admin || !profile || profile.plan === "free") return true;
-    const assets = profile.assets || [];
-    const tfMap = profile.tf_per_asset || {};
-    if (!assets.includes(r.asset)) return false;
-    return (tfMap[r.asset] || []).includes(r.tf);
-  };
-
   const agg = (list) => {
     let g = 0, p = 0, pips = 0;
     for (const r of list) {
@@ -66,14 +56,18 @@ export default async function handler(req, res) {
     return { ganhos: g, perdas: p, total: tot, pips: Math.round(pips), assertividade: tot ? Math.round((g / tot) * 100) : 0 };
   };
 
-  // Recortes por dia do mercado (UTC): Hoje · Semana (7d) · Mês (toda a janela).
+  // Recortes por dia do mercado (UTC): Hoje · Semana (7d) · Mês (30d) · 3 meses (90d).
   const todayDay = new Date(startOfForexDayMs()).toISOString().slice(0, 10);
   const weekAgoDay = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  const relevant = (rows || []).filter(eligible);
+  const monthAgoDay = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  // Laudo = TODAS as operações (não filtra por ativo/tf do usuário) → igual p/ todos.
+  const relevant = (rows || []);
 
   const geral = agg(relevant);
   const dia = agg(relevant.filter((r) => r.day >= todayDay));
   const semana = agg(relevant.filter((r) => r.day >= weekAgoDay));
+  const mes = agg(relevant.filter((r) => r.day >= monthAgoDay));
+  const trimestre = geral; // 90 dias = toda a janela
 
   return res.status(200).json({
     assertividade: geral.total ? Math.round((geral.ganhos / geral.total) * 100) / 100 : 0,
@@ -83,5 +77,7 @@ export default async function handler(req, res) {
     amostra: geral.total,
     dia,
     semana,
+    mes,
+    trimestre,
   });
 }

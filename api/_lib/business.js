@@ -1,7 +1,7 @@
 // Regras de negócio centralizadas (espelham o CLAUDE.md e o App.jsx).
 // Reutilizadas por signals.js (filtro/cota/elegibilidade) e stats.js.
 
-export const ASSETS = ["EURUSD", "GBPUSD", "XAUUSD", "NAS100", "US30"];
+export const ASSETS = ["XAUUSD", "NAS100", "US30"];
 // M5/M15 para todos; M1 é exclusivo dos planos "estilo anual". H1 removido.
 export const TFS = ["M1", "M5", "M15"];
 export const DIRS = ["Compra", "Venda"];

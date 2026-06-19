@@ -317,9 +317,8 @@ const Scroll = ({ children, style = {} }) => (
 /* ════════════════════════════════════════════════════════════
    DADOS + REGRAS
 ════════════════════════════════════════════════════════════ */
-const ASSETS = ["EURUSD", "GBPUSD", "XAUUSD", "NAS100", "US30"];
+const ASSETS = ["XAUUSD", "NAS100", "US30"];
 const ASSET_NAMES = {
-  EURUSD: "Euro / Dólar", GBPUSD: "Libra / Dólar",
   XAUUSD: "Ouro / Dólar", NAS100: "Nasdaq 100", US30: "Dow Jones 30",
 };
 // Planos premium (acesso completo) e planos "estilo anual" (M1 + dia todo).
@@ -1148,17 +1147,21 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
             <Label t={t}>Últimos sinais</Label>
-            <div style={{ display: "flex", gap: 6 }}>
-              {["Todos", "M5", "M15"].map(f => {
-                const on = dashTf === f;
-                return (
-                  <button key={f} onClick={() => setDashTf(f)} style={{
-                    padding: "4px 10px", borderRadius: 8, cursor: "pointer", fontFamily: FONT,
-                    fontSize: 11, fontWeight: 800, border: `1.5px solid ${on ? t.accent : t.bdr}`,
-                    background: on ? t.accent : "transparent", color: on ? t.activeText : t.sub }}>{f}</button>
-                );
-              })}
-            </div>
+            {/* Filtro M5/M15 só para quem recebe vários timeframes (admin/aluno).
+                Cliente comum vê só o tf que escolheu — sem mistura, sem botões. */}
+            {live?.seeAll && (
+              <div style={{ display: "flex", gap: 6 }}>
+                {["Todos", "M5", "M15"].map(f => {
+                  const on = dashTf === f;
+                  return (
+                    <button key={f} onClick={() => setDashTf(f)} style={{
+                      padding: "4px 10px", borderRadius: 8, cursor: "pointer", fontFamily: FONT,
+                      fontSize: 11, fontWeight: 800, border: `1.5px solid ${on ? t.accent : t.bdr}`,
+                      background: on ? t.accent : "transparent", color: on ? t.activeText : t.sub }}>{f}</button>
+                  );
+                })}
+              </div>
+            )}
           </div>
           {recent.length === 0 ? (
             <Card t={t} style={{ textAlign: "center", padding: "24px 18px" }}>
@@ -1217,10 +1220,7 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
         const zero = { pips: 0, assertividade: 0, total: 0 };
         const dia = stats?.dia || zero;
         const semana = stats?.semana || zero;
-        // Mês = acumulado geral (janela de 30 dias) vindo do stats.
-        const mes = stats
-          ? { pips: stats.acumulado_pips || 0, assertividade: Math.round((stats.assertividade || 0) * 100), total: stats.amostra || 0 }
-          : zero;
+        const mes = stats?.mes || zero; // recorte de 30 dias do laudo
         const row = (label, d) => {
           const pos = (d.pips || 0) >= 0;
           return (
@@ -1253,22 +1253,6 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
           {["Todos", "Compras", "Vendas"].map(f => (
             <Chip key={f} label={f} active={filter === f} onClick={() => setFilter(f)} t={t} />
           ))}
-          {(() => {
-            // Resultado líquido (=) das operações FECHADAS no filtro atual.
-            const closedShown = shown.filter(s => s.status === "ganho" || s.status === "perda");
-            const net = closedShown.reduce((a, s) => a + (s.resultPips || 0), 0);
-            const pos = net >= 0;
-            return (
-              <div title="Resultado das operações fechadas no filtro" style={{ marginLeft: "auto",
-                display: "flex", alignItems: "center", gap: 5, background: `${(pos ? t.buy : t.sell)}1A`,
-                border: `1px solid ${(pos ? t.buy : t.sell)}55`, borderRadius: 999, padding: "5px 11px" }}>
-                <span style={{ fontSize: 13, fontWeight: 800, color: t.sub, fontFamily: FONT }}>=</span>
-                <span style={{ fontSize: 13, fontWeight: 800, color: pos ? t.buy : t.sell, fontFamily: FONT, whiteSpace: "nowrap" }}>
-                  {pos ? "+" : ""}{net} pips
-                </span>
-              </div>
-            );
-          })()}
         </div>
         {plan === "free" && (
           <div style={{ background: `${t.warn}10`, border: `1px solid ${t.warn}30`,
@@ -1746,9 +1730,9 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown
 const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
   const [tab, setTab] = useState("Todos");
   const [period, setPeriod] = useState("Mês");
-  // Operações fechadas reais enviadas pelo MT4/VPS ao servidor (já filtradas
-  // pelo backend por plano/ativos/timeframe). `recent` traz qualquer dia.
-  const closed = (live?.recent || [])
+  // LAUDO oficial da ferramenta — track record COMPLETO (todos os ativos/tf),
+  // IGUAL para todos os usuários. Usa `recentAll` (não filtra por plano).
+  const closed = (live?.recentAll || live?.recent || [])
     .filter(r => r.status === "ganho" || r.status === "perda")
     .map(mapSignal);
   // Filtra pelo PERÍODO. "Hoje" = dia do mercado (zera 21:00 BRT).
@@ -1800,7 +1784,7 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
             <span style={{ fontSize: 12.5, color: t.accent, fontWeight: 800, fontFamily: FONT }}>{winRate}% acerto</span>
           </div>
           <p style={{ fontSize: 11, color: t.muted, margin: 0, fontFamily: FONT }}>
-            📅 {periodLbl} · 🕐 horário: {schedTxt}
+            📅 {periodLbl} · 📊 laudo da ferramenta (todos os ativos e timeframes)
           </p>
         </Card>
       </div>
@@ -2485,44 +2469,6 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onEditA
               onClick={onAdmin}>🛠️ Painel admin</Btn>
           )}
 
-          {isAdmin && (
-          <Card t={t} accent style={{ marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 6 }}>
-              <Label t={t}>🎁 Convide e ganhe <span style={{ fontSize: 10, color: t.muted }}>(só admin)</span></Label>
-              <span style={{ fontSize: 18, fontWeight: 900, color: t.accent, fontFamily: FONT }}>30%</span>
-            </div>
-            <p style={{ fontSize: 12, color: t.sub, margin: "0 0 14px", lineHeight: 1.55, fontFamily: FONT }}>
-              Ganhe <span style={{ fontWeight: 800, color: t.text }}>30% de comissão</span> sobre tudo que cada
-              indicado pagar — pelo tempo que ele continuar assinante.
-            </p>
-
-            <Label t={t} style={{ marginBottom: 6, fontSize: 10 }}>Seu link de convite</Label>
-            <div style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 14 }}>
-              <div style={{ flex: 1, minWidth: 0, background: t.bg2, border: `1.5px solid ${t.bdr}`,
-                borderRadius: 12, padding: "11px 14px", fontSize: 12, color: t.text, fontFamily: FONT,
-                whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{refLink}</div>
-              <button onClick={copyRef} style={{
-                flexShrink: 0, height: 42, padding: "0 16px", borderRadius: 12, cursor: "pointer",
-                fontWeight: 800, fontSize: 13, fontFamily: FONT, border: "none",
-                background: t.accent, color: t.activeText }}>{copied ? "✓ Copiado" : "Copiar"}</button>
-            </div>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
-              <div style={{ background: t.card, border: `1px solid ${t.bdr}`, borderRadius: 12, padding: "10px 14px" }}>
-                <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>Indicados</div>
-                <div style={{ fontSize: 20, fontWeight: 900, color: t.text, fontFamily: FONT }}>{referral?.count ?? 0}</div>
-              </div>
-              <div style={{ background: t.card, border: `1px solid ${t.bdr}`, borderRadius: 12, padding: "10px 14px" }}>
-                <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>Comissão</div>
-                <div style={{ fontSize: 20, fontWeight: 900, color: t.accent, fontFamily: FONT }}>30%</div>
-              </div>
-            </div>
-            <p style={{ fontSize: 10, color: t.muted, margin: "10px 0 0", lineHeight: 1.5, fontFamily: FONT }}>
-              A comissão é creditada quando o indicado assina um plano pago (ativa junto com o pagamento).
-            </p>
-          </Card>
-          )}
-
           <Label t={t} style={{ marginBottom: 12 }}>Conta</Label>
           {items.map(({ id, icon, label, body }) => {
             const open = expanded === id;
@@ -2589,7 +2535,6 @@ export default function App() {
   const [plan, setPlan] = useState("anual");
   const [selectedAssets, setSelectedAssets] = useState(["XAUUSD", "NAS100", "US30"]);
   const [tfPerAsset, setTfPerAsset] = useState({
-    EURUSD: ["M15"], GBPUSD: ["M15"],
     XAUUSD: ["M5"], NAS100: ["M15"], US30: ["M5"],
   });
   const [schedule, setSchedule] = useState({ start: "08:00", end: "18:00", allDay: false });
