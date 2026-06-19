@@ -129,7 +129,7 @@ async function getSignals(req, res) {
     .select("*")
     .gte("created_at", cutoff.toISOString())
     .order("created_at", { ascending: false })
-    .limit(1000);
+    .limit(3000);
   if (error) return serverError(res, "Falha ao ler sinais", error);
 
   // Anti-travamento: um "aberto" com mais de 12h é resíduo (o CLOSE se perdeu
@@ -151,7 +151,7 @@ async function getSignals(req, res) {
 
   // LAUDO (Histórico/Desempenho) — track record COMPLETO da ferramenta, igual
   // para todos: todas as operações, sem filtro por ativo/timeframe do usuário.
-  const recentAll = (rows || []).filter((s) => s.status !== "aberto").sort(byTime).slice(0, 1000);
+  const recentAll = (rows || []).filter((s) => s.status !== "aberto").sort(byTime).slice(0, 3000);
 
   // Sinais de HOJE (dia do mercado) → contador "sinais hoje" + cota.
   // Admin não tem teto (vê todas as operações do dia).

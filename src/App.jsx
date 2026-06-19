@@ -1760,9 +1760,13 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown
   );
 };
 
-const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
+const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, stats }) => {
   const [tab, setTab] = useState("Todos");
   const [period, setPeriod] = useState("Mês");
+  const [limit, setLimit] = useState(40);
+  // Ao trocar período/filtro, recomeça a paginação.
+  useEffect(() => { setLimit(40); }, [period, tab]);
+
   // LAUDO oficial da ferramenta — track record COMPLETO (todos os ativos/tf),
   // IGUAL para todos os usuários. Usa `recentAll` (não filtra por plano).
   const closed = (live?.recentAll || live?.recent || [])
@@ -1779,10 +1783,20 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
   const shown = inPeriod
     .filter(s => tab === "Todos" || (tab === "Ganhos" ? s.status === "ganho" : s.status === "perda"))
     .sort(sortSignals);
-  const total = shown.reduce((a, s) => a + (s.resultPips || 0), 0);
-  const wins = shown.filter(s => s.status === "ganho").length;
-  const losses = shown.filter(s => s.status === "perda").length;
-  const winRate = (wins + losses) ? Math.round((wins / (wins + losses)) * 100) : 0;
+  const visible = shown.slice(0, limit);
+
+  // TOTAIS do resumo vêm do laudo PRÉ-AGREGADO (stats_daily) — ilimitado e
+  // idêntico ao Desempenho. Assim, com muitos sinais/dia, a soma nunca é cortada
+  // pelo teto da lista. (Fallback: calcula da lista quando não há backend.)
+  const rec = period === "Hoje" ? stats?.dia
+    : period === "Semana" ? stats?.semana
+    : period === "Mês" ? stats?.mes : stats?.trimestre;
+  const wins = rec ? rec.ganhos : inPeriod.filter(s => s.status === "ganho").length;
+  const losses = rec ? rec.perdas : inPeriod.filter(s => s.status === "perda").length;
+  const total = rec ? rec.pips : inPeriod.reduce((a, s) => a + (s.resultPips || 0), 0);
+  const opsCount = rec ? rec.total : inPeriod.length;
+  const winRate = rec ? rec.assertividade
+    : ((wins + losses) ? Math.round((wins / (wins + losses)) * 100) : 0);
   const schedTxt = schedule.allDay ? "dia todo" : `${schedule.start}–${schedule.end}`;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -1804,7 +1818,7 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
         <Card t={t} style={{ marginBottom: 12, padding: "12px 16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <span style={{ fontSize: 13, color: t.text, fontWeight: 700, fontFamily: FONT }}>
-              {period} · {shown.length} operações
+              {period} · {opsCount} operações
             </span>
             <span style={{ fontSize: 16, fontWeight: 900,
               color: total >= 0 ? t.buy : t.sell, fontFamily: FONT }}>
@@ -1828,10 +1842,20 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live }) => {
               Nenhuma operação no período.<br />Seu histórico aparece aqui conforme os sinais são fechados.
             </p>
           </Card>
-        ) : shown.map((s, i) => (
-          <SignalRow key={s.id ?? i} s={s} t={t} pips={s.resultPips}
-            onClick={() => { onOpenSignal(s); onNav("signal-detail"); }} />
-        ))}
+        ) : (<>
+          {visible.map((s, i) => (
+            <SignalRow key={s.id ?? i} s={s} t={t} pips={s.resultPips}
+              onClick={() => { onOpenSignal(s); onNav("signal-detail"); }} />
+          ))}
+          {shown.length > visible.length && (
+            <button onClick={() => setLimit(l => l + 40)} style={{
+              width: "100%", padding: "12px", marginTop: 4, cursor: "pointer",
+              background: t.card, border: `1px solid ${t.bdr}`, borderRadius: 14,
+              color: t.accent, fontSize: 13, fontWeight: 800, fontFamily: FONT }}>
+              Carregar mais ({shown.length - visible.length} restantes)
+            </button>
+          )}
+        </>)}
         <div style={{ height: 16 }} />
       </Scroll>
       <BottomNav active="history" onNav={onNav} t={t} />
@@ -2853,7 +2877,7 @@ export default function App() {
       case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} tfPerAsset={tfPerAsset} onPick={pickTimeframe} locked={tfLocked} nextChange={tfNextChange} isAdmin={isAdmin} />;
       case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} breakdown={breakdown} tfPerAsset={tfPerAsset} onTfPerf={() => go("tf-perf")} showMock={showMock} />;
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
-      case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} />;
+      case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
       case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onEditAssets={openEditAssets} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
