@@ -43,10 +43,12 @@ const GlobalStyle = ({ t }) => (
        position:fixed no root — tira o documento do fluxo e o iOS pinta as áreas
        de status bar / home-indicator com o preto dele = faixas). */
     html, body, #root { height: 100%; min-height: 100dvh; margin: 0; overflow: hidden; overscroll-behavior: none; }
-    /* Fundo da página = fundo do app (bg0), igual ao conteúdo: qualquer região de
-       safe-area fica da mesma cor, sem faixa destacada. */
-    html, body, #root { background: ${t.bg0}; }
-    body { background: ${t.bg0}; }
+    /* Fundo da página = COR DO MENU (bg1). O menu fica no rodapé; se a área de
+       safe-area do home-indicator sobrar abaixo dele, ela fica da MESMA cor do
+       menu (parece que o menu vai até a borda) em vez de virar uma faixa escura.
+       O topo é coberto pelo container (bg0), então não cria faixa em cima. */
+    html, body, #root { background: ${t.bg1}; }
+    body { background: ${t.bg1}; }
     * { box-sizing: border-box; }
 
     /* ── Safe area do rodapé do menu (home-indicator) ──
