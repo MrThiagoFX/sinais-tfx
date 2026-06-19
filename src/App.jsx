@@ -1141,12 +1141,14 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
             </div>
           </div>
 
-          {/* Aviso de vencimento: 3 dias antes (não-Free). Vencido → vira Free sozinho. */}
+          {/* Aviso de vencimento: alerta de 3 dias antes E aviso de "venceu →
+             voltou ao Free" por até 7 dias depois (lembrete de renovação). Baseado
+             em plan_expires_at, não no plano atual — senão, já virado Free, sumiria. */}
           {(() => {
             const exp = live?.plan_expires_at ? new Date(live.plan_expires_at).getTime() : 0;
-            if (!exp || plan === "free") return null;
+            if (!exp) return null;
             const dias = Math.ceil((exp - Date.now()) / 86400000);
-            if (dias > 3) return null;
+            if (dias > 3 || dias < -7) return null;
             const venceu = dias <= 0;
             return (
               <div style={{ background: `${t.warn}14`, border: `1.5px solid ${t.warn}55`,
@@ -2724,6 +2726,11 @@ export default function App() {
 
   // Captura ?ref=CODE da URL (link de indicação) ao abrir o app.
   useEffect(() => { api.captureRefFromUrl(); }, []);
+
+  // A UI sempre reflete o plano EFETIVO do backend (vencido = free). Sem isso, um
+  // usuário vencido veria "Premium" e a cota cheia enquanto o servidor já entrega
+  // Free — texto/gating divergindo do que ele realmente recebe.
+  useEffect(() => { if (live?.plan) setPlan(live.plan); }, [live?.plan]);
 
   // Restaura a sessão salva ao abrir o app. Se já estiver logado, entra direto
   // no app (home) em vez de mostrar o onboarding (splash/welcome/login).
