@@ -43,12 +43,12 @@ const GlobalStyle = ({ t }) => (
        position:fixed no root — tira o documento do fluxo e o iOS pinta as áreas
        de status bar / home-indicator com o preto dele = faixas). */
     html, body, #root { height: 100%; min-height: 100dvh; margin: 0; overflow: hidden; overscroll-behavior: none; }
-    /* Fundo da página = COR DO MENU (bg1). O menu fica no rodapé; se a área de
-       safe-area do home-indicator sobrar abaixo dele, ela fica da MESMA cor do
-       menu (parece que o menu vai até a borda) em vez de virar uma faixa escura.
-       O topo é coberto pelo container (bg0), então não cria faixa em cima. */
-    html, body, #root { background: ${t.bg1}; }
-    body { background: ${t.bg1}; }
+    /* TUDO na mesma cor (bg0): página, conteúdo e menu. Se todo o app é uma cor
+       só, é impossível aparecer "borda" entre o menu e a safe-area — não importa
+       como o iOS trate o status bar / home-indicator. (manifest background_color
+       também é bg0, então a área de launch/safe-area fica igual.) */
+    html, body, #root { background: ${t.bg0}; }
+    body { background: ${t.bg0}; }
     * { box-sizing: border-box; }
 
     /* ── Safe area do rodapé do menu (home-indicator) ──
@@ -310,7 +310,7 @@ const NAV = [
 ];
 
 const BottomNav = ({ active, onNav, t }) => (
-  <div className="nav-safe" style={{ background: t.bg1, borderTop: `1px solid ${t.bdr}`,
+  <div className="nav-safe" style={{ background: t.bg0, borderTop: `1px solid ${t.bdrMid}`,
     display: "flex", paddingTop: 5, flexShrink: 0 }}>
     {NAV.map(({ id, label, icon }) => (
       <button key={id} onClick={() => onNav(id)} style={{
