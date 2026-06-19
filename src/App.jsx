@@ -40,21 +40,17 @@ const THEMES = {
 const GlobalStyle = ({ t }) => (
   <style>{`
     html, body, #root { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
-    /* Fundo do app em html/body: se a webview (PWA iOS / wrapper Android) deixar
-       qualquer faixa fora da área medida, ela mistura com o app em vez de aparecer
-       preta/branca. */
-    html, body, #root { background: ${t.bg0}; }
+    /* Fundo da página = COR DO MENU (bg1): se o wrapper "site->app" reservar a
+       área do home-indicator e essa faixa aparecer atrás do app, ela se funde com
+       o menu (parece que o menu vai até a borda) em vez de ficar uma faixa preta. */
+    html, body, #root { background: ${t.bg1}; }
     * { box-sizing: border-box; }
 
-    /* ── Safe area do rodapé do menu (home-indicator / barra de navegação) ── */
-    /* 8px base + inset real do dispositivo. */
-    .nav-safe { padding-bottom: calc(8px + env(safe-area-inset-bottom, 0px)); }
-    /* App instalado/standalone: garante um respiro mínimo (24px) mesmo quando o
-       wrapper não reporta o inset (retorna 0) — assim o menu sempre encosta no
-       fundo da tela em qualquer iPhone/Android. */
-    @media (display-mode: standalone), (display-mode: fullscreen), (display-mode: minimal-ui) {
-      .nav-safe { padding-bottom: max(calc(8px + env(safe-area-inset-bottom, 0px)), 24px); }
-    }
+    /* ── Safe area do rodapé do menu (home-indicator) ──
+       Inset real do aparelho, MAS limitado (cap 16px) para o menu ficar no
+       tamanho padrão. Em wrappers que já reservam o home-indicator (e ainda
+       expõem env=34px), sem o cap o menu fica grande demais + sobra faixa. */
+    .nav-safe { padding-bottom: calc(6px + min(env(safe-area-inset-bottom, 0px), 16px)); }
     .scrollarea {
       overflow-y: auto; overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
@@ -309,14 +305,14 @@ const NAV = [
 
 const BottomNav = ({ active, onNav, t }) => (
   <div className="nav-safe" style={{ background: t.bg1, borderTop: `1px solid ${t.bdr}`,
-    display: "flex", paddingTop: 6, flexShrink: 0 }}>
+    display: "flex", paddingTop: 5, flexShrink: 0 }}>
     {NAV.map(({ id, label, icon }) => (
       <button key={id} onClick={() => onNav(id)} style={{
         flex: 1, background: "none", border: "none", cursor: "pointer",
         display: "flex", flexDirection: "column", alignItems: "center",
-        gap: 3, padding: "4px 0", fontFamily: FONT,
+        gap: 2, padding: "3px 0", fontFamily: FONT,
       }}>
-        <span style={{ fontSize: 22, lineHeight: 1, color: active === id ? t.accent : t.muted }}>{icon}</span>
+        <span style={{ fontSize: 20, lineHeight: 1, color: active === id ? t.accent : t.muted }}>{icon}</span>
         <span style={{ fontSize: 10, fontWeight: 700, color: active === id ? t.accent : t.muted }}>{label}</span>
       </button>
     ))}
@@ -2940,10 +2936,11 @@ export default function App() {
   // rodapé (nada de "flutuar" por causa de 100dvh menor que a área visível).
   if (edgeToEdge) {
     return (
-      // Altura = a real medida da webview (window.innerHeight). Em PWA iOS e em
-      // wrappers Android/iOS "site convertido em app", 100dvh às vezes não bate
-      // com a área visível e sobra uma faixa; a altura medida sempre encaixa.
-      <div style={{ height: vp.h ? `${vp.h}px` : "100dvh", display: "flex", flexDirection: "column",
+      // position:fixed + inset:0 prende o app nas 4 bordas da viewport real,
+      // preenchendo exatamente a área visível (sem depender de 100dvh/innerHeight,
+      // que em alguns wrappers não batem com a tela). O menu, em fluxo no fim da
+      // coluna, fica colado na borda inferior.
+      <div style={{ position: "fixed", inset: 0, display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
         <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
