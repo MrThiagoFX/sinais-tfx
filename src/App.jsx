@@ -2965,6 +2965,28 @@ export default function App() {
   // neutralizar os antigos fallbacks de mock sem refatorar cada tela.
   const showMock = false;
 
+  // iOS standalone: o 100dvh vem ERRADO (curto) ao REABRIR o app (menu sobe).
+  // Medimos a altura real (innerHeight) na variável --app-h e re-medimos quando o
+  // app volta ao foco (visibilitychange/pageshow), em resize e ao girar — assim o
+  // menu fica sempre colado no fundo, inclusive depois de fechar e reabrir.
+  useEffect(() => {
+    const root = document.documentElement;
+    const set = () => root.style.setProperty("--app-h", window.innerHeight + "px");
+    const setSoon = () => { set(); requestAnimationFrame(set); setTimeout(set, 250); };
+    setSoon();
+    const onVis = () => { if (!document.hidden) setSoon(); };
+    window.addEventListener("resize", set);
+    window.addEventListener("orientationchange", setSoon);
+    window.addEventListener("pageshow", setSoon);
+    document.addEventListener("visibilitychange", onVis);
+    return () => {
+      window.removeEventListener("resize", set);
+      window.removeEventListener("orientationchange", setSoon);
+      window.removeEventListener("pageshow", setSoon);
+      document.removeEventListener("visibilitychange", onVis);
+    };
+  }, []);
+
   // Captura ?ref=CODE da URL (link de indicação) ao abrir o app.
   useEffect(() => { api.captureRefFromUrl(); }, []);
 
@@ -3202,11 +3224,10 @@ export default function App() {
   // rodapé (nada de "flutuar" por causa de 100dvh menor que a área visível).
   if (edgeToEdge) {
     return (
-      // Container em FLUXO com 100dvh (padrão que funciona no iOS standalone):
-      // ocupa a tela inteira, status bar e home-indicator ficam por baixo do app
-      // (edge-to-edge via viewport-fit=cover). O menu, no fim da coluna, encosta
-      // na borda; safe-area só como padding.
-      <div style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column",
+      // Altura = --app-h (medida real via JS, re-medida ao reabrir o app) com
+      // fallback p/ 100dvh. No iOS standalone, 100dvh vem CURTO ao reabrir e o
+      // menu sobe; a medida real corrige e mantém o menu colado no fundo.
+      <div style={{ height: "var(--app-h, 100dvh)", display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
         <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
