@@ -422,6 +422,20 @@ const forexDayStartMs = () => {
   return d.getTime();
 };
 
+// Mercado Forex: abre domingo às ~18h (Brasília) e fecha sexta às ~18h. Logo,
+// está FECHADO (fim de semana): sábado inteiro, sexta após 18h e domingo antes
+// das 18h. (Ajuste FOREX_OPEN_BRT se o seu horário de abertura for outro.)
+const FOREX_OPEN_BRT = 18;
+const forexClosed = () => {
+  const brt = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const d = brt.getDay(); // 0=domingo ... 6=sábado
+  const h = brt.getHours();
+  if (d === 6) return true;                         // sábado: fechado o dia todo
+  if (d === 5 && h >= FOREX_OPEN_BRT) return true;  // sexta, após o fechamento
+  if (d === 0 && h < FOREX_OPEN_BRT) return true;   // domingo, antes da abertura
+  return false;
+};
+
 const mapSignal = (s) => {
   // Horário SEMPRE em Brasília (GMT-3), a partir do created_at (UTC real do
   // servidor). Não usamos o signal_id porque vem no fuso do broker.
@@ -1143,6 +1157,18 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
             </div>
           </div>
 
+          {/* Fim de semana: mercado Forex fechado → não há operações. */}
+          {forexClosed() && (
+            <div style={{ background: `${t.blue}14`, border: `1.5px solid ${t.blue}55`,
+              borderRadius: 16, padding: "14px 16px", marginBottom: 14, display: "flex", gap: 10, alignItems: "flex-start" }}>
+              <span style={{ fontSize: 22, flexShrink: 0 }}>🛌</span>
+              <div style={{ fontSize: 12.8, color: t.text, lineHeight: 1.5, fontFamily: FONT }}>
+                <b>Hoje não há operações</b> — fim de semana, o mercado Forex está fechado.<br />
+                As operações voltam no <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> (horário de Brasília). Bom descanso! 📈
+              </div>
+            </div>
+          )}
+
           {/* Aviso de vencimento: alerta de 3 dias antes E aviso de "venceu →
              voltou ao Free" por até 7 dias depois (lembrete de renovação). Baseado
              em plan_expires_at, não no plano atual — senão, já virado Free, sumiria. */}
@@ -1301,12 +1327,24 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
         )}
       </div>
       <Scroll style={{ padding: "0 24px" }}>
+        {forexClosed() && (
+          <div style={{ background: `${t.blue}14`, border: `1.5px solid ${t.blue}55`,
+            borderRadius: 16, padding: "14px 16px", marginBottom: 12, display: "flex", gap: 10, alignItems: "flex-start" }}>
+            <span style={{ fontSize: 22, flexShrink: 0 }}>🛌</span>
+            <div style={{ fontSize: 12.8, color: t.text, lineHeight: 1.5, fontFamily: FONT }}>
+              <b>Hoje não há operações</b> — fim de semana, o mercado Forex está fechado.<br />
+              Voltam no <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> (Brasília).
+            </div>
+          </div>
+        )}
         {shown.length === 0 ? (
+          forexClosed() ? null : (
           <Card t={t} style={{ textAlign: "center", padding: "28px 18px" }}>
             <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
               Nenhum sinal no seu horário e filtros atuais.<br />Ajuste nos Filtros ou no Perfil.
             </p>
           </Card>
+          )
         ) : shown.map(s => {
           const open = !s.status || s.status === "aberto";
           return (
@@ -2921,10 +2959,6 @@ export default function App() {
     XAUUSD: ["M5"], NAS100: ["M15"], US30: ["M5"],
   });
   const [schedule, setSchedule] = useState({ start: "08:00", end: "18:00", allDay: false });
-  // Chave de remontagem: ao voltar o foco (reabrir o app), incrementa e força o
-  // container a ser recriado do zero — o 100dvh é recalculado com a viewport já
-  // correta (corrige o menu subindo na reabertura no iOS standalone).
-  const [resumeKey, setResumeKey] = useState(0);
   // Viewport real (largura + altura). Recalcula no resize e ao girar a tela,
   // para o app se adaptar a qualquer display: celular, iPad, desktop.
   const [vp, setVp] = useState(() => ({
@@ -2968,24 +3002,6 @@ export default function App() {
   // (e estados vazios quando não há nada). Mantido como constante para
   // neutralizar os antigos fallbacks de mock sem refatorar cada tela.
   const showMock = false;
-
-  // iOS standalone: ao REABRIR o app, o iOS recalcula o 100dvh cedo demais e o
-  // menu sobe. NÃO mexemos na altura (100dvh é o certo na 1ª vez); ao retomar o
-  // foco, REMONTAMOS o container (resumeKey) com um pequeno delay → ele é recriado
-  // e o 100dvh é recalculado com a viewport já correta, como numa abertura nova.
-  useEffect(() => {
-    // Remonta o container com um delay curto (viewport já assentada) → 100dvh
-    // recalculado como numa abertura nova.
-    const remount = () => setResumeKey(k => k + 1);
-    const remountSoon = () => { setTimeout(remount, 220); };
-    const onVis = () => { if (!document.hidden) remountSoon(); };
-    window.addEventListener("pageshow", remountSoon);
-    document.addEventListener("visibilitychange", onVis);
-    return () => {
-      window.removeEventListener("pageshow", remountSoon);
-      document.removeEventListener("visibilitychange", onVis);
-    };
-  }, []);
 
   // Captura ?ref=CODE da URL (link de indicação) ao abrir o app.
   useEffect(() => { api.captureRefFromUrl(); }, []);
@@ -3225,8 +3241,7 @@ export default function App() {
   if (edgeToEdge) {
     return (
       // Container em FLUXO com 100dvh (estado aprovado como perfeito na 1ª abertura).
-      // key={resumeKey}: ao reabrir o app, é recriado do zero e o 100dvh recalcula.
-      <div key={resumeKey} style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column",
+      <div style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
         <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
