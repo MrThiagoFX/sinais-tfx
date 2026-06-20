@@ -2072,6 +2072,71 @@ const NotifCenter = ({ t, onNav, onBack, onToggleTheme, onOpenSignal, live }) =>
   );
 };
 
+// Central de ajuda / FAQ — conteúdo estático com perguntas expansíveis.
+const FAQ_ITEMS = [
+  { q: "O que é o Infinity Signals?",
+    a: "É uma ferramenta que detecta oportunidades operacionais (sinais) no MetaTrader com indicadores técnicos e te avisa em tempo real — para XAUUSD (ouro), US30 e NAS100, nos tempos gráficos M5 e M15. São estudos operacionais de caráter informativo, não recomendação de investimento." },
+  { q: "Como eu recebo os sinais?",
+    a: "Por notificação (push) assim que o sinal é detectado, e na tela Sinais/Início do app. Ative as notificações em Perfil → Ajustes de notificação e permita o envio quando o app pedir." },
+  { q: "O que significa \"Em andamento\"?",
+    a: "A operação foi aberta e está rodando, aguardando bater o Alvo (TP) ou o Stop (SL). O próximo sinal do mesmo ativo só abre quando essa fechar. Quando fecha, você vê o resultado em pips." },
+  { q: "O que é TP (Alvo) e Stop (SL)?",
+    a: "TP (Take Profit / Alvo) é o preço onde a operação fecha no lucro. Stop (SL) é onde fecha no prejuízo, limitando a perda. Todo sinal vem com Entrada, Alvo e Stop definidos." },
+  { q: "Qual a diferença entre Free e Premium?",
+    a: "No Free você recebe alguns sinais por dia, em horários fixos. No Premium (mensal/anual) você recebe até 20 por dia e escolhe os ativos e timeframes que quer acompanhar." },
+  { q: "Por que o dia zera às 21:00?",
+    a: "O mercado Forex vira o dia à meia-noite do horário do mercado, que dá 21:00 no Brasil. Por isso o contador \"Hoje\" zera às 21:00 e o boletim diário é enviado nesse momento, fechando o resultado do dia. Semana e Mês não zeram, só acumulam." },
+  { q: "O que é o laudo e a curva de capital?",
+    a: "O laudo é o histórico oficial e completo da ferramenta (todos os sinais, igual para todos). A curva de capital mostra os pips acumulados ao longo do tempo — a evolução do desempenho. Você vê em Desempenho e Histórico." },
+  { q: "Os resultados são garantidos?",
+    a: "Não. Desempenho passado NÃO garante resultados futuros. Operar envolve risco de perda. Os sinais são estudos operacionais informativos e não constituem recomendação de investimento (conforme normas da CVM). Opere com responsabilidade." },
+  { q: "Como troco ou cancelo meu plano?",
+    a: "Para mudar de ativos/timeframes: Perfil → Editar ativos. Para cancelar e voltar ao Free: Perfil → Cancelar plano. Ao vencer sem renovar, sua conta volta automaticamente ao Free." },
+];
+
+const Faq = ({ t, onNav, onBack, onToggleTheme, onSupport }) => {
+  const [open, setOpen] = useState(null);
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Central de ajuda" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <Scroll style={{ padding: "0 24px" }}>
+        <p style={{ fontSize: 12.5, color: t.sub, margin: "0 0 14px", lineHeight: 1.5, fontFamily: FONT }}>
+          Dúvidas frequentes sobre os sinais e o app. Toque para expandir.
+        </p>
+        {FAQ_ITEMS.map((item, i) => {
+          const isOpen = open === i;
+          return (
+            <div key={i} style={{ marginBottom: 8 }}>
+              <div onClick={() => setOpen(isOpen ? null : i)} style={{
+                background: t.card, border: `1px solid ${isOpen ? t.accentBdr : t.bdr}`,
+                borderRadius: isOpen ? "14px 14px 0 0" : 14, padding: "13px 15px", cursor: "pointer",
+                display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: t.text, fontFamily: FONT }}>{item.q}</span>
+                <span style={{ color: t.sub, fontSize: 18, lineHeight: 1, flexShrink: 0,
+                  transition: "transform .2s", transform: isOpen ? "rotate(90deg)" : "none" }}>›</span>
+              </div>
+              {isOpen && (
+                <div style={{ background: t.bg2, border: `1px solid ${t.accentBdr}`, borderTop: "none",
+                  borderRadius: "0 0 14px 14px", padding: "12px 15px" }}>
+                  <p style={{ fontSize: 12.5, color: t.sub, lineHeight: 1.65, margin: 0, fontFamily: FONT }}>{item.a}</p>
+                </div>
+              )}
+            </div>
+          );
+        })}
+        <Card t={t} style={{ marginTop: 14, marginBottom: 16, textAlign: "center", padding: "18px 16px" }}>
+          <p style={{ fontSize: 13, color: t.text, margin: "0 0 12px", fontWeight: 700, fontFamily: FONT }}>
+            Não achou sua resposta?
+          </p>
+          <Btn t={t} onClick={onSupport}>💬 Falar com o suporte</Btn>
+        </Card>
+        <div style={{ height: 16 }} />
+      </Scroll>
+      <BottomNav active="home" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
 const AvatarCircle = ({ url, t, size = 62, fontSize = 30 }) => (
   url ? (
     <img src={url} alt="" style={{ width: size, height: size, borderRadius: size * 0.32,
@@ -2497,7 +2562,7 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   );
 };
 
-const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCenter, onEdit, onEditAssets, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock }) => {
+const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCenter, onOpenFaq, onEdit, onEditAssets, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock }) => {
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
   const [schedSaved, setSchedSaved] = useState(false);
@@ -2695,8 +2760,11 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
           <Btn t={t} variant="secondary" style={{ marginBottom: 10 }} onClick={onOpenNotifCenter}>
             🛎️ Central de notificações
           </Btn>
-          <Btn t={t} variant="secondary" style={{ marginBottom: isAdmin ? 10 : 20 }} onClick={onOpenNotifications}>
+          <Btn t={t} variant="secondary" style={{ marginBottom: 10 }} onClick={onOpenNotifications}>
             🔔 Ajustes de notificação
+          </Btn>
+          <Btn t={t} variant="secondary" style={{ marginBottom: isAdmin ? 10 : 20 }} onClick={onOpenFaq}>
+            ❓ Central de ajuda
           </Btn>
           {isAdmin && (
             <Btn t={t} style={{ marginBottom: 20, background: t.blue, color: t.id === "dark" ? "#05121A" : "#FFFFFF" }}
@@ -3055,7 +3123,8 @@ export default function App() {
       case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
       case "notif-center":  return <NotifCenter {...common} onNav={nav} onBack={() => go("profile")} onOpenSignal={setSignal} live={live} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onOpenNotifCenter={() => go("notif-center")} onEdit={() => go("edit-profile")} onEditAssets={openEditAssets} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} />;
+      case "faq":           return <Faq {...common} onNav={nav} onBack={() => go("profile")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onOpenNotifCenter={() => go("notif-center")} onOpenFaq={() => go("faq")} onEdit={() => go("edit-profile")} onEditAssets={openEditAssets} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
       case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;
