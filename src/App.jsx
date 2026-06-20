@@ -39,14 +39,10 @@ const THEMES = {
 /* CSS global: scroll fino + reset */
 const GlobalStyle = ({ t }) => (
   <style>{`
-    /* Tela cheia no iOS standalone: documento em FLUXO (não usar position:fixed no
-       root — tira do fluxo e o iOS pinta as safe-areas de preto). Altura via SVH
-       (small viewport height): é ESTÁVEL e NÃO recalcula ao reabrir o app — corrige
-       o menu "subir" na reabertura, problema do 100dvh que recalcula na retomada. */
-    html, body, #root { height: 100%; margin: 0; overflow: hidden; overscroll-behavior: none; }
-    html, body, #root { min-height: 100vh; min-height: 100svh; }
-    /* Shell do app: altura fixa = tela cheia estável (svh), com fallback vh. */
-    .app-shell { height: 100vh; height: 100svh; }
+    /* Tela cheia no iOS standalone: documento em FLUXO com 100dvh (não usar
+       position:fixed no root — tira o documento do fluxo e o iOS pinta as áreas
+       de status bar / home-indicator com o preto dele = faixas). */
+    html, body, #root { height: 100%; min-height: 100dvh; margin: 0; overflow: hidden; overscroll-behavior: none; }
     /* TUDO na mesma cor (bg0): página, conteúdo e menu. Se todo o app é uma cor
        só, é impossível aparecer "borda" entre o menu e a safe-area — não importa
        como o iOS trate o status bar / home-indicator. (manifest background_color
@@ -3244,9 +3240,8 @@ export default function App() {
   // rodapé (nada de "flutuar" por causa de 100dvh menor que a área visível).
   if (edgeToEdge) {
     return (
-      // Container em FLUXO com altura SVH estável (.app-shell) — não recalcula ao
-      // reabrir o app, então o menu fica no fundo em toda reabertura.
-      <div className="app-shell" style={{ display: "flex", flexDirection: "column",
+      // Container em FLUXO com 100dvh (estado aprovado como perfeito na 1ª abertura).
+      <div style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
         <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
