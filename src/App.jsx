@@ -2006,6 +2006,72 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
   );
 };
 
+// Central de notificações in-app: feed das ENTRADAS e CONCLUSÕES (TP/Stop) dos
+// sinais do usuário — derivado de live.recent (não precisa de tabela nova).
+const NotifCenter = ({ t, onNav, onBack, onToggleTheme, onOpenSignal, live }) => {
+  const fmtBRT = (ms) => new Intl.DateTimeFormat("pt-BR", {
+    timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit",
+    hour: "2-digit", minute: "2-digit", hour12: false,
+  }).format(new Date(ms)).replace(",", " ·");
+
+  const events = [];
+  for (const s of (live?.recent || [])) {
+    const created = new Date(s.created_at).getTime();
+    events.push({ id: `${s.signal_id || s.id}-o`, kind: "entrada", sig: s,
+      asset: s.asset, dir: s.direction, tf: s.tf, ts: created });
+    if (s.status === "ganho" || s.status === "perda") {
+      const closedTs = s.closed_at ? new Date(s.closed_at).getTime() : created;
+      events.push({ id: `${s.signal_id || s.id}-c`, kind: "fechamento", sig: s,
+        asset: s.asset, dir: s.direction, tf: s.tf, ts: closedTs,
+        win: s.status === "ganho", pips: s.result_pips });
+    }
+  }
+  events.sort((a, b) => b.ts - a.ts);
+
+  return (
+    <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
+      <ScreenHeader title="Notificações" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <Scroll style={{ padding: "0 24px" }}>
+        {events.length === 0 ? (
+          <Card t={t} style={{ textAlign: "center", padding: "28px 18px" }}>
+            <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
+              Nenhuma notificação ainda.<br />Os alertas de entrada e de fechamento aparecem aqui.
+            </p>
+          </Card>
+        ) : events.map((e) => {
+          const entrada = e.kind === "entrada";
+          const buy = e.dir === "Compra";
+          const icon = entrada ? (buy ? "🟢" : "🔴") : (e.win ? "✅" : "❌");
+          const title = entrada
+            ? `Nova entrada · ${e.asset}`
+            : `Fechou · ${e.asset}`;
+          const sub = entrada
+            ? `${e.dir} · ${e.tf}`
+            : `${e.win ? "Alvo (TP)" : "Stop"} · ${e.pips >= 0 ? "+" : ""}${e.pips} pips`;
+          const col = entrada ? t.text : (e.win ? t.buy : t.sell);
+          return (
+            <div key={e.id} onClick={() => { onOpenSignal(mapSignal(e.sig)); onNav("signal-detail"); }}
+              style={{ display: "flex", alignItems: "center", gap: 12, padding: "12px 14px",
+                marginBottom: 8, background: t.card, border: `1px solid ${t.bdr}`,
+                borderRadius: 14, cursor: "pointer" }}>
+              <span style={{ fontSize: 20, flexShrink: 0 }}>{icon}</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 13.5, fontWeight: 800, color: col, fontFamily: FONT }}>{title}</div>
+                <div style={{ fontSize: 11.5, color: t.sub, fontFamily: FONT, marginTop: 1 }}>{sub}</div>
+              </div>
+              <span style={{ fontSize: 10.5, color: t.muted, fontFamily: FONT, flexShrink: 0, whiteSpace: "nowrap" }}>
+                {fmtBRT(e.ts)}
+              </span>
+            </div>
+          );
+        })}
+        <div style={{ height: 16 }} />
+      </Scroll>
+      <BottomNav active="home" onNav={onNav} t={t} />
+    </div>
+  );
+};
+
 const AvatarCircle = ({ url, t, size = 62, fontSize = 30 }) => (
   url ? (
     <img src={url} alt="" style={{ width: size, height: size, borderRadius: size * 0.32,
@@ -2431,7 +2497,7 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   );
 };
 
-const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onEditAssets, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock }) => {
+const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCenter, onEdit, onEditAssets, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock }) => {
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
   const [schedSaved, setSchedSaved] = useState(false);
@@ -2626,8 +2692,11 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onEdit, onEditA
               📊 Editar ativos e timeframes
             </Btn>
           )}
+          <Btn t={t} variant="secondary" style={{ marginBottom: 10 }} onClick={onOpenNotifCenter}>
+            🛎️ Central de notificações
+          </Btn>
           <Btn t={t} variant="secondary" style={{ marginBottom: isAdmin ? 10 : 20 }} onClick={onOpenNotifications}>
-            🔔 Notificações
+            🔔 Ajustes de notificação
           </Btn>
           {isAdmin && (
             <Btn t={t} style={{ marginBottom: 20, background: t.blue, color: t.id === "dark" ? "#05121A" : "#FFFFFF" }}
@@ -2985,7 +3054,8 @@ export default function App() {
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
       case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onEdit={() => go("edit-profile")} onEditAssets={openEditAssets} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} />;
+      case "notif-center":  return <NotifCenter {...common} onNav={nav} onBack={() => go("profile")} onOpenSignal={setSignal} live={live} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onOpenNotifCenter={() => go("notif-center")} onEdit={() => go("edit-profile")} onEditAssets={openEditAssets} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
       case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;
