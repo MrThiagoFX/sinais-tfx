@@ -2434,6 +2434,36 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
         </Card>
 
         <Card t={t} accent style={{ marginBottom: 14 }}>
+          <Label t={t} style={{ marginBottom: 8 }}>🩺 Monitoramento de erros</Label>
+          <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
+            Últimas falhas 500 registradas nas APIs. Se estiver vazio, está tudo rodando sem erros.
+          </p>
+          {(() => {
+            const errs = data?.errors || [];
+            if (errs.length === 0) {
+              return (
+                <div style={{ fontSize: 12.5, fontWeight: 700, color: t.buy, fontFamily: FONT,
+                  background: t.card, border: `1px solid ${t.buy}44`, borderRadius: 12, padding: "10px 12px" }}>
+                  ✓ Nenhum erro registrado
+                </div>
+              );
+            }
+            return errs.slice(0, 8).map((e) => (
+              <div key={e.id} style={{ marginBottom: 6, background: t.card, border: `1px solid ${t.warn}44`,
+                borderRadius: 10, padding: "8px 11px" }}>
+                <div style={{ fontSize: 11.5, fontWeight: 800, color: t.warn, fontFamily: FONT }}>{e.context || "erro"}</div>
+                <div style={{ fontSize: 10.5, color: t.sub, fontFamily: FONT, lineHeight: 1.5, wordBreak: "break-word" }}>
+                  {e.detail || "—"}
+                </div>
+                <div style={{ fontSize: 9.5, color: t.muted, fontFamily: FONT, marginTop: 2 }}>
+                  {e.ts ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(e.ts)) : ""}
+                </div>
+              </div>
+            ));
+          })()}
+        </Card>
+
+        <Card t={t} accent style={{ marginBottom: 14 }}>
           <Label t={t} style={{ marginBottom: 8 }}>🎁 Operações grátis por dia (Free)</Label>
           <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
             Define quantas operações os usuários Free recebem nesta semana (2 a 4). Vale pra todos do plano Free.

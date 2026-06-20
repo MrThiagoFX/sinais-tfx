@@ -50,7 +50,15 @@ export default async function handler(req, res) {
       openSignals = op || [];
     } catch { /* ignore */ }
 
-    return res.status(200).json({ users, settings: { history_start_date, free_quota, aluno_coupon }, openSignals, count: users.length });
+    // Monitoramento: últimos erros 500 registrados (se a tabela existir).
+    let errors = [];
+    try {
+      const { data: er } = await sb.from("error_log")
+        .select("id, ts, context, detail").order("ts", { ascending: false }).limit(20);
+      errors = er || [];
+    } catch { /* tabela ainda não criada */ }
+
+    return res.status(200).json({ users, settings: { history_start_date, free_quota, aluno_coupon }, openSignals, errors, count: users.length });
   }
 
   if (req.method === "POST") {
