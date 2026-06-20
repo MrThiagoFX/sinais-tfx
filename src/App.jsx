@@ -2965,24 +2965,24 @@ export default function App() {
   // neutralizar os antigos fallbacks de mock sem refatorar cada tela.
   const showMock = false;
 
-  // iOS standalone: o 100dvh vem ERRADO (curto) ao REABRIR o app (menu sobe).
-  // Medimos a altura real (innerHeight) na variável --app-h e re-medimos quando o
-  // app volta ao foco (visibilitychange/pageshow), em resize e ao girar — assim o
-  // menu fica sempre colado no fundo, inclusive depois de fechar e reabrir.
+  // iOS standalone: ao REABRIR o app, o iOS recalcula o 100dvh cedo demais e o
+  // menu sobe. NÃO mexemos na altura (100dvh é o certo na 1ª vez); ao retomar o
+  // foco, damos um "empurrão" de re-layout (esconde/mostra o #root por 1 frame)
+  // pra forçar o iOS a recalcular o 100dvh com a viewport já correta.
   useEffect(() => {
-    const root = document.documentElement;
-    const set = () => root.style.setProperty("--app-h", window.innerHeight + "px");
-    const setSoon = () => { set(); requestAnimationFrame(set); setTimeout(set, 250); };
-    setSoon();
-    const onVis = () => { if (!document.hidden) setSoon(); };
-    window.addEventListener("resize", set);
-    window.addEventListener("orientationchange", setSoon);
-    window.addEventListener("pageshow", setSoon);
+    const nudge = () => {
+      const el = document.getElementById("root");
+      if (!el) return;
+      el.style.display = "none";
+      void el.offsetHeight; // força reflow → iOS recalcula o 100dvh
+      el.style.display = "";
+    };
+    const nudgeSoon = () => { requestAnimationFrame(nudge); setTimeout(nudge, 300); };
+    const onVis = () => { if (!document.hidden) nudgeSoon(); };
+    window.addEventListener("pageshow", nudgeSoon);
     document.addEventListener("visibilitychange", onVis);
     return () => {
-      window.removeEventListener("resize", set);
-      window.removeEventListener("orientationchange", setSoon);
-      window.removeEventListener("pageshow", setSoon);
+      window.removeEventListener("pageshow", nudgeSoon);
       document.removeEventListener("visibilitychange", onVis);
     };
   }, []);
@@ -3224,10 +3224,8 @@ export default function App() {
   // rodapé (nada de "flutuar" por causa de 100dvh menor que a área visível).
   if (edgeToEdge) {
     return (
-      // Altura = --app-h (medida real via JS, re-medida ao reabrir o app) com
-      // fallback p/ 100dvh. No iOS standalone, 100dvh vem CURTO ao reabrir e o
-      // menu sobe; a medida real corrige e mantém o menu colado no fundo.
-      <div style={{ height: "var(--app-h, 100dvh)", display: "flex", flexDirection: "column",
+      // Container em FLUXO com 100dvh (estado aprovado como perfeito na 1ª abertura).
+      <div style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
         <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
