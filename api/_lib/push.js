@@ -156,7 +156,8 @@ export async function sendDailyBulletin() {
     const body = (g + p) > 0
       ? `Hoje: ${g} ✓ · ${p} ✗ · ${pips >= 0 ? "+" : ""}${pips} pips`
       : "Hoje sem operações fechadas. Até amanhã! 📈";
-    const payload = JSON.stringify({ title: "📊 Boletim diário — Infinity Signals", body, url: "/" });
+    // url com ?go=performance → ao tocar, o app abre direto na curva de capital.
+    const payload = JSON.stringify({ title: "📊 Boletim diário — Infinity Signals", body, url: "/?go=performance" });
 
     let any = false;
     for (const row of subs) {

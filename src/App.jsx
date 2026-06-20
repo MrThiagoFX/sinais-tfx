@@ -1607,26 +1607,46 @@ const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerA
 // Curva de capital (equity): pips ACUMULADOS ao longo do tempo, a partir dos
 // sinais fechados. Reutilizável (Desempenho + boletim). `closed` = lista já
 // mapeada (mapSignal) com .ts/.resultPips/.status.
-const EquityCurve = ({ t, closed, height = 120 }) => {
-  const ordered = (closed || [])
-    .filter(s => s.status === "ganho" || s.status === "perda")
-    .sort((a, b) => (a.ts || 0) - (b.ts || 0));
-  if (ordered.length < 2) return null; // sem dados suficientes p/ uma curva
+const EquityCurve = ({ t, closed, height = 120, defaultPeriod = "Geral" }) => {
+  const [period, setPeriod] = useState(defaultPeriod);
+  const all = (closed || []).filter(s => s.status === "ganho" || s.status === "perda");
+  if (all.length < 2) return null; // sem track record suficiente ainda
+
+  const cut = period === "Semana" ? Date.now() - 7 * 86400000
+    : period === "Mês" ? Date.now() - 30 * 86400000 : 0;
+  const ordered = all.filter(s => (s.ts || 0) >= cut).sort((a, b) => (a.ts || 0) - (b.ts || 0));
 
   let cum = 0;
   const serie = ordered.map(s => (cum += (s.resultPips || 0)));
-  const min = Math.min(0, ...serie);
-  const max = Math.max(0, ...serie);
-  const range = (max - min) || 1;
-  const W = 320, H = height, pad = 8;
-  const x = i => (i / (serie.length - 1)) * W;
-  const y = v => H - pad - ((v - min) / range) * (H - 2 * pad);
-  const line = serie.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
-  const area = `0,${H} ${line} ${W},${H}`;
-  const final = serie[serie.length - 1];
+  const final = serie.length ? serie[serie.length - 1] : 0;
   const pos = final >= 0;
   const col = pos ? t.buy : t.sell;
-  const zeroY = y(0).toFixed(1);
+
+  let chart = null;
+  if (serie.length >= 2) {
+    const min = Math.min(0, ...serie);
+    const max = Math.max(0, ...serie);
+    const range = (max - min) || 1;
+    const W = 320, H = height, pad = 8;
+    const x = i => (i / (serie.length - 1)) * W;
+    const y = v => H - pad - ((v - min) / range) * (H - 2 * pad);
+    const line = serie.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(" ");
+    const area = `0,${H} ${line} ${W},${H}`;
+    const zeroY = y(0).toFixed(1);
+    chart = (
+      <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
+        <defs>
+          <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={col} stopOpacity="0.28" />
+            <stop offset="100%" stopColor={col} stopOpacity="0" />
+          </linearGradient>
+        </defs>
+        <line x1="0" y1={zeroY} x2={W} y2={zeroY} stroke={t.bdr} strokeWidth="1" strokeDasharray="3 4" />
+        <polygon points={area} fill="url(#eqGrad)" />
+        <polyline points={line} fill="none" stroke={col} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
+      </svg>
+    );
+  }
 
   return (
     <Card t={t} style={{ marginBottom: 16 }}>
@@ -1636,20 +1656,18 @@ const EquityCurve = ({ t, closed, height = 120 }) => {
           {pos ? "+" : ""}{Math.round(final)} pips
         </span>
       </div>
-      <svg width="100%" height={H} viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ display: "block" }}>
-        <defs>
-          <linearGradient id="eqGrad" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor={col} stopOpacity="0.28" />
-            <stop offset="100%" stopColor={col} stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        {/* linha do zero (break-even) */}
-        <line x1="0" y1={zeroY} x2={W} y2={zeroY} stroke={t.bdr} strokeWidth="1" strokeDasharray="3 4" />
-        <polygon points={area} fill="url(#eqGrad)" />
-        <polyline points={line} fill="none" stroke={col} strokeWidth="2.2" strokeLinejoin="round" strokeLinecap="round" />
-      </svg>
+      <div style={{ display: "flex", gap: 8, marginBottom: 12 }}>
+        {["Semana", "Mês", "Geral"].map(p => (
+          <Chip key={p} label={p} active={period === p} onClick={() => setPeriod(p)} t={t} />
+        ))}
+      </div>
+      {chart || (
+        <p style={{ fontSize: 12, color: t.sub, margin: "10px 0", textAlign: "center", fontFamily: FONT }}>
+          Poucas operações fechadas neste período.
+        </p>
+      )}
       <p style={{ fontSize: 10.5, color: t.muted, margin: "8px 0 0", fontFamily: FONT }}>
-        Pips acumulados em {ordered.length} operações fechadas (laudo da ferramenta).
+        Pips acumulados em {ordered.length} operações ({period.toLowerCase()}) — laudo da ferramenta.
       </p>
     </Card>
   );
@@ -2961,7 +2979,19 @@ export default function App() {
     if (!hasSupabase) return;
     api.getSession().then((s) => {
       setSession(s);
-      if (s) setScreen("home");
+      if (s) {
+        // Deep-link: notificação pode abrir o app numa tela (ex.: boletim → ?go=performance).
+        let target = "home";
+        try {
+          const go = new URLSearchParams(window.location.search).get("go");
+          const allowed = ["performance", "history", "signals", "notif-center"];
+          if (go && allowed.includes(go)) {
+            target = go;
+            window.history.replaceState({}, "", window.location.pathname); // limpa o ?go da URL
+          }
+        } catch { /* ignore */ }
+        setScreen(target);
+      }
     });
   }, []);
 
