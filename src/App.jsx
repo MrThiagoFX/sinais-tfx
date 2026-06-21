@@ -2965,6 +2965,22 @@ export default function App() {
     w: typeof window !== "undefined" ? window.innerWidth : 390,
     h: typeof window !== "undefined" ? window.innerHeight : 844,
   }));
+  // Remontagem APENAS na REABERTURA real (app voltou do segundo plano após ter
+  // sido minimizado). Por definição, visibilitychange NUNCA dispara na 1ª abertura
+  // → não há risco de estragar o estado perfeito da primeira vez.
+  const [resumeKey, setResumeKey] = useState(0);
+  useEffect(() => {
+    let foiOculto = false;
+    const onVis = () => {
+      if (document.visibilityState === "hidden") { foiOculto = true; return; }
+      if (document.visibilityState === "visible" && foiOculto) {
+        foiOculto = false;
+        setTimeout(() => setResumeKey(k => k + 1), 150); // viewport assenta após retomar
+      }
+    };
+    document.addEventListener("visibilitychange", onVis);
+    return () => document.removeEventListener("visibilitychange", onVis);
+  }, []);
 
   useEffect(() => {
     // window.innerHeight = altura TOTAL da tela (inclui a safe-area inferior) em
@@ -3241,7 +3257,7 @@ export default function App() {
   if (edgeToEdge) {
     return (
       // Container em FLUXO com 100dvh (estado aprovado como perfeito na 1ª abertura).
-      <div style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column",
+      <div key={resumeKey} style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
         <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
