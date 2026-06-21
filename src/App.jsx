@@ -49,6 +49,11 @@ const GlobalStyle = ({ t }) => (
        também é bg0, então a área de launch/safe-area fica igual.) */
     html, body, #root { background: ${t.bg0}; }
     body { background: ${t.bg0}; }
+    /* MODO APP (standalone): trava a altura em 100dvh + overflow hidden — impede o
+       header/menu de "subir" ao reabrir, conforme a referência do Lovable. */
+    @media (display-mode: standalone) {
+      html, body, #root { height: 100dvh; min-height: 100dvh; overflow: hidden; }
+    }
     * { box-sizing: border-box; }
 
     /* ── Safe area do rodapé do menu (home-indicator) ──
