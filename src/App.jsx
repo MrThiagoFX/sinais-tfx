@@ -2965,41 +2965,6 @@ export default function App() {
     w: typeof window !== "undefined" ? window.innerWidth : 390,
     h: typeof window !== "undefined" ? window.innerHeight : 844,
   }));
-  // ALTURA TRAVADA (ideia do usuário): a 1ª abertura calcula o 100dvh CERTO (tela
-  // cheia). Na reabertura o iOS recalcula ERRADO (menu sobe). Solução: medir o
-  // valor certo, guardar o MAIOR já visto (= tela cheia) e REPETIR ele em todo
-  // início — sem confiar no recálculo bugado da reabertura.
-  const [lockedH, setLockedH] = useState(() => {
-    try { return parseInt(localStorage.getItem("tfx_app_h") || "0", 10) || 0; } catch { return 0; }
-  });
-  useEffect(() => {
-    // Mede quanto o 100dvh resolve de verdade (via um elemento-sonda) e mantém o
-    // maior valor já visto — esse é o "tela cheia perfeito" da 1ª vez.
-    const measure = () => {
-      const probe = document.createElement("div");
-      probe.style.cssText = "position:fixed;top:0;left:0;width:1px;height:100dvh;visibility:hidden;pointer-events:none;";
-      document.body.appendChild(probe);
-      const h = Math.round(probe.getBoundingClientRect().height);
-      document.body.removeChild(probe);
-      if (h > 100) setLockedH((prev) => {
-        const next = Math.max(prev, h);
-        if (next !== prev) { try { localStorage.setItem("tfx_app_h", String(next)); } catch { /* ignore */ } }
-        return next;
-      });
-    };
-    measure();
-    requestAnimationFrame(measure);
-    const t1 = setTimeout(measure, 400); // pega o valor já assentado
-    const onVis = () => { if (!document.hidden) setTimeout(measure, 120); };
-    const onOri = () => setTimeout(measure, 250);
-    document.addEventListener("visibilitychange", onVis);
-    window.addEventListener("orientationchange", onOri);
-    return () => {
-      clearTimeout(t1);
-      document.removeEventListener("visibilitychange", onVis);
-      window.removeEventListener("orientationchange", onOri);
-    };
-  }, []);
 
   useEffect(() => {
     // window.innerHeight = altura TOTAL da tela (inclui a safe-area inferior) em
@@ -3276,7 +3241,7 @@ export default function App() {
   if (edgeToEdge) {
     return (
       // Container em FLUXO com 100dvh (estado aprovado como perfeito na 1ª abertura).
-      <div style={{ height: lockedH ? `${lockedH}px` : "100dvh", display: "flex", flexDirection: "column",
+      <div style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
         <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
