@@ -57,6 +57,21 @@ const GlobalStyle = ({ t }) => (
        acima da barrinha do iPhone — visual de app nativo. No navegador o inset
        é 0 (a barra do Safari ocupa o rodapé) e o menu fica compacto. */
     .nav-safe { padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
+
+    /* ── Menu FIXO no rodapé (correção do "menu sobe ao reabrir" — iOS standalone) ──
+       position:fixed segue a borda REAL da tela e NÃO depende do 100dvh (que vem
+       errado na reabertura, prendendo o menu num valor curto). Aplica só no celular
+       (max-width 540); no cartão de iPad/desktop o menu segue no fluxo normal.
+       translateZ(0) = camada estável (não "pula" no relayout/teclado). O espaçador
+       .nav-clearance reserva a altura do menu fixo pra não cobrir o conteúdo. */
+    .nav-clearance { height: 0; flex-shrink: 0; }
+    @media (max-width: 540px) {
+      .app-nav {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
+        transform: translateZ(0);
+      }
+      .nav-clearance { height: calc(52px + env(safe-area-inset-bottom, 0px)); }
+    }
     .scrollarea {
       overflow-y: auto; overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
@@ -310,7 +325,7 @@ const NAV = [
 ];
 
 const BottomNav = ({ active, onNav, t }) => (
-  <div className="nav-safe" style={{ background: t.bg0, borderTop: `1px solid ${t.bdrMid}`,
+  <div className="app-nav nav-safe" style={{ background: t.bg0, borderTop: `1px solid ${t.bdrMid}`,
     display: "flex", paddingTop: 5, flexShrink: 0 }}>
     {NAV.map(({ id, label, icon }) => (
       <button key={id} onClick={() => onNav(id)} style={{
@@ -326,7 +341,11 @@ const BottomNav = ({ active, onNav, t }) => (
 );
 
 const Scroll = ({ children, style = {} }) => (
-  <div className="scrollarea" style={{ flex: 1, minHeight: 0, ...style }}>{children}</div>
+  <div className="scrollarea" style={{ flex: 1, minHeight: 0, ...style }}>
+    {children}
+    {/* Reserva a altura do menu fixo no celular (no desktop tem altura 0). */}
+    <div className="nav-clearance" aria-hidden />
+  </div>
 );
 
 /* ════════════════════════════════════════════════════════════
