@@ -2949,51 +2949,6 @@ const SCREENS = [
   { id: "profile",       label: "15 · Perfil"       },
 ];
 
-// HUD de diagnóstico TEMPORÁRIO — mostra os números reais do viewport pra entender
-// o "menu sobe ao reabrir" no iOS. Remover depois de diagnosticar.
-const DebugHUD = () => {
-  const [i, setI] = useState({});
-  useEffect(() => {
-    const px = (css) => {
-      const d = document.createElement("div");
-      d.style.cssText = `position:fixed;top:0;left:0;width:1px;height:${css};visibility:hidden;pointer-events:none`;
-      document.body.appendChild(d);
-      const h = Math.round(d.getBoundingClientRect().height);
-      document.body.removeChild(d);
-      return h;
-    };
-    const probe = () => {
-      const nav = document.querySelector(".nav-safe");
-      const r = nav && nav.getBoundingClientRect();
-      setI({
-        standalone: window.matchMedia("(display-mode: standalone)").matches ? "SIM" : "nao",
-        inner: window.innerHeight,
-        client: document.documentElement.clientHeight,
-        dvh: px("100dvh"),
-        svh: px("100svh"),
-        vv: window.visualViewport ? Math.round(window.visualViewport.height) : 0,
-        screen: window.screen ? window.screen.height : 0,
-        safeBot: px("env(safe-area-inset-bottom,0px)"),
-        navTop: r ? Math.round(r.top) : 0,
-        navBot: r ? Math.round(r.bottom) : 0,
-      });
-    };
-    probe();
-    const id = setInterval(probe, 600);
-    const onVis = () => { if (!document.hidden) setTimeout(probe, 250); };
-    document.addEventListener("visibilitychange", onVis);
-    window.addEventListener("resize", probe);
-    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); window.removeEventListener("resize", probe); };
-  }, []);
-  return (
-    <div style={{ position: "fixed", top: 96, left: 6, zIndex: 99999, background: "rgba(0,0,0,.88)",
-      color: "#39FF14", fontFamily: "monospace", fontSize: 10.5, padding: "5px 7px", borderRadius: 7,
-      lineHeight: 1.45, pointerEvents: "none", whiteSpace: "pre" }}>
-      {`standalone:${i.standalone}  screen:${i.screen}\ninner:${i.inner} client:${i.client}\n100dvh:${i.dvh} 100svh:${i.svh} vv:${i.vv}\nsafe-bottom:${i.safeBot}\nNAV top:${i.navTop} bottom:${i.navBot}`}
-    </div>
-  );
-};
-
 export default function App() {
   const [themeId, setThemeId] = useState("dark");
   const [screen, setScreen] = useState("splash");
@@ -3057,12 +3012,26 @@ export default function App() {
   // no fundo real da tela, na 1ª vez e em toda reabertura.
   useEffect(() => {
     const setH = () => {
+      // Só no APP INSTALADO no CELULAR (standalone + tela estreita). No navegador
+      // e no iPad usa o modo normal (100dvh), pra não arriscar overflow. screen.height
+      // é a tela do PRÓPRIO aparelho de cada aluno → adapta sozinho ao device.
+      const standalone = window.matchMedia("(display-mode: standalone)").matches;
+      const mobile = window.innerWidth <= 540;
       const h = (window.screen && window.screen.height) || 0;
-      if (h > 200) document.documentElement.style.setProperty("--screen-h", h + "px");
+      if (standalone && mobile && h > 200) {
+        document.documentElement.style.setProperty("--screen-h", h + "px");
+      } else {
+        document.documentElement.style.removeProperty("--screen-h");
+      }
     };
     setH();
-    window.addEventListener("orientationchange", () => setTimeout(setH, 200));
-    return () => {};
+    const onChange = () => setTimeout(setH, 200);
+    window.addEventListener("orientationchange", onChange);
+    window.addEventListener("resize", onChange);
+    return () => {
+      window.removeEventListener("orientationchange", onChange);
+      window.removeEventListener("resize", onChange);
+    };
   }, []);
 
   // A UI sempre reflete o plano EFETIVO do backend (vencido = free). Sem isso, um
@@ -3303,7 +3272,6 @@ export default function App() {
       <div style={{ height: "var(--screen-h, 100dvh)", display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
-        <DebugHUD />
         <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
           flexDirection: "column", overflow: "hidden", background: t.bg0 }}>
           <div className="screen-anim" key={screen}>{render()}</div>
