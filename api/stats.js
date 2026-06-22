@@ -5,7 +5,7 @@
 // Obs.: por ser agregado por dia, NÃO há filtro de hora (janela 08-18 etc.) —
 // o resumo é o "track record" dos ativos/timeframes que o usuário acompanha.
 import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
-import { isAnualLike, startOfForexDayMs } from "./_lib/business.js";
+import { isAnualLike, startOfForexDayMs, startOfWeekMs, startOfMonthMs, getWeekRange } from "./_lib/business.js";
 import { serverError } from "./_lib/http.js";
 
 export default async function handler(req, res) {
@@ -56,17 +56,21 @@ export default async function handler(req, res) {
     return { ganhos: g, perdas: p, total: tot, pips: Math.round(pips), assertividade: tot ? Math.round((g / tot) * 100) : 0 };
   };
 
-  // Recortes por dia do mercado (UTC): Hoje · Semana (7d) · Mês (30d) · 3 meses (90d).
-  const todayDay = new Date(startOfForexDayMs()).toISOString().slice(0, 10);
-  const weekAgoDay = new Date(Date.now() - 7 * 86400000).toISOString().slice(0, 10);
-  const monthAgoDay = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
+  // Recortes SINCRONIZADOS COM CALENDÁRIO (Brasília):
+  // - Hoje = desde 00:00 BRT de hoje
+  // - Semana = desde segunda-feira de ESTA semana
+  // - Mês = desde 1º do mês atual
   // Laudo = TODAS as operações (não filtra por ativo/tf do usuário) → igual p/ todos.
+  const todayDay = new Date(startOfForexDayMs()).toISOString().slice(0, 10);
+  const weekStartDay = new Date(startOfWeekMs()).toISOString().slice(0, 10);
+  const monthStartDay = new Date(startOfMonthMs()).toISOString().slice(0, 10);
+  const weekRange = getWeekRange();
   const relevant = (rows || []);
 
   const geral = agg(relevant);
   const dia = agg(relevant.filter((r) => r.day >= todayDay));
-  const semana = agg(relevant.filter((r) => r.day >= weekAgoDay));
-  const mes = agg(relevant.filter((r) => r.day >= monthAgoDay));
+  const semana = agg(relevant.filter((r) => r.day >= weekStartDay));
+  const mes = agg(relevant.filter((r) => r.day >= monthStartDay));
   const trimestre = geral; // 90 dias = toda a janela
 
   return res.status(200).json({
@@ -78,6 +82,7 @@ export default async function handler(req, res) {
     dia,
     semana,
     mes,
+    week_label: weekRange.label, // "Esta semana (20-24 jun)" pra UI
     trimestre,
   });
 }

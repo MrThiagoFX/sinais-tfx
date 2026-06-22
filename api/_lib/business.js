@@ -65,6 +65,69 @@ export function startOfForexDayMs() {
   return d.getTime();
 }
 
+// ─── SINCRONIZAÇÃO COM CALENDÁRIO (Brasília) ───
+// Semana Forex: segunda a sexta (mercado aberto). Usa Brasília como zona.
+
+// Retorna timestamp (ms) da segunda-feira de ESTA semana às 00:00 BRT.
+export function startOfWeekMs() {
+  const brt = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const day = brt.getDay(); // 0=dom, 1=seg, ..., 6=sab
+  const diff = day === 0 ? -2 : (day === 1 ? 0 : 1 - day); // volta à seg anterior
+  const seg = new Date(brt);
+  seg.setDate(seg.getDate() + diff);
+  seg.setHours(0, 0, 0, 0);
+  return seg.getTime();
+}
+
+// Retorna timestamp (ms) da sexta-feira de ESTA semana às 23:59:59 BRT.
+export function endOfWeekMs() {
+  const seg = new Date(startOfWeekMs());
+  const sex = new Date(seg);
+  sex.setDate(sex.getDate() + 4); // 4 dias depois = sexta
+  sex.setHours(23, 59, 59, 999);
+  return sex.getTime();
+}
+
+// Retorna timestamp (ms) da segunda-feira da SEMANA PASSADA às 00:00 BRT.
+export function startOfLastWeekMs() {
+  return startOfWeekMs() - 7 * 86400000; // 7 dias antes
+}
+
+// Retorna timestamp (ms) da sexta-feira da SEMANA PASSADA às 23:59:59 BRT.
+export function endOfLastWeekMs() {
+  return endOfWeekMs() - 7 * 86400000; // 7 dias antes
+}
+
+// Retorna timestamp (ms) do 1º do mês atual às 00:00 BRT.
+export function startOfMonthMs() {
+  const brt = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const prim = new Date(brt);
+  prim.setDate(1);
+  prim.setHours(0, 0, 0, 0);
+  return prim.getTime();
+}
+
+// Retorna timestamp (ms) do último dia do mês às 23:59:59 BRT.
+export function endOfMonthMs() {
+  const brt = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+  const ult = new Date(brt.getFullYear(), brt.getMonth() + 1, 0, 23, 59, 59, 999);
+  return ult.getTime();
+}
+
+// Retorna {start, end, label} pra UI mostrar "Esta semana (20–24 jun)".
+export function getWeekRange() {
+  const start = new Date(startOfWeekMs());
+  const end = new Date(endOfWeekMs());
+  const fmt = (d) => d.getDate().toString().padStart(2, "0");
+  const mês = start.getMonth() === end.getMonth()
+    ? ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"][start.getMonth()]
+    : null;
+  const label = mês
+    ? `Esta semana (${fmt(start)}–${fmt(end)} ${mês})`
+    : `Esta semana (${fmt(start)}/${start.getMonth() + 1}–${fmt(end)}/${end.getMonth() + 1})`;
+  return { start: startOfWeekMs(), end: endOfWeekMs(), label };
+}
+
 // Cota diária de sinais: Free = configurável pelo admin (2 a 4) · Premium = 20.
 // Usa o plano EFETIVO (vencido = Free).
 export function dailyQuota(profile, freeQuota = 4) {

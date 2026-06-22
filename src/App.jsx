@@ -1306,7 +1306,7 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
           <div style={{ padding: "0 16px", marginBottom: 10, flexShrink: 0,
             display: "flex", gap: 8 }}>
             {row("Hoje", dia)}
-            {row("Semana", semana)}
+            {row(stats?.week_label || "Semana", semana)}
             {row("Mês", mes)}
           </div>
         );
