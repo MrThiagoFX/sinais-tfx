@@ -183,12 +183,10 @@ export async function redeemAluno(coupon) {
 }
 
 /* ── Dados (/api) ── */
-// full=true inclui o laudo completo (recentAll) — usar só ao abrir Histórico/
-// Desempenho. O poll normal vai leve (sem a lista pesada).
-export async function fetchSignals(full = false) {
+export async function fetchSignals() {
   if (!hasSupabase) return null;
   try {
-    const res = await fetch("/api/signals" + (full ? "?full=1" : ""), { headers: await authHeader() });
+    const res = await fetch("/api/signals", { headers: await authHeader() });
     if (!res.ok) return null;
     return await res.json();
   } catch { return null; }
