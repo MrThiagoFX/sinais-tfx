@@ -39,33 +39,24 @@ const THEMES = {
 /* CSS global: scroll fino + reset */
 const GlobalStyle = ({ t }) => (
   <style>{`
-    /* Receita definitiva (Lovable) — 4 partes juntas contra o "menu sobe + faixa". */
-    /* Parte 1: SEM padding de safe-area no body (quem cuida é o nav fixo, senão
-       o iOS conta 2x). */
-    html, body, #root { height: 100%; margin: 0; padding: 0; overflow: hidden; overscroll-behavior: none; }
+    /* Tela cheia no iOS standalone: documento em FLUXO com 100dvh (não usar
+       position:fixed no root — tira o documento do fluxo e o iOS pinta as áreas
+       de status bar / home-indicator com o preto dele = faixas). */
+    html, body, #root { height: 100%; min-height: 100dvh; margin: 0; overflow: hidden; overscroll-behavior: none; }
+    /* TUDO na mesma cor (bg0): página, conteúdo e menu. Se todo o app é uma cor
+       só, é impossível aparecer "borda" entre o menu e a safe-area — não importa
+       como o iOS trate o status bar / home-indicator. (manifest background_color
+       também é bg0, então a área de launch/safe-area fica igual.) */
     html, body, #root { background: ${t.bg0}; }
     body { background: ${t.bg0}; }
-    /* Parte 2: no MODO APP (standalone), congela html/body como caixa fixa do
-       viewport visual — assim o bottom:0 do nav sempre bate na borda REAL da tela
-       e o iOS não reposiciona o fixed ao recalcular a safe-area depois de pintar. */
-    @media (display-mode: standalone) {
-      html, body { position: fixed; inset: 0; width: 100%; height: 100%; overflow: hidden; overscroll-behavior: none; }
-      #root { height: 100%; overflow: hidden; }
-    }
     * { box-sizing: border-box; }
 
-    /* Parte 3: bottom nav fixo (só celular) com a safe-area DENTRO dele — a barra
-       cresce pra cobrir a home indicator, sem flutuar acima dela. Parte 4: o
-       .nav-clearance reserva a altura do nav no conteúdo rolável. */
-    .nav-clearance { height: 0; flex-shrink: 0; }
-    @media (max-width: 540px) {
-      .app-nav {
-        position: fixed; left: 0; right: 0; bottom: 0; z-index: 50;
-        height: calc(50px + env(safe-area-inset-bottom, 0px));
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-      }
-      .nav-clearance { height: calc(50px + env(safe-area-inset-bottom, 0px)); }
-    }
+    /* ── Safe area do rodapé do menu (home-indicator) ──
+       PWA da tela de início (standalone): usa o inset REAL (≈34px no iPhone),
+       então o FUNDO do menu preenche até a borda inferior e os ícones ficam
+       acima da barrinha do iPhone — visual de app nativo. No navegador o inset
+       é 0 (a barra do Safari ocupa o rodapé) e o menu fica compacto. */
+    .nav-safe { padding-bottom: calc(6px + env(safe-area-inset-bottom, 0px)); }
     .scrollarea {
       overflow-y: auto; overflow-x: hidden;
       -webkit-overflow-scrolling: touch;
@@ -319,8 +310,8 @@ const NAV = [
 ];
 
 const BottomNav = ({ active, onNav, t }) => (
-  <div className="app-nav" style={{ background: t.bg0, borderTop: `1px solid ${t.bdrMid}`,
-    display: "flex", alignItems: "flex-start", paddingTop: 5, flexShrink: 0 }}>
+  <div className="nav-safe" style={{ background: t.bg0, borderTop: `1px solid ${t.bdrMid}`,
+    display: "flex", paddingTop: 5, flexShrink: 0 }}>
     {NAV.map(({ id, label, icon }) => (
       <button key={id} onClick={() => onNav(id)} style={{
         flex: 1, background: "none", border: "none", cursor: "pointer",
@@ -335,11 +326,7 @@ const BottomNav = ({ active, onNav, t }) => (
 );
 
 const Scroll = ({ children, style = {} }) => (
-  <div className="scrollarea" style={{ flex: 1, minHeight: 0, ...style }}>
-    {children}
-    {/* Reserva a altura do menu fixo no celular (altura 0 no desktop). */}
-    <div className="nav-clearance" aria-hidden />
-  </div>
+  <div className="scrollarea" style={{ flex: 1, minHeight: 0, ...style }}>{children}</div>
 );
 
 /* ════════════════════════════════════════════════════════════
@@ -2962,6 +2949,51 @@ const SCREENS = [
   { id: "profile",       label: "15 · Perfil"       },
 ];
 
+// HUD de diagnóstico TEMPORÁRIO — mostra os números reais do viewport pra entender
+// o "menu sobe ao reabrir" no iOS. Remover depois de diagnosticar.
+const DebugHUD = () => {
+  const [i, setI] = useState({});
+  useEffect(() => {
+    const px = (css) => {
+      const d = document.createElement("div");
+      d.style.cssText = `position:fixed;top:0;left:0;width:1px;height:${css};visibility:hidden;pointer-events:none`;
+      document.body.appendChild(d);
+      const h = Math.round(d.getBoundingClientRect().height);
+      document.body.removeChild(d);
+      return h;
+    };
+    const probe = () => {
+      const nav = document.querySelector(".nav-safe");
+      const r = nav && nav.getBoundingClientRect();
+      setI({
+        standalone: window.matchMedia("(display-mode: standalone)").matches ? "SIM" : "nao",
+        inner: window.innerHeight,
+        client: document.documentElement.clientHeight,
+        dvh: px("100dvh"),
+        svh: px("100svh"),
+        vv: window.visualViewport ? Math.round(window.visualViewport.height) : 0,
+        screen: window.screen ? window.screen.height : 0,
+        safeBot: px("env(safe-area-inset-bottom,0px)"),
+        navTop: r ? Math.round(r.top) : 0,
+        navBot: r ? Math.round(r.bottom) : 0,
+      });
+    };
+    probe();
+    const id = setInterval(probe, 600);
+    const onVis = () => { if (!document.hidden) setTimeout(probe, 250); };
+    document.addEventListener("visibilitychange", onVis);
+    window.addEventListener("resize", probe);
+    return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); window.removeEventListener("resize", probe); };
+  }, []);
+  return (
+    <div style={{ position: "fixed", top: 46, left: 6, zIndex: 99999, background: "rgba(0,0,0,.88)",
+      color: "#39FF14", fontFamily: "monospace", fontSize: 10.5, padding: "5px 7px", borderRadius: 7,
+      lineHeight: 1.45, pointerEvents: "none", whiteSpace: "pre" }}>
+      {`standalone:${i.standalone}  screen:${i.screen}\ninner:${i.inner} client:${i.client}\n100dvh:${i.dvh} 100svh:${i.svh} vv:${i.vv}\nsafe-bottom:${i.safeBot}\nNAV top:${i.navTop} bottom:${i.navBot}`}
+    </div>
+  );
+};
+
 export default function App() {
   const [themeId, setThemeId] = useState("dark");
   const [screen, setScreen] = useState("splash");
@@ -3254,9 +3286,10 @@ export default function App() {
   if (edgeToEdge) {
     return (
       // Container em FLUXO com 100dvh (estado aprovado como perfeito na 1ª abertura).
-      <div style={{ height: "100%", display: "flex", flexDirection: "column",
+      <div style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
+        <DebugHUD />
         <div className="safe-top" style={{ flex: 1, minHeight: 0, display: "flex",
           flexDirection: "column", overflow: "hidden", background: t.bg0 }}>
           <div className="screen-anim" key={screen}>{render()}</div>
