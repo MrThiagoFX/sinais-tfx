@@ -42,7 +42,7 @@ const GlobalStyle = ({ t }) => (
     /* Tela cheia no iOS standalone: documento em FLUXO com 100dvh (não usar
        position:fixed no root — tira o documento do fluxo e o iOS pinta as áreas
        de status bar / home-indicator com o preto dele = faixas). */
-    html, body, #root { height: 100%; min-height: 100dvh; margin: 0; overflow: hidden; overscroll-behavior: none; }
+    html, body, #root { height: var(--screen-h, 100%); min-height: var(--screen-h, 100dvh); margin: 0; overflow: hidden; overscroll-behavior: none; }
     /* TUDO na mesma cor (bg0): página, conteúdo e menu. Se todo o app é uma cor
        só, é impossível aparecer "borda" entre o menu e a safe-area — não importa
        como o iOS trate o status bar / home-indicator. (manifest background_color
@@ -2986,7 +2986,7 @@ const DebugHUD = () => {
     return () => { clearInterval(id); document.removeEventListener("visibilitychange", onVis); window.removeEventListener("resize", probe); };
   }, []);
   return (
-    <div style={{ position: "fixed", top: 46, left: 6, zIndex: 99999, background: "rgba(0,0,0,.88)",
+    <div style={{ position: "fixed", top: 96, left: 6, zIndex: 99999, background: "rgba(0,0,0,.88)",
       color: "#39FF14", fontFamily: "monospace", fontSize: 10.5, padding: "5px 7px", borderRadius: 7,
       lineHeight: 1.45, pointerEvents: "none", whiteSpace: "pre" }}>
       {`standalone:${i.standalone}  screen:${i.screen}\ninner:${i.inner} client:${i.client}\n100dvh:${i.dvh} 100svh:${i.svh} vv:${i.vv}\nsafe-bottom:${i.safeBot}\nNAV top:${i.navTop} bottom:${i.navBot}`}
@@ -3050,6 +3050,20 @@ export default function App() {
 
   // Captura ?ref=CODE da URL (link de indicação) ao abrir o app.
   useEffect(() => { api.captureRefFromUrl(); }, []);
+
+  // FIX do "menu sobe ao reabrir": no iOS, ao reabrir o PWA, o 100dvh/innerHeight
+  // vêm CURTOS (faltam ~62px da status bar), mas a tela física (window.screen.height)
+  // é CONSTANTE e correta. Travamos a altura do app nesse valor → o menu fica sempre
+  // no fundo real da tela, na 1ª vez e em toda reabertura.
+  useEffect(() => {
+    const setH = () => {
+      const h = (window.screen && window.screen.height) || 0;
+      if (h > 200) document.documentElement.style.setProperty("--screen-h", h + "px");
+    };
+    setH();
+    window.addEventListener("orientationchange", () => setTimeout(setH, 200));
+    return () => {};
+  }, []);
 
   // A UI sempre reflete o plano EFETIVO do backend (vencido = free). Sem isso, um
   // usuário vencido veria "Premium" e a cota cheia enquanto o servidor já entrega
@@ -3286,7 +3300,7 @@ export default function App() {
   if (edgeToEdge) {
     return (
       // Container em FLUXO com 100dvh (estado aprovado como perfeito na 1ª abertura).
-      <div style={{ minHeight: "100dvh", height: "100dvh", display: "flex", flexDirection: "column",
+      <div style={{ height: "var(--screen-h, 100dvh)", display: "flex", flexDirection: "column",
         background: t.bg0, fontFamily: FONT }}>
         <GlobalStyle t={t} />
         <DebugHUD />
