@@ -2473,6 +2473,7 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
               <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT, lineHeight: 1.6 }}>
                 Divergências: <b style={{ color: t.text }}>{health.divergencias ?? "—"}</b>{health.reconstruido ? " (reconstruído ✓)" : ""} ·
                 Presas: <b style={{ color: (health.presas ? t.warn : t.text) }}>{health.presas ?? "—"}</b><br />
+                {health.auto_resolvidas > 0 && (<>Auto-encerradas (+24h): <b style={{ color: t.warn }}>{health.auto_resolvidas}</b><br /></>)}
                 Fechados: <b style={{ color: t.text }}>{health.fechados ?? "—"}</b> · Laudo: <b style={{ color: t.buy }}>{health.laudo_pips >= 0 ? "+" : ""}{health.laudo_pips} pips</b>
               </div>
             </div>

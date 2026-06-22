@@ -72,12 +72,29 @@ export default async function handler(req, res) {
   const agora = Date.now();
   const presas = (abertos || []).filter((o) => agora - new Date(o.created_at).getTime() > 12 * 3600 * 1000).length;
 
+  // 6) AUTO-RESOLVER: operações abertas há +24h são resíduo de CLOSE perdido
+  // (ex.: MT4 desconectou/senha venceu) — M5/M15 não rodam 24h. Marca como
+  // "cancelado": sai do "aberto" e NÃO entra no laudo (não conta ganho/perda).
+  // Rede de segurança p/ o admin não precisar fechar na mão.
+  const AUTO_CLOSE_MS = 24 * 3600 * 1000;
+  const stale = (abertos || []).filter((o) => agora - new Date(o.created_at).getTime() > AUTO_CLOSE_MS);
+  let auto_resolvidas = 0;
+  if (stale.length) {
+    const ids = stale.map((o) => o.id);
+    const { error: e2 } = await sb.from("signals")
+      .update({ status: "cancelado", closed_at: new Date().toISOString() }).in("id", ids);
+    if (!e2) auto_resolvidas = ids.length;
+  }
+  // Presas que ainda restam (12h–24h, aguardando o limite de auto-resolução).
+  const presas_restantes = Math.max(0, presas - auto_resolvidas);
+
   const totalPips = Object.values(esperado).reduce((a, b) => a + b.pips, 0);
   return res.status(200).json({
-    ok: divergencias === 0 && presas === 0,
+    ok: divergencias === 0 && presas_restantes === 0,
     divergencias,
     reconstruido,
-    presas,
+    presas: presas_restantes,
+    auto_resolvidas,
     buckets: Object.keys(esperado).length,
     fechados: (closed || []).length,
     laudo_pips: Math.round(totalPips),
