@@ -149,20 +149,16 @@ async function getSignals(req, res) {
   // Feed PERSONALIZADO (Sinais/Dashboard) — respeita o plano do usuário.
   const eligible = fresh.filter((s) => seeAll || isEligible(s, profile)).sort(byTime);
 
-  // LAUDO (Histórico/Desempenho) — track record COMPLETO da ferramenta, igual
-  // para todos: todas as operações, sem filtro por ativo/timeframe do usuário.
-  const recentAll = (rows || []).filter((s) => s.status !== "aberto").sort(byTime).slice(0, 3000);
-
   // Sinais de HOJE (dia do mercado) → contador "sinais hoje" + cota.
   // Admin não tem teto (vê todas as operações do dia).
   const dayStart = startOfForexDayMs();
   const todayEligible = eligible.filter((s) => new Date(s.created_at).getTime() >= dayStart);
   const signals = admin ? todayEligible : todayEligible.slice(0, quota);
 
-  // Operações recentes personalizadas → tela Sinais e Dashboard.
-  const recent = eligible.slice(0, 1000);
+  // Operações recentes personalizadas → tela Sinais e Dashboard (feed leve).
+  const recent = eligible.slice(0, 300);
 
-  return res.status(200).json({
+  const resp = {
     plan: planEf,
     plan_expires_at: profile?.plan_expires_at || null,
     quota,
@@ -171,6 +167,14 @@ async function getSignals(req, res) {
     seeAll,
     signals,
     recent,
-    recentAll,
-  });
+  };
+
+  // LAUDO (Histórico/Desempenho) — track record COMPLETO, igual p/ todos. É a
+  // lista pesada; só vai quando ?full=1 (ao abrir Histórico/Desempenho), NÃO no
+  // poll de 15s — economiza dados com muitos usuários.
+  if (req.query?.full === "1") {
+    resp.recentAll = (rows || []).filter((s) => s.status !== "aberto").sort(byTime).slice(0, 3000);
+  }
+
+  return res.status(200).json(resp);
 }

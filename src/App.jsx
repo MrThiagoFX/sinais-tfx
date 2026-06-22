@@ -1711,7 +1711,7 @@ const EquityCurve = ({ t, closed, height = 120, defaultPeriod = "Geral" }) => {
   );
 };
 
-const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown, tfPerAsset = {}, onTfPerf, showMock, live }) => {
+const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown, tfPerAsset = {}, onTfPerf, showMock, live, laudo }) => {
   // Agrega o desempenho por TIMEFRAME (M5, M15) e o geral — a partir do
   // breakdown por ativo×tf. Deixa claro de onde vem o número acumulado.
   const bd = breakdown?.breakdown || [];
@@ -1803,7 +1803,7 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown
           </Card>
 
           {/* Curva de capital — pips acumulados do laudo (abaixo do histórico por tf). */}
-          <EquityCurve t={t} closed={(live?.recentAll || []).map(mapSignal)} />
+          <EquityCurve t={t} closed={(laudo || live?.recentAll || []).map(mapSignal)} />
 
           {/* Bloco de marca (preenche o espaço; espaço reservado para logo/identidade). */}
           <div style={{ marginTop: 30, marginBottom: 8, display: "flex", flexDirection: "column",
@@ -1874,7 +1874,7 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown
   );
 };
 
-const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, stats }) => {
+const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, laudo, stats }) => {
   const [tab, setTab] = useState("Todos");
   const [period, setPeriod] = useState("Mês");
   const [limit, setLimit] = useState(40);
@@ -1883,7 +1883,7 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, stats 
 
   // LAUDO oficial da ferramenta — track record COMPLETO (todos os ativos/tf),
   // IGUAL para todos os usuários. Usa `recentAll` (não filtra por plano).
-  const closed = (live?.recentAll || live?.recent || [])
+  const closed = (laudo || live?.recentAll || live?.recent || [])
     .filter(r => r.status === "ganho" || r.status === "perda")
     .map(mapSignal);
   // Filtra pelo PERÍODO. "Hoje" = dia do mercado (zera 21:00 BRT).
@@ -2991,7 +2991,8 @@ export default function App() {
   // Sem credenciais (hasSupabase=false), tudo abaixo é no-op e o app roda em modo demo.
   const [session, setSession] = useState(null);
   const [profileLoaded, setProfileLoaded] = useState(false);
-  const [live, setLive] = useState(null);    // resposta de GET /api/signals
+  const [live, setLive] = useState(null);    // resposta de GET /api/signals (feed leve)
+  const [laudo, setLaudo] = useState(null);  // recentAll (lista pesada) — só Histórico/Desempenho
   const [stats, setStats] = useState(null);  // resposta de GET /api/stats
   const [referralCount, setReferralCount] = useState(0);
   const [profileData, setProfileData] = useState({ name: "", username: "", phone: "", avatar_url: "", referral_code: "" });
@@ -3150,6 +3151,19 @@ export default function App() {
     };
   }, [screen, session]);
 
+  // Laudo completo (recentAll) — busca só ao abrir Histórico/Desempenho (fora do
+  // poll de 15s, pra economizar dados). Atualiza ao voltar pro app nessas telas.
+  useEffect(() => {
+    if (!hasSupabase || !session) return;
+    if (screen !== "history" && screen !== "performance") return;
+    let alive = true;
+    const pullLaudo = () => api.fetchSignals(true).then((d) => { if (alive && d?.recentAll) setLaudo(d.recentAll); });
+    pullLaudo();
+    const onVis = () => { if (document.visibilityState === "visible") pullLaudo(); };
+    document.addEventListener("visibilitychange", onVis);
+    return () => { alive = false; document.removeEventListener("visibilitychange", onVis); };
+  }, [screen, session]);
+
   // Busca o desempenho por timeframe ao abrir a tela.
   useEffect(() => {
     if (!hasSupabase || !session || !["tf-perf", "performance"].includes(screen)) return;
@@ -3245,9 +3259,9 @@ export default function App() {
       case "signals":       return <SignalsFeed {...common} onNav={nav} onOpenSignal={setSignal} onOpenFilters={() => go("filters")} {...bizState} live={live} stats={stats} showMock={showMock} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} />;
       case "signal-detail": return <SignalDetail {...common} signal={signal} onNav={nav} onBack={() => go("signals")} showMock={showMock} />;
       case "filters":       return <Filters {...common} onNav={nav} onBack={() => go("signals")} selectedAssets={selectedAssets} plan={plan} tfPerAsset={tfPerAsset} onPick={pickTimeframe} locked={tfLocked} nextChange={tfNextChange} isAdmin={isAdmin} />;
-      case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} breakdown={breakdown} tfPerAsset={tfPerAsset} onTfPerf={() => go("tf-perf")} showMock={showMock} live={live} />;
+      case "performance":   return <Performance {...common} onNav={nav} selectedAssets={selectedAssets} stats={stats} breakdown={breakdown} tfPerAsset={tfPerAsset} onTfPerf={() => go("tf-perf")} showMock={showMock} live={live} laudo={laudo} />;
       case "tf-perf":       return <TimeframePerf {...common} onNav={nav} onBack={() => go("performance")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} plan={plan} breakdown={breakdown} locked={tfLocked} nextChange={tfNextChange} onPick={pickTimeframe} showMock={showMock} />;
-      case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} />;
+      case "history":       return <History {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} laudo={laudo} stats={stats} />;
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
       case "notif-center":  return <NotifCenter {...common} onNav={nav} onBack={() => go("profile")} onOpenSignal={setSignal} live={live} />;
       case "faq":           return <Faq {...common} onNav={nav} onBack={() => go("profile")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} />;
