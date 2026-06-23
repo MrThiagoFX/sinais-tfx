@@ -250,6 +250,7 @@ async function adminPost(body) {
 export const adminSetAlunoCoupon = (value) => adminPost({ action: "set-aluno-coupon", value });
 export const adminCloseStuck = (signalId, outcome) => adminPost({ action: "close-stuck", signalId, outcome });
 export const adminSetPlan = (userId, plan) => adminPost({ action: "set-plan", userId, plan });
+export const adminClearErrors = () => adminPost({ action: "clear-errors" });
 
 // Verificação de integridade do laudo (recomputa + reconstrói se divergir).
 export async function adminSelfcheck(rebuild = false) {

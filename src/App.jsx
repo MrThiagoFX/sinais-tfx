@@ -2559,18 +2559,31 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
                 </div>
               );
             }
-            return errs.slice(0, 8).map((e) => (
-              <div key={e.id} style={{ marginBottom: 6, background: t.card, border: `1px solid ${t.warn}44`,
-                borderRadius: 10, padding: "8px 11px" }}>
-                <div style={{ fontSize: 11.5, fontWeight: 800, color: t.warn, fontFamily: FONT }}>{e.context || "erro"}</div>
-                <div style={{ fontSize: 10.5, color: t.sub, fontFamily: FONT, lineHeight: 1.5, wordBreak: "break-word" }}>
-                  {e.detail || "—"}
-                </div>
-                <div style={{ fontSize: 9.5, color: t.muted, fontFamily: FONT, marginTop: 2 }}>
-                  {e.ts ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(e.ts)) : ""}
-                </div>
-              </div>
-            ));
+            return (
+              <>
+                {errs.slice(0, 8).map((e) => (
+                  <div key={e.id} style={{ marginBottom: 6, background: t.card, border: `1px solid ${t.warn}44`,
+                    borderRadius: 10, padding: "8px 11px" }}>
+                    <div style={{ fontSize: 11.5, fontWeight: 800, color: t.warn, fontFamily: FONT }}>{e.context || "erro"}</div>
+                    <div style={{ fontSize: 10.5, color: t.sub, fontFamily: FONT, lineHeight: 1.5, wordBreak: "break-word" }}>
+                      {e.detail || "—"}
+                    </div>
+                    <div style={{ fontSize: 9.5, color: t.muted, fontFamily: FONT, marginTop: 2 }}>
+                      {e.ts ? new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(e.ts)) : ""}
+                    </div>
+                  </div>
+                ))}
+                <button onClick={async () => {
+                  const r = await api.adminClearErrors();
+                  if (r.ok) setData((prev) => ({ ...prev, errors: [] }));
+                }} style={{
+                  width: "100%", height: 40, marginTop: 10, borderRadius: 10, cursor: "pointer",
+                  fontWeight: 700, fontSize: 12, fontFamily: FONT, border: "none",
+                  background: t.accent, color: t.activeText }}>
+                  🗑️ Limpar erros
+                </button>
+              </>
+            );
           })()}
         </Card>
 

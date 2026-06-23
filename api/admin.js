@@ -121,6 +121,13 @@ export default async function handler(req, res) {
       return res.status(200).json({ ok: true, aluno_coupon: code });
     }
 
+    // Limpa todos os erros antigos do error_log (após resolver o problema).
+    if (action === "clear-errors") {
+      const { error } = await sb.from("error_log").delete().neq("id", 0);
+      if (error) return serverError(res, "Falha ao limpar erros", error);
+      return res.status(200).json({ ok: true, cleared: true });
+    }
+
     return res.status(400).json({ error: "ação desconhecida" });
   }
 
