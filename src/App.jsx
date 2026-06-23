@@ -1291,9 +1291,28 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
           const allClosed = (live?.recentAll || live?.recent || [])
             .filter(r => (r.status === "ganho" || r.status === "perda") && r.tf === tfStats)
             .map(mapSignal);
+          // Usar mesmas datas do backend (sincronizadas com Brasília).
           const dayStart = forexDayStartMs();
-          const weekStart = Date.now() - 7 * 86400000;
-          const monthStart = Date.now() - 30 * 86400000;
+          const { startOfWeekMs, startOfMonthMs } = (() => {
+            const brt = new Date(new Date().toLocaleString("en-US", { timeZone: "America/Sao_Paulo" }));
+            const startOfWeek = () => {
+              const day = brt.getDay();
+              const diff = day === 0 ? -2 : (day === 1 ? 0 : 1 - day);
+              const seg = new Date(brt);
+              seg.setDate(seg.getDate() + diff);
+              seg.setHours(0, 0, 0, 0);
+              return seg.getTime();
+            };
+            const startOfMonth = () => {
+              const m = new Date(brt);
+              m.setDate(1);
+              m.setHours(0, 0, 0, 0);
+              return m.getTime();
+            };
+            return { startOfWeekMs: startOfWeek(), startOfMonthMs: startOfMonth() };
+          })();
+          const weekStart = startOfWeekMs;
+          const monthStart = startOfMonthMs;
           const agg = (list) => {
             let g = 0, p = 0, pips = 0;
             for (const s of list) {
