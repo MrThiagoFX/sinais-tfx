@@ -1259,6 +1259,7 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
 
 const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live, stats, showMock, closeAlerts = [], onToggleCloseAlert }) => {
   const [filter, setFilter] = useState("Todos");
+  const [tfStats, setTfStats] = useState("Geral"); // Filtro simples: Geral, M5, M15
   const inWindow = h => schedule.allDay || (h >= parseInt(schedule.start) && h < parseInt(schedule.end));
   // Com backend, o /api já devolve os sinais filtrados por plano/ativos/janela/cota.
   // O backend já devolve os sinais filtrados por plano/ativos/janela/cota:
@@ -1266,9 +1267,12 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
   const recentSignals = live?.recent?.length ? live.recent.map(mapSignal) : null;
   const base = liveSignals || recentSignals || [];
-  const shown = base
-    .filter(s => filter === "Todos" || (filter === "Compras" ? s.dir === "Compra" : s.dir === "Venda"))
-    .sort(sortSignals);
+  // Filtra por direção + timeframe.
+  const filtered = base.filter(s =>
+    (filter === "Todos" || (filter === "Compras" ? s.dir === "Compra" : s.dir === "Venda")) &&
+    (tfStats === "Geral" || s.tf === tfStats)
+  );
+  const shown = filtered.sort(sortSignals);
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
       <ScreenHeader title="Sinais" t={t} onToggleTheme={onToggleTheme}
@@ -1281,9 +1285,33 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
         } />
       {(() => {
         const zero = { pips: 0, assertividade: 0, total: 0 };
-        const dia = stats?.dia || zero;
-        const semana = stats?.semana || zero;
-        const mes = stats?.mes || zero; // recorte de 30 dias do laudo
+        // Se tem filtro por TF, calcula dos sinais filtrados (não usa stats pré-agregado).
+        let dia = zero, semana = zero, mes = zero;
+        if (tfStats !== "Geral") {
+          const allClosed = (live?.recentAll || live?.recent || [])
+            .filter(r => r.status === "ganho" || r.status === "perda" && r.tf === tfStats)
+            .map(mapSignal);
+          const dayStart = forexDayStartMs();
+          const weekStart = Date.now() - 7 * 86400000;
+          const monthStart = Date.now() - 30 * 86400000;
+          const agg = (list) => {
+            let g = 0, p = 0, pips = 0;
+            for (const s of list) {
+              if (s.status === "ganho") g++; else p++;
+              pips += (s.resultPips || 0);
+            }
+            const tot = g + p;
+            return { ganhos: g, perdas: p, total: tot, pips: Math.round(pips), assertividade: tot ? Math.round((g / tot) * 100) : 0 };
+          };
+          dia = agg(allClosed.filter(s => (s.ts || 0) >= dayStart));
+          semana = agg(allClosed.filter(s => (s.ts || 0) >= weekStart));
+          mes = agg(allClosed.filter(s => (s.ts || 0) >= monthStart));
+        } else {
+          // Sem filtro: usa stats pré-agregado (como era).
+          dia = stats?.dia || zero;
+          semana = stats?.semana || zero;
+          mes = stats?.mes || zero;
+        }
         const row = (label, d) => {
           const pos = (d.pips || 0) >= 0;
           return (
@@ -1316,6 +1344,17 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
           {["Todos", "Compras", "Vendas"].map(f => (
             <Chip key={f} label={f} active={filter === f} onClick={() => setFilter(f)} t={t} />
           ))}
+          {/* Dropdown simples: Geral / M5 / M15 (ícone relógio) */}
+          <select value={tfStats} onChange={(e) => setTfStats(e.target.value)}
+            style={{
+              background: t.card, border: `1px solid ${t.bdr}`, borderRadius: 8,
+              color: t.text, fontSize: 12, padding: "4px 8px", fontFamily: FONT,
+              cursor: "pointer", marginLeft: "auto"
+            }}>
+            <option value="Geral">⏱️ Geral</option>
+            <option value="M5">⏱️ M5</option>
+            <option value="M15">⏱️ M15</option>
+          </select>
         </div>
         {plan === "free" && (
           <div style={{ background: `${t.warn}10`, border: `1px solid ${t.warn}30`,
@@ -1874,12 +1913,13 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown
   );
 };
 
-const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, stats }) => {
+const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, stats, plan }) => {
   const [tab, setTab] = useState("Todos");
   const [period, setPeriod] = useState("Mês");
+  const [tfStats, setTfStats] = useState("Geral"); // Filtro simples: Geral, M5, M15
   const [limit, setLimit] = useState(40);
   // Ao trocar período/filtro, recomeça a paginação.
-  useEffect(() => { setLimit(40); }, [period, tab]);
+  useEffect(() => { setLimit(40); }, [period, tab, tfStats]);
 
   // LAUDO oficial da ferramenta — track record COMPLETO (todos os ativos/tf),
   // IGUAL para todos os usuários. Usa `recentAll` (não filtra por plano).
@@ -1894,21 +1934,22 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, stats 
     : period === "Semana" ? "últimos 7 dias"
     : period === "Mês" ? "últimos 30 dias" : "últimos 90 dias";
   const inPeriod = closed.filter(s => (s.ts || 0) >= periodStart);
+  // Filtro simples por timeframe (Geral/M5/M15) — só nos números do resumo.
+  const byTf = tfStats === "Geral" ? inPeriod : inPeriod.filter(s => s.tf === tfStats);
   const shown = inPeriod
     .filter(s => tab === "Todos" || (tab === "Ganhos" ? s.status === "ganho" : s.status === "perda"))
     .sort(sortSignals);
   const visible = shown.slice(0, limit);
 
-  // TOTAIS do resumo vêm do laudo PRÉ-AGREGADO (stats_daily) — ilimitado e
-  // idêntico ao Desempenho. Assim, com muitos sinais/dia, a soma nunca é cortada
-  // pelo teto da lista. (Fallback: calcula da lista quando não há backend.)
-  const rec = period === "Hoje" ? stats?.dia
+  // TOTAIS do resumo: se tem filtro por TF, calcula da lista; senão usa stats pré-agregado.
+  const useFiltered = tfStats !== "Geral"; // se tem filtro, calcula na mão
+  const rec = !useFiltered && (period === "Hoje" ? stats?.dia
     : period === "Semana" ? stats?.semana
-    : period === "Mês" ? stats?.mes : stats?.trimestre;
-  const wins = rec ? rec.ganhos : inPeriod.filter(s => s.status === "ganho").length;
-  const losses = rec ? rec.perdas : inPeriod.filter(s => s.status === "perda").length;
-  const total = rec ? rec.pips : inPeriod.reduce((a, s) => a + (s.resultPips || 0), 0);
-  const opsCount = rec ? rec.total : inPeriod.length;
+    : period === "Mês" ? stats?.mes : stats?.trimestre);
+  const wins = rec ? rec.ganhos : byTf.filter(s => s.status === "ganho").length;
+  const losses = rec ? rec.perdas : byTf.filter(s => s.status === "perda").length;
+  const total = rec ? rec.pips : byTf.reduce((a, s) => a + (s.resultPips || 0), 0);
+  const opsCount = rec ? rec.total : byTf.length;
   const winRate = rec ? rec.assertividade
     : ((wins + losses) ? Math.round((wins / (wins + losses)) * 100) : 0);
   const schedTxt = schedule.allDay ? "dia todo" : `${schedule.start}–${schedule.end}`;
@@ -1931,9 +1972,22 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, stats 
         </div>
         <Card t={t} style={{ marginBottom: 12, padding: "12px 16px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
-            <span style={{ fontSize: 13, color: t.text, fontWeight: 700, fontFamily: FONT }}>
-              {period} · {opsCount} operações
-            </span>
+            <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <span style={{ fontSize: 13, color: t.text, fontWeight: 700, fontFamily: FONT }}>
+                {period} · {opsCount} operações
+              </span>
+              {/* Dropdown simples: Geral / M5 / M15 (ícone relógio) */}
+              <select value={tfStats} onChange={(e) => setTfStats(e.target.value)}
+                style={{
+                  background: t.card, border: `1px solid ${t.bdr}`, borderRadius: 8,
+                  color: t.text, fontSize: 12, padding: "4px 8px", fontFamily: FONT,
+                  cursor: "pointer"
+                }}>
+                <option value="Geral">⏱️ Geral</option>
+                <option value="M5">⏱️ M5</option>
+                <option value="M15">⏱️ M15</option>
+              </select>
+            </div>
             <span style={{ fontSize: 16, fontWeight: 900,
               color: total >= 0 ? t.buy : t.sell, fontFamily: FONT }}>
               {total >= 0 ? "+" : ""}{total} pips
