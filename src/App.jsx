@@ -1289,7 +1289,7 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
         let dia = zero, semana = zero, mes = zero;
         if (tfStats !== "Geral") {
           const allClosed = (live?.recentAll || live?.recent || [])
-            .filter(r => r.status === "ganho" || r.status === "perda" && r.tf === tfStats)
+            .filter(r => (r.status === "ganho" || r.status === "perda") && r.tf === tfStats)
             .map(mapSignal);
           const dayStart = forexDayStartMs();
           const weekStart = Date.now() - 7 * 86400000;
