@@ -1,252 +1,309 @@
-// Internacionalização COMPLETA (i18n) — PT, EN, ES
-export const translations = {
-  pt: {
-    // ─────────────────── NAVEGAÇÃO ───────────────────
-    inicio: "Início", sinais: "Sinais", desempenho: "Desempenho", historico: "Histórico", mais: "Mais", voltar: "Voltar",
-
-    // ─────────────────── HOME ───────────────────
-    ola: "Olá", dashboard: "Dashboard", bemVindo: "Bem-vindo", operacoesHoje: "Operações hoje",
-    ganhos: "Ganhos", perdas: "Perdas", assertividade: "Acerto", pips: "pips", ops: "ops",
-    ultimosSinais: "Últimos sinais", todos: "Todos", diaAtivo: "Dia ativo", semanaAtiva: "Semana ativa", mesAtivo: "Mês ativo",
-    diaFimDeSemana: "Fim de semana — mercado Forex fechado", naoHaOperacoes: "Não há operações agora",
-    operacaoRodando: "Operação rodando — aguardando bater TP ou SL", proximoSinalAbrem: "O próximo sinal só abre quando esta fechar",
-
-    // ─────────────────── SINAIS ───────────────────
-    sinaisAtivos: "Sinais ativos", emAndamento: "Em andamento", resultado: "Resultado", avisarAoFechar: "Avisar ao fechar",
-    compra: "Compra", venda: "Venda", compras: "Compras", vendas: "Vendas", entrada: "Entrada", alvo: "Alvo", stop: "Stop",
-    entradadef: "Entrada", alvoDef: "Alvo", stopDef: "Stop", statusAberto: "aberto", statusGanho: "ganho", statusPerda: "perda",
-
-    // ─────────────────── PERFORMANCE ───────────────────
-    curvaDeCapital: "Curva de capital", semana: "Semana", mes: "Mês", geral: "Geral", periodo: "Período",
-    semanaLabel: "Esta semana", mesLabel: "Mês", geralLabel: "Geral", desempenhoAtivos: "Desempenho por ativo",
-    desempenhoTimeframes: "Desempenho por timeframe", win: "Win", loss: "Loss", rr: "R:R",
-
-    // ─────────────────── HISTÓRICO ───────────────────
-    operacoesFechadas: "Operações fechadas", filtrar: "Filtrar", limpar: "Limpar", semResultados: "Sem resultados",
-    verMais: "Ver mais", naoHaOperacoes2: "Nenhuma operação até agora",
-
-    // ─────────────────── PERFIL ───────────────────
-    perfil: "Meu perfil", meusDados: "Meus dados", preferencias: "Preferências", sair: "Sair", nome: "Nome", email: "E-mail",
-    telefone: "Telefone", senha: "Senha", novaSenh: "Nova senha", altarEmail: "Alterar e-mail", alterarSenha: "Alterar senha",
-    editarPerfil: "Editar perfil", salvar: "Salvar", cancelar: "Cancelar", fechar: "Fechar",
-
-    // ─────────────────── AJUSTES ───────────────────
-    tema: "Tema", claro: "Claro", escuro: "Escuro", idioma: "Idioma", portuguese: "Português", english: "English", spanish: "Español",
-    horarioSinais: "Horário de sinais", diaInteiro: "Dia inteiro", horarioFixo: "Horário fixo", inicio: "Início", fim: "Fim",
-    janela: "Janela", horario: "Horário", ativos: "Ativos", timeframes: "Timeframes", ativosSelecionados: "Ativos selecionados",
-    escolhaAtivos: "Escolha seus ativos", editarAtivos: "Editar ativos e timeframes", escolhaTimeframes: "Escolha timeframes",
-    language_desc: "Escolha seu idioma preferido. Auto-salvo.", schedule_saved: "Horário salvo!",
-
-    // ─────────────────── PLANOS ───────────────────
-    plan: "Plano", free: "Grátis", mensal: "Mensal", anual: "Anual", aluno: "Aluno", premium: "Premium",
-    escolhaPlano: "Escolha seu plano", assinar: "Assinar", cancearPlano: "Cancelar plano", upgrade: "Upgrade",
-    operacoesDia: "operações/dia", acesso24: "Acesso 24h", horarioCustomizado: "Horário customizado",
-
-    // ─────────────────── AUTH ───────────────────
-    entrar: "Entrar", cadastrar: "Cadastrar", loginComEmail: "Entrar com e-mail", novaConta: "Criar nova conta",
-    esqueceuSenha: "Esqueceu a senha?", enviar: "Enviar", redefinir: "Redefinir", confirmar: "Confirmar",
-    confirmeSenha: "Confirme a senha", cupom: "Cupom", referencia: "Código de referência", jaTemConta: "Já tem conta?",
-
-    // ─────────────────── ADMIN ───────────────────
-    paineladmin: "Painel admin", usuarios: "Usuários", saudeDoSistema: "Saúde do sistema", verificarAgora: "Verificar agora",
-    reconstruirLaudo: "Reconstruir laudo", monitoramentoDeErros: "Monitoramento de erros", ultimasfalhas: "Últimas falhas",
-    seEstiverVazio: "Se estiver vazio, está tudo rodando sem erros.", limparErros: "Limpar erros", clicNaLinha: "Clique na linha pra ver detalhes",
-    operacoesAbertas: "Operações abertas", diagnostico: "Diagnóstico", divergencias: "Divergências", presas: "Presas (>12h)",
-    autoResolvidas: "Auto-resolvidas", buckets: "Buckets", fechados: "Fechados", laudoPips: "Laudo pips",
-
-    // ─────────────────── NOTIFICAÇÕES ───────────────────
-    notificacoes: "Notificações", centralNotificacoes: "Central de notificações", novasNotificacoes: "Novas notificações",
-    sinalAberto: "Sinal aberto", sinalFechado: "Sinal fechado", ganhou: "Ganhou!", perdeu: "Perdeu", tp: "TP", sl: "SL",
-    ativarNotificacoes: "Ativar notificações", permitirNotificacoes: "Permitir notificações push",
-
-    // ─────────────────── FAQ ───────────────────
-    centralAjuda: "Central de ajuda", perguntas: "Perguntas frequentes", oQueEh: "O que é?", comoFunciona: "Como funciona?",
-    leia: "Leia", expandir: "Expandir", colapsar: "Colapsar",
-
-    // ─────────────────── MSGS DE ERRO/SUCESSO ───────────────────
-    erro: "Erro", sucesso: "Sucesso", aviso: "Aviso", info: "Informação", carregando: "Carregando...", aguarde: "Aguarde...",
-    erroBuscar: "Erro ao buscar dados", erroEnviar: "Erro ao enviar", erroSalvar: "Erro ao salvar", naoAutenticado: "Não autenticado",
-    sessionExpirada: "Sessão expirada. Faça login novamente", semConexao: "Sem conexão com o servidor", tPaga: "Tente novamente",
-    emailInvalido: "E-mail inválido", senhaFraca: "Senha fraca (mín. 6 caracteres)", emailJaRegistrado: "E-mail já registrado",
-
-    // ─────────────────── OUTRAS ───────────────────
-    carregar: "Carregar", recarregar: "Recarregar", atualizar: "Atualizar", copiar: "Copiar", copiado: "Copiado!",
-    compartilhar: "Compartilhar", exportar: "Exportar", importar: "Importar", configurar: "Configurar", ok: "OK",
-    semDados: "Sem dados", vazio: "Vazio", carregando2: "Carregando dados...", esperando: "Esperando...",
-    ativo: "Ativo", inativo: "Inativo", habilitado: "Habilitado", desabilitado: "Desabilitado",
-    premium: "Premium", gratuito: "Gratuito", ativacao: "Ativação", expirado: "Expirado", validade: "Validade",
-  },
-
-  en: {
-    // ─────────────────── NAVIGATION ───────────────────
-    inicio: "Home", sinais: "Signals", desempenho: "Performance", historico: "History", mais: "More", voltar: "Back",
-
-    // ─────────────────── HOME ───────────────────
-    ola: "Hi", dashboard: "Dashboard", bemVindo: "Welcome", operacoesHoje: "Operations today",
-    ganhos: "Wins", perdas: "Losses", assertividade: "Win rate", pips: "pips", ops: "ops",
-    ultimosSinais: "Latest signals", todos: "All", diaAtivo: "Active day", semanaAtiva: "Active week", mesAtivo: "Active month",
-    diaFimDeSemana: "Weekend — Forex market closed", naoHaOperacoes: "No operations right now",
-    operacaoRodando: "Operation running — waiting for TP or SL", proximoSinalAbrem: "Next signal opens when this closes",
-
-    // ─────────────────── SIGNALS ───────────────────
-    sinaisAtivos: "Active signals", emAndamento: "In progress", resultado: "Result", avisarAoFechar: "Alert when closed",
-    compra: "Buy", venda: "Sell", compras: "Buys", vendas: "Sells", entrada: "Entry", alvo: "Target", stop: "Stop",
-    entradadef: "Entry", alvoDef: "Target", stopDef: "Stop", statusAberto: "open", statusGanho: "win", statusPerda: "loss",
-
-    // ─────────────────── PERFORMANCE ───────────────────
-    curvaDeCapital: "Equity curve", semana: "Week", mes: "Month", geral: "Overall", periodo: "Period",
-    semanaLabel: "This week", mesLabel: "Month", geralLabel: "Overall", desempenhoAtivos: "Performance by asset",
-    desempenhoTimeframes: "Performance by timeframe", win: "Win", loss: "Loss", rr: "R:R",
-
-    // ─────────────────── HISTORY ───────────────────
-    operacoesFechadas: "Closed operations", filtrar: "Filter", limpar: "Clear", semResultados: "No results",
-    verMais: "See more", naoHaOperacoes2: "No operations yet",
-
-    // ─────────────────── PROFILE ───────────────────
-    perfil: "My profile", meusDados: "My data", preferencias: "Preferences", sair: "Logout", nome: "Name", email: "Email",
-    telefone: "Phone", senha: "Password", novaSenh: "New password", altarEmail: "Change email", alterarSenha: "Change password",
-    editarPerfil: "Edit profile", salvar: "Save", cancelar: "Cancel", fechar: "Close",
-
-    // ─────────────────── SETTINGS ───────────────────
-    tema: "Theme", claro: "Light", escuro: "Dark", idioma: "Language", portuguese: "Portuguese", english: "English", spanish: "Spanish",
-    horarioSinais: "Signal schedule", diaInteiro: "All day", horarioFixo: "Fixed schedule", inicio: "Start", fim: "End",
-    janela: "Window", horario: "Time", ativos: "Assets", timeframes: "Timeframes", ativosSelecionados: "Selected assets",
-    escolhaAtivos: "Choose your assets", editarAtivos: "Edit assets and timeframes", escolhaTimeframes: "Choose timeframes",
-    language_desc: "Choose your preferred language. Auto-saved.", schedule_saved: "Schedule saved!",
-
-    // ─────────────────── PLANS ───────────────────
-    plan: "Plan", free: "Free", mensal: "Monthly", anual: "Yearly", aluno: "Student", premium: "Premium",
-    escolhaPlano: "Choose your plan", assinar: "Subscribe", cancearPlano: "Cancel plan", upgrade: "Upgrade",
-    operacoesDia: "operations/day", acesso24: "24h access", horarioCustomizado: "Custom schedule",
-
-    // ─────────────────── AUTH ───────────────────
-    entrar: "Sign in", cadastrar: "Sign up", loginComEmail: "Sign in with email", novaConta: "Create account",
-    esqueceuSenha: "Forgot password?", enviar: "Send", redefinir: "Reset", confirmar: "Confirm",
-    confirmeSenha: "Confirm password", cupom: "Coupon", referencia: "Referral code", jaTemConta: "Already have an account?",
-
-    // ─────────────────── ADMIN ───────────────────
-    paineladmin: "Admin panel", usuarios: "Users", saudeDoSistema: "System health", verificarAgora: "Check now",
-    reconstruirLaudo: "Rebuild report", monitoramentoDeErros: "Error monitoring", ultimasfalhas: "Latest failures",
-    seEstiverVazio: "If empty, everything is running smoothly.", limparErros: "Clear errors", clicNaLinha: "Click for details",
-    operacoesAbertas: "Open operations", diagnostico: "Diagnostics", divergencias: "Divergences", presas: "Stuck (>12h)",
-    autoResolvidas: "Auto-resolved", buckets: "Buckets", fechados: "Closed", laudoPips: "Report pips",
-
-    // ─────────────────── NOTIFICATIONS ───────────────────
-    notificacoes: "Notifications", centralNotificacoes: "Notification center", novasNotificacoes: "New notifications",
-    sinalAberto: "Signal opened", sinalFechado: "Signal closed", ganhou: "Won!", perdeu: "Lost", tp: "TP", sl: "SL",
-    ativarNotificacoes: "Enable notifications", permitirNotificacoes: "Allow push notifications",
-
-    // ─────────────────── FAQ ───────────────────
-    centralAjuda: "Help center", perguntas: "Frequently asked questions", oQueEh: "What is?", comoFunciona: "How it works?",
-    leia: "Read", expandir: "Expand", colapsar: "Collapse",
-
-    // ─────────────────── ERROR/SUCCESS MSGS ───────────────────
-    erro: "Error", sucesso: "Success", aviso: "Warning", info: "Info", carregando: "Loading...", aguarde: "Please wait...",
-    erroBuscar: "Error fetching data", erroEnviar: "Error sending", erroSalvar: "Error saving", naoAutenticado: "Not authenticated",
-    sessionExpirada: "Session expired. Sign in again", semConexao: "No connection to server", tPaga: "Try again",
-    emailInvalido: "Invalid email", senhaFraca: "Weak password (min. 6 chars)", emailJaRegistrado: "Email already registered",
-
-    // ─────────────────── OTHER ───────────────────
-    carregar: "Load", recarregar: "Reload", atualizar: "Update", copiar: "Copy", copiado: "Copied!",
-    compartilhar: "Share", exportar: "Export", importar: "Import", configurar: "Configure", ok: "OK",
-    semDados: "No data", vazio: "Empty", carregando2: "Loading data...", esperando: "Waiting...",
-    ativo: "Active", inativo: "Inactive", habilitado: "Enabled", desabilitado: "Disabled",
-    premium: "Premium", gratuito: "Free", ativacao: "Activation", expirado: "Expired", validade: "Expiry",
-  },
-
-  es: {
-    // ─────────────────── NAVEGACIÓN ───────────────────
-    inicio: "Inicio", sinais: "Señales", desempenho: "Rendimiento", historico: "Historial", mais: "Más", voltar: "Atrás",
-
-    // ─────────────────── HOME ───────────────────
-    ola: "Hola", dashboard: "Panel", bemVindo: "Bienvenido", operacoesHoje: "Operaciones hoy",
-    ganhos: "Ganancias", perdas: "Pérdidas", assertividade: "Acierto", pips: "pips", ops: "ops",
-    ultimosSinais: "Últimas señales", todos: "Todos", diaAtivo: "Día activo", semanaAtiva: "Semana activa", mesAtivo: "Mes activo",
-    diaFimDeSemana: "Fin de semana — mercado Forex cerrado", naoHaOperacoes: "Sin operaciones ahora",
-    operacaoRodando: "Operación en curso — esperando TP o SL", proximoSinalAbrem: "Próxima señal se abre cuando esta cierre",
-
-    // ─────────────────── SEÑALES ───────────────────
-    sinaisAtivos: "Señales activas", emAndamento: "En progreso", resultado: "Resultado", avisarAoFechar: "Alertar al cerrar",
-    compra: "Compra", venda: "Venta", compras: "Compras", vendas: "Ventas", entrada: "Entrada", alvo: "Objetivo", stop: "Stop",
-    entradadef: "Entrada", alvoDef: "Objetivo", stopDef: "Stop", statusAberto: "abierto", statusGanho: "ganancia", statusPerda: "pérdida",
-
-    // ─────────────────── RENDIMIENTO ───────────────────
-    curvaDeCapital: "Curva de capital", semana: "Semana", mes: "Mes", geral: "General", periodo: "Período",
-    semanaLabel: "Esta semana", mesLabel: "Mes", geralLabel: "General", desempenhoAtivos: "Rendimiento por activo",
-    desempenhoTimeframes: "Rendimiento por marco de tiempo", win: "Ganancia", loss: "Pérdida", rr: "R:R",
-
-    // ─────────────────── HISTORIAL ───────────────────
-    operacoesFechadas: "Operaciones cerradas", filtrar: "Filtrar", limpar: "Limpiar", semResultados: "Sin resultados",
-    verMais: "Ver más", naoHaOperacoes2: "Ninguna operación aún",
-
-    // ─────────────────── PERFIL ───────────────────
-    perfil: "Mi perfil", meusDados: "Mis datos", preferencias: "Preferencias", sair: "Cerrar sesión", nome: "Nombre", email: "Correo",
-    telefone: "Teléfono", senha: "Contraseña", novaSenh: "Nueva contraseña", altarEmail: "Cambiar correo", alterarSenha: "Cambiar contraseña",
-    editarPerfil: "Editar perfil", salvar: "Guardar", cancelar: "Cancelar", fechar: "Cerrar",
-
-    // ─────────────────── AJUSTES ───────────────────
-    tema: "Tema", claro: "Claro", escuro: "Oscuro", idioma: "Idioma", portuguese: "Portugués", english: "Inglés", spanish: "Español",
-    horarioSinais: "Horario de señales", diaInteiro: "Todo el día", horarioFixo: "Horario fijo", inicio: "Inicio", fim: "Fin",
-    janela: "Ventana", horario: "Hora", ativos: "Activos", timeframes: "Marcos de tiempo", ativosSelecionados: "Activos seleccionados",
-    escolhaAtivos: "Elige tus activos", editarAtivos: "Editar activos y marcos de tiempo", escolhaTimeframes: "Elige marcos de tiempo",
-    language_desc: "Elige tu idioma preferido. Auto-guardado.", schedule_saved: "¡Horario guardado!",
-
-    // ─────────────────── PLANES ───────────────────
-    plan: "Plan", free: "Gratis", mensal: "Mensual", anual: "Anual", aluno: "Estudiante", premium: "Premium",
-    escolhaPlano: "Elige tu plan", assinar: "Suscribirse", cancearPlano: "Cancelar plan", upgrade: "Actualizar",
-    operacoesDia: "operaciones/día", acesso24: "Acceso 24h", horarioCustomizado: "Horario personalizado",
-
-    // ─────────────────── AUTH ───────────────────
-    entrar: "Iniciar sesión", cadastrar: "Registrarse", loginComEmail: "Iniciar sesión con correo", novaConta: "Crear cuenta",
-    esqueceuSenha: "¿Olvidó la contraseña?", enviar: "Enviar", redefinir: "Restablecer", confirmar: "Confirmar",
-    confirmeSenha: "Confirmar contraseña", cupom: "Cupón", referencia: "Código de referencia", jaTemConta: "¿Ya tiene cuenta?",
-
-    // ─────────────────── ADMIN ───────────────────
-    paineladmin: "Panel de administración", usuarios: "Usuarios", saudeDoSistema: "Salud del sistema", verificarAgora: "Verificar ahora",
-    reconstruirLaudo: "Reconstruir informe", monitoramentoDeErros: "Monitoreo de errores", ultimasfalhas: "Últimos fallos",
-    seEstiverVazio: "Si está vacío, todo funciona correctamente.", limparErros: "Limpiar errores", clicNaLinha: "Haz clic para detalles",
-    operacoesAbertas: "Operaciones abiertas", diagnostico: "Diagnóstico", divergencias: "Divergencias", presas: "Atrapadas (>12h)",
-    autoResolvidas: "Auto-resueltas", buckets: "Cubos", fechados: "Cerrados", laudoPips: "Informe pips",
-
-    // ─────────────────── NOTIFICACIONES ───────────────────
-    notificacoes: "Notificaciones", centralNotificacoes: "Centro de notificaciones", novasNotificacoes: "Nuevas notificaciones",
-    sinalAberto: "Señal abierta", sinalFechado: "Señal cerrada", ganhou: "¡Ganó!", perdeu: "Perdió", tp: "TP", sl: "SL",
-    ativarNotificacoes: "Habilitar notificaciones", permitirNotificacoes: "Permitir notificaciones push",
-
-    // ─────────────────── FAQ ───────────────────
-    centralAjuda: "Centro de ayuda", perguntas: "Preguntas frecuentes", oQueEh: "¿Qué es?", comoFunciona: "¿Cómo funciona?",
-    leia: "Lea", expandir: "Expandir", colapsar: "Colapsar",
-
-    // ─────────────────── MSGS DE ERROR/ÉXITO ───────────────────
-    erro: "Error", sucesso: "Éxito", aviso: "Advertencia", info: "Información", carregando: "Cargando...", aguarde: "Por favor espere...",
-    erroBuscar: "Error al obtener datos", erroEnviar: "Error al enviar", erroSalvar: "Error al guardar", naoAutenticado: "No autenticado",
-    sessionExpirada: "Sesión expirada. Inicie sesión nuevamente", semConexao: "Sin conexión al servidor", tPaga: "Intente de nuevo",
-    emailInvalido: "Correo inválido", senhaFraca: "Contraseña débil (mín. 6 caracteres)", emailJaRegistrado: "Correo ya registrado",
-
-    // ─────────────────── OTROS ───────────────────
-    carregar: "Cargar", recarregar: "Recargar", atualizar: "Actualizar", copiar: "Copiar", copiado: "¡Copiado!",
-    compartilhar: "Compartir", exportar: "Exportar", importar: "Importar", configurar: "Configurar", ok: "OK",
-    semDados: "Sin datos", vazio: "Vacío", carregando2: "Cargando datos...", esperando: "Esperando...",
-    ativo: "Activo", inativo: "Inactivo", habilitado: "Habilitado", desabilitado: "Deshabilitado",
-    premium: "Premium", gratuito: "Gratis", ativacao: "Activación", expirado: "Expirado", validade: "Vencimiento",
-  },
-};
+// Internacionalização (i18n) — PT (base) / EN / ES
+// Estratégia de retrofit: a própria string em português é a CHAVE.
+// txt("Resultado") devolve a tradução no idioma atual; em PT devolve a própria string.
+// O idioma é lido uma vez no carregamento (o app recarrega ao trocar de idioma).
 
 export function getSavedLanguage() {
-  try {
-    return localStorage.getItem("tfx_language") || "pt";
-  } catch {
-    return "pt";
-  }
+  try { return localStorage.getItem("tfx_language") || "pt"; } catch { return "pt"; }
 }
 
 export function saveLanguagePreference(lang) {
-  try {
-    localStorage.setItem("tfx_language", lang);
-  } catch { /* ignore */ }
+  try { localStorage.setItem("tfx_language", lang); } catch { /* ignore */ }
 }
 
-// Helper: pega string traduzida com fallback
-export function txt(key, translations, language) {
-  return translations[language]?.[key] || translations.pt?.[key] || key;
+let _lang = getSavedLanguage();
+export function setLang(lang) { _lang = lang; }
+
+// DICIONÁRIO — chave = texto em português. Só EN e ES (PT é identidade).
+const DICT = {
+  en: {
+    // Navegação / telas
+    "Início": "Home", "Sinais": "Signals", "Desempenho": "Performance", "Histórico": "History", "Mais": "More",
+    "← Voltar": "← Back", "Voltar": "Back", "Continuar": "Continue", "Começar agora": "Get started",
+    "TOQUE PARA CONTINUAR": "TAP TO CONTINUE", "Mais opções": "More options", "Abrir filtros": "Open filters",
+    "Alternar tema": "Toggle theme", "Mudar idioma": "Change language", "ou": "or",
+    // Onboarding / boas-vindas
+    "Bem-vindo ao": "Welcome to", "Bem-vindo de volta": "Welcome back",
+    "SINAIS INTELIGENTES": "SMART SIGNALS", "Receba sinais de Forex, índices e metais": "Get Forex, indices and metals signals",
+    "em tempo real": "in real time", "Desempenho real · operações verificadas": "Real performance · verified trades",
+    "Antes de continuar": "Before you continue", "⚠ Aviso importante": "⚠ Important notice",
+    "Este é um estudo operacional, não uma recomendação financeira. Avalie o risco antes de operar.": "This is an operational study, not financial advice. Assess the risk before trading.",
+    "Li e concordo com os termos de uso": "I have read and agree to the terms of use",
+    "Atenção:": "Warning:",
+    // Auth
+    "Entrar no": "Sign in to", "Entrar": "Sign in", "Entrando…": "Signing in…", "Criar conta": "Create account",
+    "Criar sua conta": "Create your account", "Já tenho conta": "I already have an account", "Ir para o login": "Go to login",
+    "Esqueci minha senha": "Forgot my password", "Nome completo": "Full name", "Seu nome": "Your name",
+    "E-mail": "Email", "Senha": "Password", "Nome completo": "Full name",
+    "Telefone / WhatsApp": "Phone / WhatsApp", "Confirmar senha": "Confirm password", "repita a senha": "repeat the password",
+    "mín. 6 caracteres": "min. 6 characters", "seu@email.com": "you@email.com",
+    "🔒 Seus dados são protegidos e usados só para o serviço. Ao criar conta você concorda com os Termos e a Política de Privacidade.": "🔒 Your data is protected and used only for the service. By creating an account you agree to the Terms and Privacy Policy.",
+    "🎓 Tenho cupom de aluno": "🎓 I have a student coupon", "Cupom de aluno": "Student coupon", "🎓 Cupom de aluno": "🎓 Student coupon",
+    "ex.: aluno2026": "e.g.: student2026",
+    "Com um cupom válido, seu acesso de": "With a valid coupon, your", "aluno é liberado por 15 dias": "student access is granted for 15 days",
+    "aluno por 15 dias": "student for 15 days", "automaticamente.": "automatically.",
+    // Home / dashboard
+    "Olá": "Hi", "Sinais hoje": "Signals today", "Últimos sinais": "Latest signals", "Resultado do mês": "Month result",
+    "Assertividade": "Win rate", "Hoje não há operações": "No trades today",
+    "— fim de semana, o mercado Forex está fechado.": "— weekend, the Forex market is closed.",
+    "As operações voltam no": "Trades resume on", "Voltam no": "Resume on",
+    ". O próximo sinal só abre quando esta fechar.": ". The next signal only opens when this one closes.",
+    "⏳ Operação rodando — aguardando bater": "⏳ Trade running — waiting to hit", "aguardando TP/SL": "waiting for TP/SL",
+    "Em andamento": "In progress", "Resultado": "Result", "Avisar quando fechar": "Notify when closed",
+    "Favoritar para alerta de fechamento": "Favorite for close alert", "Nenhum sinal ainda hoje.": "No signals yet today.",
+    "Você será avisado quando chegar um.": "You'll be notified when one arrives.",
+    "Nenhum sinal no seu horário e filtros atuais.": "No signals in your current schedule and filters.",
+    "Ajuste nos Filtros ou no Perfil.": "Adjust in Filters or Profile.",
+    // Sinais / detalhe
+    "Compra": "Buy", "Venda": "Sell", "Copiar sinal": "Copy signal", "Sinal indisponível.": "Signal unavailable.",
+    "Ver histórico": "View history", "Janela de entrada encerrada.": "Entry window closed.",
+    "Os sinais exibidos serão apenas dos ativos que você escolher aqui.": "Only signals from the assets you choose here will be shown.",
+    // Performance
+    "Curva de capital": "Equity curve", "Período": "Period", "Resultado por timeframe": "Result by timeframe",
+    "Acumulado de cada tempo gráfico e o geral (soma de todos).": "Accumulated for each timeframe and the overall (sum of all).",
+    "Histórico por timeframe": "History by timeframe", "Veja qual tempo rende mais e escolha o melhor": "See which timeframe performs best and choose it",
+    "Assertividade por ativo": "Win rate by asset", "Evolução — últimos 30 dias": "Evolution — last 30 days",
+    "Desempenho → Histórico por timeframe": "Performance → History by timeframe",
+    "Para comparar qual timeframe rende mais em cada ativo, veja": "To compare which timeframe performs best per asset, see",
+    // Histórico
+    "Nenhuma operação no período.": "No trades in the period.", "Poucas operações fechadas neste período.": "Few closed trades in this period.",
+    "Seu histórico aparece aqui conforme os sinais são fechados.": "Your history appears here as signals close.",
+    // Perfil
+    "Meu perfil": "My profile", "Editar perfil": "Edit profile", "Plano atual": "Current plan", "Seu plano": "Your plan",
+    "Seus ativos": "Your assets", "Sinais usados hoje": "Signals used today", "Conta": "Account", "Sair da conta": "Log out",
+    "Salvar": "Save", "Salvar preferências": "Save preferences", "Cancelar": "Cancel", "Manter plano": "Keep plan",
+    "📷 Trocar foto": "📷 Change photo", "🔑 Trocar senha": "🔑 Change password", "Nova senha (mín. 6)": "New password (min. 6)",
+    "🕐 Horário de sinais": "🕐 Signal schedule", "Dia todo": "All day", "Fim": "End",
+    "Recebendo sinais das": "Receiving signals from", "às": "to",
+    "Receba sinais apenas no período que você definir. O histórico contabiliza dentro desta janela.": "Receive signals only in the period you set. History counts within this window.",
+    "Desbloqueado:": "Unlocked:", "no horário que você escolher.": "at the time you choose.",
+    "todos os sinais, 24 horas por dia — exclusivo do Premium Anual.": "all signals, 24 hours a day — exclusive to Annual Premium.",
+    "💡 No Premium Anual você desbloqueia sinais o dia todo.": "💡 With Annual Premium you unlock all-day signals.",
+    "💡 Faça upgrade para o Premium e escolha o seu próprio horário.": "💡 Upgrade to Premium and choose your own schedule.",
+    "Você já está no": "You're already on the", "plano máximo": "top plan", "— acesso completo liberado.": "— full access granted.",
+    "📊 Editar ativos e timeframes": "📊 Edit assets and timeframes", "🛎️ Central de notificações": "🛎️ Notification center",
+    "🔔 Ajustes de notificação": "🔔 Notification settings", "❓ Central de ajuda": "❓ Help center", "🛠️ Painel admin": "🛠️ Admin panel",
+    "Cancelar plano (voltar ao Free)": "Cancel plan (back to Free)",
+    "Cancelar agora rebaixa sua conta para o": "Cancelling now downgrades your account to",
+    "imediatamente (você perde o acesso premium). Tem certeza?": "immediately (you lose premium access). Are you sure?",
+    "Seu plano vence em": "Your plan expires in", "Validade:": "Expires:", "venceu": "expired",
+    ". Renove para não cair no Free.": ". Renew so you don't drop to Free.", ". Renove para recuperar o acesso completo.": ". Renew to recover full access.",
+    "— sua conta voltou para o": "— your account returned to", "Você": "You",
+    // Idioma modal
+    "🌐 Escolha o idioma": "🌐 Choose the language", "Escolha o idioma": "Choose the language",
+    "O app será reiniciado automaticamente.": "The app will restart automatically.", "OK": "OK",
+    // Filtros / ativos / timeframes
+    "Seu código de convite": "Your invite code", "Tempos gráficos": "Timeframes", "Timeframe por ativo": "Timeframe per asset",
+    "Você recebe os sinais no timeframe escolhido para cada ativo —": "You receive signals in the chosen timeframe for each asset —",
+    "escolhe o melhor tempo pelo histórico — e só pode trocar 1 vez por semana.": "choose the best timeframe by history — and can only change once a week.",
+    "Veja qual tempo rende mais em cada ativo e escolha o melhor. Lembre:": "See which timeframe performs best per asset and choose it. Remember:",
+    "você só pode alterar ativos/timeframes 1 vez a cada 7 dias.": "you can only change assets/timeframes once every 7 days.",
+    "⚠️ Ao trocar o timeframe de um ativo, ele fica": "⚠️ When you change an asset's timeframe, it stays",
+    "Timeframes travados. Você poderá trocar em": "Timeframes locked. You can change in",
+    "travado por 7 dias": "locked for 7 days", "1 troca por semana": "1 change per week", "1 timeframe fixo por ativo.": "1 fixed timeframe per asset.",
+    "1 por ativo": "1 per asset", "1 timeframe fixo por ativo": "1 fixed timeframe per asset",
+    "Você escolheu em": "You chose on", "Escolhido em": "Chosen on", "poderá trocar a partir de": "can change from",
+    "troca liberada em": "change unlocked in", "Poderá alterar de novo em": "Can change again in",
+    "O M1 é exclusivo do Premium Anual.": "M1 is exclusive to Annual Premium.", "O M1 é exclusivo do seu plano Anual.": "M1 is exclusive to your Annual plan.",
+    // Planos
+    "Plano": "Plan", "Free": "Free", "MELHOR": "BEST", "ATUAL": "CURRENT", "● ATUAL": "● CURRENT",
+    "atual:": "current:", "Mudar ›": "Change ›", "Usar ›": "Use ›",
+    "operações do dia": "trades of the day", "No plano Free as": "On the Free plan the", "horários fixos": "fixed times",
+    "Plano Free: 2 a 4 operações por dia (M5/M15 sortidos) em horários fixos. Faça upgrade para escolher ativos.": "Free plan: 2 to 4 trades per day (random M5/M15) at fixed times. Upgrade to choose assets.",
+    // FAQ / suporte / notificações
+    "Central de ajuda": "Help center", "Dúvidas frequentes sobre os sinais e o app. Toque para expandir.": "Frequently asked questions about signals and the app. Tap to expand.",
+    "Não achou sua resposta?": "Didn't find your answer?", "💬 Falar com o suporte": "💬 Contact support",
+    "Alertas operacionais": "Operational alerts", "Os alertas de entrada e de fechamento aparecem aqui.": "Entry and close alerts appear here.",
+    "Notificações": "Notifications", "Nenhuma notificação ainda.": "No notifications yet.",
+    // Admin
+    "Painel admin": "Admin panel", "Buscar por e-mail, nome ou código": "Search by email, name or code", "Nenhum usuário encontrado.": "No users found.",
+    "🩺 Saúde do sistema (laudo)": "🩺 System health (report)", "Reconstruir laudo": "Rebuild report",
+    "Recomputa o laudo a partir dos sinais e compara. Se divergir, reconstrói sozinho. Roda automático todo dia; aqui você força na hora.": "Recomputes the report from signals and compares. If it diverges, it rebuilds itself. Runs automatically daily; here you force it now.",
+    "Divergências:": "Divergences:", "Auto-encerradas (+24h):": "Auto-closed (+24h):",
+    "🔧 Operações abertas (reconciliar)": "🔧 Open trades (reconcile)",
+    "Se o CLOSE se perdeu (EA reiniciou), feche aqui pelo que aconteceu na VPS. Acima de 12h some do app sozinho.": "If the CLOSE was lost (EA restarted), close it here based on what happened on the VPS. After 12h it disappears from the app by itself.",
+    "🩺 Monitoramento de erros": "🩺 Error monitoring", "🗑️ Limpar erros": "🗑️ Clear errors",
+    "Últimas falhas 500 registradas nas APIs. Se estiver vazio, está tudo rodando sem erros.": "Last 500 errors logged in the APIs. If empty, everything is running error-free.",
+    "✓ Nenhum erro registrado": "✓ No errors logged",
+    "🗓️ Ativação do histórico": "🗓️ History activation",
+    "Desempenho/Histórico contam só a partir desta data (descarta o período de teste). Vazio = conta tudo.": "Performance/History count only from this date (discards the test period). Empty = counts everything.",
+    "🎁 Operações grátis por dia (Free)": "🎁 Free trades per day (Free)",
+    "Define quantas operações os usuários Free recebem nesta semana (2 a 4). Vale pra todos do plano Free.": "Sets how many trades Free users receive this week (2 to 4). Applies to all Free users.",
+    "Quem se cadastrar com este cupom vira": "Whoever signs up with this coupon becomes",
+    "É o que vai no seu link de convite (`/?ref=seucódigo`). Só letras e números.": "This goes in your invite link (`/?ref=yourcode`). Letters and numbers only.",
+    "ex.: mrthiago": "e.g.: mrthiago",
+    // Planos (nomes/subtítulos) + rótulos de dados
+    "Premium Mensal": "Monthly Premium", "Premium Anual": "Annual Premium", "Grátis": "Free",
+    "Para conhecer": "To get started", "Cobrança mensal": "Monthly billing",
+    "Equivalente — cobrado anualmente": "Equivalent — billed annually", "Mais popular": "Most popular",
+    "Geral (todos)": "Overall (all)", "Geral": "Overall",
+    "até 20 operações por dia": "up to 20 trades per day",
+    // Notificações (ajustes)
+    "Sinais em tempo real": "Real-time signals", "Alerta assim que o sinal for detectado": "Alert as soon as the signal is detected",
+    "Boletim diário": "Daily bulletin", "Resumo do dia, enviado às 21:00 (fecha o dia do mercado)": "Day summary, sent at 9:00 PM (market day close)",
+    "Sinais favoritos": "Favorite signals", "Notificações dos ativos preferidos": "Notifications for your favorite assets",
+    "Som e vibração": "Sound and vibration", "Feedback tátil ao receber alertas": "Haptic feedback when receiving alerts",
+    // FAQ
+    "O que é o Infinity Signals?": "What is Infinity Signals?",
+    "É uma ferramenta que detecta oportunidades operacionais (sinais) no MetaTrader com indicadores técnicos e te avisa em tempo real — para XAUUSD (ouro), US30 e NAS100, nos tempos gráficos M5 e M15. São estudos operacionais de caráter informativo, não recomendação de investimento.": "It's a tool that detects trading opportunities (signals) in MetaTrader using technical indicators and alerts you in real time — for XAUUSD (gold), US30 and NAS100, on the M5 and M15 timeframes. These are informational operational studies, not investment advice.",
+    "Como eu recebo os sinais?": "How do I receive the signals?",
+    "Por notificação (push) assim que o sinal é detectado, e na tela Sinais/Início do app. Ative as notificações em Perfil → Ajustes de notificação e permita o envio quando o app pedir.": "By push notification as soon as the signal is detected, and on the app's Signals/Home screen. Enable notifications in Profile → Notification settings and allow them when the app asks.",
+    "O que significa \"Em andamento\"?": "What does \"In progress\" mean?",
+    "A operação foi aberta e está rodando, aguardando bater o Alvo (TP) ou o Stop (SL). O próximo sinal do mesmo ativo só abre quando essa fechar. Quando fecha, você vê o resultado em pips.": "The trade has been opened and is running, waiting to hit the Target (TP) or Stop (SL). The next signal for the same asset only opens when this one closes. When it closes, you see the result in pips.",
+    "O que é TP (Alvo) e Stop (SL)?": "What are TP (Target) and Stop (SL)?",
+    "TP (Take Profit / Alvo) é o preço onde a operação fecha no lucro. Stop (SL) é onde fecha no prejuízo, limitando a perda. Todo sinal vem com Entrada, Alvo e Stop definidos.": "TP (Take Profit / Target) is the price where the trade closes in profit. Stop (SL) is where it closes at a loss, limiting the downside. Every signal comes with Entry, Target and Stop defined.",
+    "Qual a diferença entre Free e Premium?": "What's the difference between Free and Premium?",
+    "No Free você recebe alguns sinais por dia, em horários fixos. No Premium (mensal/anual) você recebe até 20 por dia e escolhe os ativos e timeframes que quer acompanhar.": "On Free you receive a few signals per day at fixed times. On Premium (monthly/annual) you receive up to 20 per day and choose the assets and timeframes you want to follow.",
+    "Por que o dia zera às 21:00?": "Why does the day reset at 9:00 PM?",
+    "O mercado Forex vira o dia à meia-noite do horário do mercado, que dá 21:00 no Brasil. Por isso o contador \"Hoje\" zera às 21:00 e o boletim diário é enviado nesse momento, fechando o resultado do dia. Semana e Mês não zeram, só acumulam.": "The Forex market rolls over at midnight market time, which is 9:00 PM in Brazil. That's why the \"Today\" counter resets at 9:00 PM and the daily bulletin is sent then, closing the day's result. Week and Month don't reset, they only accumulate.",
+    "O que é o laudo e a curva de capital?": "What are the report and the equity curve?",
+    "O laudo é o histórico oficial e completo da ferramenta (todos os sinais, igual para todos). A curva de capital mostra os pips acumulados ao longo do tempo — a evolução do desempenho. Você vê em Desempenho e Histórico.": "The report is the tool's official, complete history (all signals, the same for everyone). The equity curve shows pips accumulated over time — the performance evolution. You see it in Performance and History.",
+    "Os resultados são garantidos?": "Are results guaranteed?",
+    "Não. Desempenho passado NÃO garante resultados futuros. Operar envolve risco de perda. Os sinais são estudos operacionais informativos e não constituem recomendação de investimento (conforme normas da CVM). Opere com responsabilidade.": "No. Past performance does NOT guarantee future results. Trading involves risk of loss. The signals are informational operational studies and do not constitute investment advice (per CVM rules). Trade responsibly.",
+    "Como troco ou cancelo meu plano?": "How do I change or cancel my plan?",
+    "Para mudar de ativos/timeframes: Perfil → Editar ativos. Para cancelar e voltar ao Free: Perfil → Cancelar plano. Ao vencer sem renovar, sua conta volta automaticamente ao Free.": "To change assets/timeframes: Profile → Edit assets. To cancel and go back to Free: Profile → Cancel plan. When it expires without renewal, your account automatically returns to Free.",
+  },
+
+  es: {
+    "Início": "Inicio", "Sinais": "Señales", "Desempenho": "Rendimiento", "Histórico": "Historial", "Mais": "Más",
+    "← Voltar": "← Atrás", "Voltar": "Atrás", "Continuar": "Continuar", "Começar agora": "Empezar ahora",
+    "TOQUE PARA CONTINUAR": "TOCA PARA CONTINUAR", "Mais opções": "Más opciones", "Abrir filtros": "Abrir filtros",
+    "Alternar tema": "Cambiar tema", "Mudar idioma": "Cambiar idioma", "ou": "o",
+    "Bem-vindo ao": "Bienvenido a", "Bem-vindo de volta": "Bienvenido de vuelta",
+    "SINAIS INTELIGENTES": "SEÑALES INTELIGENTES", "Receba sinais de Forex, índices e metais": "Recibe señales de Forex, índices y metales",
+    "em tempo real": "en tiempo real", "Desempenho real · operações verificadas": "Rendimiento real · operaciones verificadas",
+    "Antes de continuar": "Antes de continuar", "⚠ Aviso importante": "⚠ Aviso importante",
+    "Este é um estudo operacional, não uma recomendação financeira. Avalie o risco antes de operar.": "Este es un estudio operativo, no una recomendación financiera. Evalúa el riesgo antes de operar.",
+    "Li e concordo com os termos de uso": "He leído y acepto los términos de uso",
+    "Atenção:": "Atención:",
+    "Entrar no": "Entrar en", "Entrar": "Iniciar sesión", "Entrando…": "Entrando…", "Criar conta": "Crear cuenta",
+    "Criar sua conta": "Crea tu cuenta", "Já tenho conta": "Ya tengo cuenta", "Ir para o login": "Ir al inicio de sesión",
+    "Esqueci minha senha": "Olvidé mi contraseña", "Nome completo": "Nombre completo", "Seu nome": "Tu nombre",
+    "E-mail": "Correo", "Senha": "Contraseña", "Nome completo": "Nombre completo",
+    "Telefone / WhatsApp": "Teléfono / WhatsApp", "Confirmar senha": "Confirmar contraseña", "repita a senha": "repite la contraseña",
+    "mín. 6 caracteres": "mín. 6 caracteres", "seu@email.com": "tu@email.com",
+    "🔒 Seus dados são protegidos e usados só para o serviço. Ao criar conta você concorda com os Termos e a Política de Privacidade.": "🔒 Tus datos están protegidos y se usan solo para el servicio. Al crear una cuenta aceptas los Términos y la Política de Privacidad.",
+    "🎓 Tenho cupom de aluno": "🎓 Tengo cupón de estudiante", "Cupom de aluno": "Cupón de estudiante", "🎓 Cupom de aluno": "🎓 Cupón de estudiante",
+    "ex.: aluno2026": "ej.: estudiante2026",
+    "Com um cupom válido, seu acesso de": "Con un cupón válido, tu acceso de", "aluno é liberado por 15 dias": "estudiante se activa por 15 días",
+    "aluno por 15 dias": "estudiante por 15 días", "automaticamente.": "automáticamente.",
+    "Olá": "Hola", "Sinais hoje": "Señales hoy", "Últimos sinais": "Últimas señales", "Resultado do mês": "Resultado del mes",
+    "Assertividade": "Acierto", "Hoje não há operações": "Hoy no hay operaciones",
+    "— fim de semana, o mercado Forex está fechado.": "— fin de semana, el mercado Forex está cerrado.",
+    "As operações voltam no": "Las operaciones vuelven el", "Voltam no": "Vuelven el",
+    ". O próximo sinal só abre quando esta fechar.": ". La próxima señal solo abre cuando esta cierre.",
+    "⏳ Operação rodando — aguardando bater": "⏳ Operación en curso — esperando alcanzar", "aguardando TP/SL": "esperando TP/SL",
+    "Em andamento": "En progreso", "Resultado": "Resultado", "Avisar quando fechar": "Avisar al cerrar",
+    "Favoritar para alerta de fechamento": "Marcar para alerta de cierre", "Nenhum sinal ainda hoje.": "Aún no hay señales hoy.",
+    "Você será avisado quando chegar um.": "Se te avisará cuando llegue una.",
+    "Nenhum sinal no seu horário e filtros atuais.": "No hay señales en tu horario y filtros actuales.",
+    "Ajuste nos Filtros ou no Perfil.": "Ajusta en Filtros o en Perfil.",
+    "Compra": "Compra", "Venda": "Venta", "Copiar sinal": "Copiar señal", "Sinal indisponível.": "Señal no disponible.",
+    "Ver histórico": "Ver historial", "Janela de entrada encerrada.": "Ventana de entrada cerrada.",
+    "Os sinais exibidos serão apenas dos ativos que você escolher aqui.": "Solo se mostrarán señales de los activos que elijas aquí.",
+    "Curva de capital": "Curva de capital", "Período": "Período", "Resultado por timeframe": "Resultado por marco de tiempo",
+    "Acumulado de cada tempo gráfico e o geral (soma de todos).": "Acumulado de cada marco de tiempo y el general (suma de todos).",
+    "Histórico por timeframe": "Historial por marco de tiempo", "Veja qual tempo rende mais e escolha o melhor": "Mira qué marco rinde más y elige el mejor",
+    "Assertividade por ativo": "Acierto por activo", "Evolução — últimos 30 dias": "Evolución — últimos 30 días",
+    "Desempenho → Histórico por timeframe": "Rendimiento → Historial por marco de tiempo",
+    "Para comparar qual timeframe rende mais em cada ativo, veja": "Para comparar qué marco rinde más en cada activo, mira",
+    "Nenhuma operação no período.": "Sin operaciones en el período.", "Poucas operações fechadas neste período.": "Pocas operaciones cerradas en este período.",
+    "Seu histórico aparece aqui conforme os sinais são fechados.": "Tu historial aparece aquí a medida que las señales se cierran.",
+    "Meu perfil": "Mi perfil", "Editar perfil": "Editar perfil", "Plano atual": "Plan actual", "Seu plano": "Tu plan",
+    "Seus ativos": "Tus activos", "Sinais usados hoje": "Señales usadas hoy", "Conta": "Cuenta", "Sair da conta": "Cerrar sesión",
+    "Salvar": "Guardar", "Salvar preferências": "Guardar preferencias", "Cancelar": "Cancelar", "Manter plano": "Mantener plan",
+    "📷 Trocar foto": "📷 Cambiar foto", "🔑 Trocar senha": "🔑 Cambiar contraseña", "Nova senha (mín. 6)": "Nueva contraseña (mín. 6)",
+    "🕐 Horário de sinais": "🕐 Horario de señales", "Dia todo": "Todo el día", "Fim": "Fin",
+    "Recebendo sinais das": "Recibiendo señales de", "às": "a",
+    "Receba sinais apenas no período que você definir. O histórico contabiliza dentro desta janela.": "Recibe señales solo en el período que definas. El historial cuenta dentro de esta ventana.",
+    "Desbloqueado:": "Desbloqueado:", "no horário que você escolher.": "en el horario que elijas.",
+    "todos os sinais, 24 horas por dia — exclusivo do Premium Anual.": "todas las señales, 24 horas al día — exclusivo del Premium Anual.",
+    "💡 No Premium Anual você desbloqueia sinais o dia todo.": "💡 Con el Premium Anual desbloqueas señales todo el día.",
+    "💡 Faça upgrade para o Premium e escolha o seu próprio horário.": "💡 Mejora a Premium y elige tu propio horario.",
+    "Você já está no": "Ya estás en el", "plano máximo": "plan máximo", "— acesso completo liberado.": "— acceso completo activado.",
+    "📊 Editar ativos e timeframes": "📊 Editar activos y marcos de tiempo", "🛎️ Central de notificações": "🛎️ Centro de notificaciones",
+    "🔔 Ajustes de notificação": "🔔 Ajustes de notificación", "❓ Central de ajuda": "❓ Centro de ayuda", "🛠️ Painel admin": "🛠️ Panel de administración",
+    "Cancelar plano (voltar ao Free)": "Cancelar plan (volver a Free)",
+    "Cancelar agora rebaixa sua conta para o": "Cancelar ahora baja tu cuenta a",
+    "imediatamente (você perde o acesso premium). Tem certeza?": "inmediatamente (pierdes el acceso premium). ¿Estás seguro?",
+    "Seu plano vence em": "Tu plan vence en", "Validade:": "Vence:", "venceu": "venció",
+    ". Renove para não cair no Free.": ". Renueva para no caer en Free.", ". Renove para recuperar o acesso completo.": ". Renueva para recuperar el acceso completo.",
+    "— sua conta voltou para o": "— tu cuenta volvió a", "Você": "Tú",
+    "🌐 Escolha o idioma": "🌐 Elige el idioma", "Escolha o idioma": "Elige el idioma",
+    "O app será reiniciado automaticamente.": "La app se reiniciará automáticamente.", "OK": "OK",
+    "Seu código de convite": "Tu código de invitación", "Tempos gráficos": "Marcos de tiempo", "Timeframe por ativo": "Marco de tiempo por activo",
+    "Você recebe os sinais no timeframe escolhido para cada ativo —": "Recibes las señales en el marco de tiempo elegido para cada activo —",
+    "escolhe o melhor tempo pelo histórico — e só pode trocar 1 vez por semana.": "elige el mejor marco por el historial — y solo puedes cambiar 1 vez por semana.",
+    "Veja qual tempo rende mais em cada ativo e escolha o melhor. Lembre:": "Mira qué marco rinde más en cada activo y elige el mejor. Recuerda:",
+    "você só pode alterar ativos/timeframes 1 vez a cada 7 dias.": "solo puedes cambiar activos/marcos 1 vez cada 7 días.",
+    "⚠️ Ao trocar o timeframe de um ativo, ele fica": "⚠️ Al cambiar el marco de un activo, queda",
+    "Timeframes travados. Você poderá trocar em": "Marcos bloqueados. Podrás cambiar en",
+    "travado por 7 dias": "bloqueado por 7 días", "1 troca por semana": "1 cambio por semana", "1 timeframe fixo por ativo.": "1 marco fijo por activo.",
+    "1 por ativo": "1 por activo", "1 timeframe fixo por ativo": "1 marco fijo por activo",
+    "Você escolheu em": "Elegiste el", "Escolhido em": "Elegido el", "poderá trocar a partir de": "podrás cambiar a partir de",
+    "troca liberada em": "cambio disponible en", "Poderá alterar de novo em": "Podrás cambiar de nuevo en",
+    "O M1 é exclusivo do Premium Anual.": "M1 es exclusivo del Premium Anual.", "O M1 é exclusivo do seu plano Anual.": "M1 es exclusivo de tu plan Anual.",
+    "Plano": "Plan", "Free": "Free", "MELHOR": "MEJOR", "ATUAL": "ACTUAL", "● ATUAL": "● ACTUAL",
+    "atual:": "actual:", "Mudar ›": "Cambiar ›", "Usar ›": "Usar ›",
+    "operações do dia": "operaciones del día", "No plano Free as": "En el plan Free las", "horários fixos": "horarios fijos",
+    "Plano Free: 2 a 4 operações por dia (M5/M15 sortidos) em horários fixos. Faça upgrade para escolher ativos.": "Plan Free: 2 a 4 operaciones por día (M5/M15 aleatorios) en horarios fijos. Mejora para elegir activos.",
+    "Central de ajuda": "Centro de ayuda", "Dúvidas frequentes sobre os sinais e o app. Toque para expandir.": "Preguntas frecuentes sobre las señales y la app. Toca para expandir.",
+    "Não achou sua resposta?": "¿No encontraste tu respuesta?", "💬 Falar com o suporte": "💬 Hablar con soporte",
+    "Alertas operacionais": "Alertas operativas", "Os alertas de entrada e de fechamento aparecem aqui.": "Las alertas de entrada y cierre aparecen aquí.",
+    "Notificações": "Notificaciones", "Nenhuma notificação ainda.": "Aún no hay notificaciones.",
+    "Painel admin": "Panel de administración", "Buscar por e-mail, nome ou código": "Buscar por correo, nombre o código", "Nenhum usuário encontrado.": "No se encontraron usuarios.",
+    "🩺 Saúde do sistema (laudo)": "🩺 Salud del sistema (informe)", "Reconstruir laudo": "Reconstruir informe",
+    "Recomputa o laudo a partir dos sinais e compara. Se divergir, reconstrói sozinho. Roda automático todo dia; aqui você força na hora.": "Recalcula el informe a partir de las señales y compara. Si difiere, se reconstruye solo. Corre automático cada día; aquí lo fuerzas al instante.",
+    "Divergências:": "Divergencias:", "Auto-encerradas (+24h):": "Auto-cerradas (+24h):",
+    "🔧 Operações abertas (reconciliar)": "🔧 Operaciones abiertas (reconciliar)",
+    "Se o CLOSE se perdeu (EA reiniciou), feche aqui pelo que aconteceu na VPS. Acima de 12h some do app sozinho.": "Si el CLOSE se perdió (el EA se reinició), ciérralo aquí según lo ocurrido en la VPS. Tras 12h desaparece de la app solo.",
+    "🩺 Monitoramento de erros": "🩺 Monitoreo de errores", "🗑️ Limpar erros": "🗑️ Limpiar errores",
+    "Últimas falhas 500 registradas nas APIs. Se estiver vazio, está tudo rodando sem erros.": "Últimos 500 errores registrados en las APIs. Si está vacío, todo funciona sin errores.",
+    "✓ Nenhum erro registrado": "✓ Ningún error registrado",
+    "🗓️ Ativação do histórico": "🗓️ Activación del historial",
+    "Desempenho/Histórico contam só a partir desta data (descarta o período de teste). Vazio = conta tudo.": "Rendimiento/Historial cuentan solo desde esta fecha (descarta el período de prueba). Vacío = cuenta todo.",
+    "🎁 Operações grátis por dia (Free)": "🎁 Operaciones gratis por día (Free)",
+    "Define quantas operações os usuários Free recebem nesta semana (2 a 4). Vale pra todos do plano Free.": "Define cuántas operaciones reciben los usuarios Free esta semana (2 a 4). Aplica a todos los del plan Free.",
+    "Quem se cadastrar com este cupom vira": "Quien se registre con este cupón se vuelve",
+    "É o que vai no seu link de convite (`/?ref=seucódigo`). Só letras e números.": "Es lo que va en tu enlace de invitación (`/?ref=tucodigo`). Solo letras y números.",
+    "ex.: mrthiago": "ej.: mrthiago",
+    // Planes (nombres/subtítulos) + etiquetas de datos
+    "Premium Mensal": "Premium Mensual", "Premium Anual": "Premium Anual", "Grátis": "Gratis",
+    "Para conhecer": "Para conocer", "Cobrança mensal": "Cobro mensual",
+    "Equivalente — cobrado anualmente": "Equivalente — cobrado anualmente", "Mais popular": "Más popular",
+    "Geral (todos)": "General (todos)", "Geral": "General",
+    "até 20 operações por dia": "hasta 20 operaciones por día",
+    "Sinais em tempo real": "Señales en tiempo real", "Alerta assim que o sinal for detectado": "Alerta apenas se detecta la señal",
+    "Boletim diário": "Boletín diario", "Resumo do dia, enviado às 21:00 (fecha o dia do mercado)": "Resumen del día, enviado a las 21:00 (cierre del día de mercado)",
+    "Sinais favoritos": "Señales favoritas", "Notificações dos ativos preferidos": "Notificaciones de los activos preferidos",
+    "Som e vibração": "Sonido y vibración", "Feedback tátil ao receber alertas": "Respuesta táctil al recibir alertas",
+    "O que é o Infinity Signals?": "¿Qué es Infinity Signals?",
+    "É uma ferramenta que detecta oportunidades operacionais (sinais) no MetaTrader com indicadores técnicos e te avisa em tempo real — para XAUUSD (ouro), US30 e NAS100, nos tempos gráficos M5 e M15. São estudos operacionais de caráter informativo, não recomendação de investimento.": "Es una herramienta que detecta oportunidades operativas (señales) en MetaTrader con indicadores técnicos y te avisa en tiempo real — para XAUUSD (oro), US30 y NAS100, en los marcos de tiempo M5 y M15. Son estudios operativos de carácter informativo, no recomendación de inversión.",
+    "Como eu recebo os sinais?": "¿Cómo recibo las señales?",
+    "Por notificação (push) assim que o sinal é detectado, e na tela Sinais/Início do app. Ative as notificações em Perfil → Ajustes de notificação e permita o envio quando o app pedir.": "Por notificación (push) en cuanto se detecta la señal, y en la pantalla Señales/Inicio de la app. Activa las notificaciones en Perfil → Ajustes de notificación y permite el envío cuando la app lo pida.",
+    "O que significa \"Em andamento\"?": "¿Qué significa \"En progreso\"?",
+    "A operação foi aberta e está rodando, aguardando bater o Alvo (TP) ou o Stop (SL). O próximo sinal do mesmo ativo só abre quando essa fechar. Quando fecha, você vê o resultado em pips.": "La operación se abrió y está en curso, esperando alcanzar el Objetivo (TP) o el Stop (SL). La próxima señal del mismo activo solo abre cuando esta cierre. Al cerrar, ves el resultado en pips.",
+    "O que é TP (Alvo) e Stop (SL)?": "¿Qué son TP (Objetivo) y Stop (SL)?",
+    "TP (Take Profit / Alvo) é o preço onde a operação fecha no lucro. Stop (SL) é onde fecha no prejuízo, limitando a perda. Todo sinal vem com Entrada, Alvo e Stop definidos.": "TP (Take Profit / Objetivo) es el precio donde la operación cierra en ganancia. Stop (SL) es donde cierra en pérdida, limitando la pérdida. Cada señal viene con Entrada, Objetivo y Stop definidos.",
+    "Qual a diferença entre Free e Premium?": "¿Cuál es la diferencia entre Free y Premium?",
+    "No Free você recebe alguns sinais por dia, em horários fixos. No Premium (mensal/anual) você recebe até 20 por dia e escolhe os ativos e timeframes que quer acompanhar.": "En Free recibes algunas señales por día, en horarios fijos. En Premium (mensual/anual) recibes hasta 20 por día y eliges los activos y marcos de tiempo que quieres seguir.",
+    "Por que o dia zera às 21:00?": "¿Por qué el día se reinicia a las 21:00?",
+    "O mercado Forex vira o dia à meia-noite do horário do mercado, que dá 21:00 no Brasil. Por isso o contador \"Hoje\" zera às 21:00 e o boletim diário é enviado nesse momento, fechando o resultado do dia. Semana e Mês não zeram, só acumulam.": "El mercado Forex cambia de día a la medianoche del horario del mercado, que son las 21:00 en Brasil. Por eso el contador \"Hoy\" se reinicia a las 21:00 y el boletín diario se envía en ese momento, cerrando el resultado del día. Semana y Mes no se reinician, solo acumulan.",
+    "O que é o laudo e a curva de capital?": "¿Qué son el informe y la curva de capital?",
+    "O laudo é o histórico oficial e completo da ferramenta (todos os sinais, igual para todos). A curva de capital mostra os pips acumulados ao longo do tempo — a evolução do desempenho. Você vê em Desempenho e Histórico.": "El informe es el historial oficial y completo de la herramienta (todas las señales, igual para todos). La curva de capital muestra los pips acumulados a lo largo del tiempo — la evolución del rendimiento. Lo ves en Rendimiento e Historial.",
+    "Os resultados são garantidos?": "¿Los resultados están garantizados?",
+    "Não. Desempenho passado NÃO garante resultados futuros. Operar envolve risco de perda. Os sinais são estudos operacionais informativos e não constituem recomendação de investimento (conforme normas da CVM). Opere com responsabilidade.": "No. El rendimiento pasado NO garantiza resultados futuros. Operar implica riesgo de pérdida. Las señales son estudios operativos informativos y no constituyen recomendación de inversión (según normas de la CVM). Opera con responsabilidad.",
+    "Como troco ou cancelo meu plano?": "¿Cómo cambio o cancelo mi plan?",
+    "Para mudar de ativos/timeframes: Perfil → Editar ativos. Para cancelar e voltar ao Free: Perfil → Cancelar plano. Ao vencer sem renovar, sua conta volta automaticamente ao Free.": "Para cambiar activos/marcos de tiempo: Perfil → Editar activos. Para cancelar y volver a Free: Perfil → Cancelar plan. Al vencer sin renovar, tu cuenta vuelve automáticamente a Free.",
+  },
+};
+
+// Função global de tradução. Chave = string em português.
+export function txt(s) {
+  if (s == null) return s;
+  const d = DICT[_lang];
+  return (d && d[s]) || s;
 }
+
+// Compat: alguns lugares antigos importavam `translations`.
+export const translations = { pt: {}, en: DICT.en, es: DICT.es };

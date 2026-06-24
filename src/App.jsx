@@ -1,7 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import * as api from "./lib/api.js";
 import { hasSupabase } from "./lib/supabase.js";
-import { translations, getSavedLanguage, saveLanguagePreference } from "./lib/i18n.js";
+import { txt, setLang, getSavedLanguage, saveLanguagePreference } from "./lib/i18n.js";
 
 /* ════════════════════════════════════════════════════════════
    INFINITY SIGNALS · v4.1 — Vercel/PWA ready
@@ -201,7 +201,7 @@ const BoltLogo = ({ t, size = 40 }) => (
 );
 
 const ThemeToggle = ({ t, onToggle }) => (
-  <button onClick={onToggle} aria-label="Alternar tema" style={{
+  <button onClick={onToggle} aria-label={txt("Alternar tema")} style={{
     width: 38, height: 38, borderRadius: 12, cursor: "pointer",
     background: t.card, border: `1.5px solid ${t.bdr}`,
     display: "flex", alignItems: "center", justifyContent: "center",
@@ -283,10 +283,10 @@ const BackBtn = ({ onClick, t }) => (
     background: "none", border: "none", color: t.accent,
     cursor: "pointer", fontSize: 14, fontWeight: 800, padding: 0,
     display: "flex", alignItems: "center", gap: 4, fontFamily: FONT,
-  }}>← Voltar</button>
+  }}>{txt("← Voltar")}</button>
 );
 
-const ScreenHeader = ({ title, t, txt, onToggleTheme, right, onBack }) => (
+const ScreenHeader = ({ title, t, onToggleTheme, right, onBack }) => (
   <div style={{ padding: "16px 24px 0", flexShrink: 0 }}>
     {onBack && (
       <div style={{ marginBottom: 10 }}><BackBtn onClick={onBack} t={t} /></div>
@@ -323,7 +323,7 @@ const BottomNav = ({ active, onNav, t }) => (
         gap: 2, padding: "3px 0", fontFamily: FONT,
       }}>
         <span style={{ fontSize: 20, lineHeight: 1, color: active === id ? t.accent : t.muted }}>{icon}</span>
-        <span style={{ fontSize: 10, fontWeight: 700, color: active === id ? t.accent : t.muted }}>{label}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: active === id ? t.accent : t.muted }}>{txt(label)}</span>
       </button>
     ))}
   </div>
@@ -497,15 +497,15 @@ const DashSignalCard = ({ s, t, onClick, fav, onToggleFav }) => {
         {open ? (
           <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
             {onToggleFav && (
-              <button onClick={(e) => { e.stopPropagation(); onToggleFav(); }} title="Avisar quando fechar"
-                aria-label="Favoritar para alerta de fechamento" style={{
+              <button onClick={(e) => { e.stopPropagation(); onToggleFav(); }} title={txt("Avisar quando fechar")}
+                aria-label={txt("Favoritar para alerta de fechamento")} style={{
                   background: "none", border: "none", cursor: "pointer", padding: 0, lineHeight: 1,
                   fontSize: 20, color: fav ? t.accent : t.muted }}>{fav ? "★" : "☆"}</button>
             )}
             <div style={{ display: "flex", alignItems: "center", gap: 6, background: `${t.warn}1A`,
               border: `1px solid ${t.warn}40`, borderRadius: 8, padding: "4px 9px" }}>
               <span className="live-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: t.warn }} />
-              <span style={{ fontSize: 11, fontWeight: 800, color: t.warn, fontFamily: FONT }}>Em andamento</span>
+              <span style={{ fontSize: 11, fontWeight: 800, color: t.warn, fontFamily: FONT }}>{txt("Em andamento")}</span>
             </div>
           </div>
         ) : (
@@ -528,13 +528,13 @@ const DashSignalCard = ({ s, t, onClick, fav, onToggleFav }) => {
             ))}
           </div>
           <p style={{ fontSize: 11, color: t.muted, margin: "8px 2px 0", lineHeight: 1.45, fontFamily: FONT }}>
-            ⏳ Operação rodando — aguardando bater <span style={{ color: t.buy, fontWeight: 700 }}>TP</span> ou <span style={{ color: t.sell, fontWeight: 700 }}>SL</span>. O próximo sinal só abre quando esta fechar.
+            {txt("⏳ Operação rodando — aguardando bater")} <span style={{ color: t.buy, fontWeight: 700 }}>TP</span> {txt("ou")} <span style={{ color: t.sell, fontWeight: 700 }}>SL</span>{txt(". O próximo sinal só abre quando esta fechar.")}
           </p>
         </>
       ) : (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>
-            <Badge text={s.dir} color={ac} /> <span style={{ marginLeft: 6 }}>R:R {s.rr}</span>
+            <Badge text={txt(s.dir)} color={ac} /> <span style={{ marginLeft: 6 }}>R:R {s.rr}</span>
           </span>
           <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>
             {s.entry} → {win ? s.tp : s.sl}
@@ -566,12 +566,12 @@ const SignalRow = ({ s, t, onClick, pips, fav, onToggleFav }) => {
         </div>
         <div style={{ display: "flex", gap: 6, alignItems: "center" }}>
           <Badge text={s.tf} color={t.blue} />
-          <Badge text={s.dir} color={ac} />
+          <Badge text={txt(s.dir)} color={ac} />
         </div>
       </div>
       {pips !== undefined ? (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-          <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>Resultado</span>
+          <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>{txt("Resultado")}</span>
           <span style={{ fontWeight: 800, fontSize: 15, color: pips >= 0 ? t.buy : t.sell, fontFamily: FONT }}>
             {pips >= 0 ? "+" : ""}{pips} pips · {pips >= 0 ? "✓" : "✗"}
           </span>
@@ -580,11 +580,11 @@ const SignalRow = ({ s, t, onClick, pips, fav, onToggleFav }) => {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
             <span className="live-dot" style={{ width: 7, height: 7, borderRadius: "50%", background: t.warn }} />
-            <span style={{ fontSize: 12, fontWeight: 700, color: t.warn, fontFamily: FONT }}>Em andamento</span>
+            <span style={{ fontSize: 12, fontWeight: 700, color: t.warn, fontFamily: FONT }}>{txt("Em andamento")}</span>
           </div>
           {onToggleFav ? (
             <button onClick={(e) => { e.stopPropagation(); onToggleFav(); }}
-              aria-label="Avisar quando fechar" style={{
+              aria-label={txt("Avisar quando fechar")} style={{
                 background: fav ? t.accentSoft : "transparent", cursor: "pointer",
                 border: `1px solid ${fav ? t.accent : t.bdr}`, borderRadius: 8, padding: "4px 9px",
                 display: "flex", alignItems: "center", gap: 5, fontFamily: FONT }}>
@@ -594,7 +594,7 @@ const SignalRow = ({ s, t, onClick, pips, fav, onToggleFav }) => {
               </span>
             </button>
           ) : (
-            <span style={{ fontSize: 11.5, color: t.muted, fontFamily: FONT }}>aguardando TP/SL</span>
+            <span style={{ fontSize: 11.5, color: t.muted, fontFamily: FONT }}>{txt("aguardando TP/SL")}</span>
           )}
         </div>
       )}
@@ -645,17 +645,28 @@ const Splash = ({ t, onNext, onToggleTheme }) => (
         Infinity <span style={{ color: t.accent }}>Signals</span>
       </div>
       <div style={{ fontSize: 12, color: t.muted, letterSpacing: 3, fontWeight: 700, fontFamily: FONT }}>
-        SINAIS INTELIGENTES
+        {txt("SINAIS INTELIGENTES")}
       </div>
     </div>
     <div style={{ position: "absolute", bottom: 28, fontSize: 11, color: t.dim,
-      letterSpacing: 1.5, fontWeight: 600, fontFamily: FONT }}>TOQUE PARA CONTINUAR</div>
+      letterSpacing: 1.5, fontWeight: 600, fontFamily: FONT }}>{txt("TOQUE PARA CONTINUAR")}</div>
   </div>
 );
 
-const Welcome = ({ t, onNext, onLogin, onToggleTheme }) => (
+const Welcome = ({ t, onNext, onLogin, onToggleTheme, language, onChangeLanguage }) => (
   <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-    <div style={{ display: "flex", justifyContent: "flex-end", padding: "14px 18px 0", flexShrink: 0 }}>
+    <div style={{ display: "flex", justifyContent: "flex-end", alignItems: "center", gap: 8, padding: "14px 18px 0", flexShrink: 0 }}>
+      {["pt", "en", "es"].map(lang => (
+        <button key={lang} onClick={() => onChangeLanguage?.(lang)} style={{
+          height: 32, padding: "0 10px", borderRadius: 9, cursor: "pointer",
+          fontWeight: language === lang ? 800 : 600, fontSize: 11, fontFamily: FONT,
+          border: `1.5px solid ${language === lang ? t.accent : t.bdr}`,
+          background: language === lang ? t.accent : t.card,
+          color: language === lang ? t.bg0 : t.text,
+        }}>
+          {lang === "pt" ? "🇧🇷" : lang === "en" ? "🇺🇸" : "🇪🇸"} {lang.toUpperCase()}
+        </button>
+      ))}
       <ThemeToggle t={t} onToggle={onToggleTheme} />
     </div>
     <Scroll>
@@ -677,17 +688,17 @@ const Welcome = ({ t, onNext, onLogin, onToggleTheme }) => (
         <div style={{ textAlign: "center" }}>
           <h1 style={{ fontSize: 27, fontWeight: 900, lineHeight: 1.2, margin: "0 0 12px",
             letterSpacing: -0.5, color: t.text, fontFamily: FONT }}>
-            Alertas operacionais<br /><span style={{ color: t.accent }}>em tempo real</span>
+            {txt("Alertas operacionais")}<br /><span style={{ color: t.accent }}>{txt("em tempo real")}</span>
           </h1>
           <p style={{ fontSize: 14, color: t.sub, lineHeight: 1.65, margin: 0, fontFamily: FONT }}>
-            Receba sinais de Forex, índices e metais<br />no horário que você escolher.
+            {txt("Receba sinais de Forex, índices e metais")}<br />{txt("no horário que você escolher.")}
           </p>
         </div>
       </div>
     </Scroll>
     <div style={{ padding: "12px 24px 32px", display: "flex", flexDirection: "column", gap: 10, flexShrink: 0 }}>
-      <Btn t={t} onClick={onNext}>Começar agora</Btn>
-      <Btn t={t} variant="secondary" onClick={onLogin}>Já tenho conta</Btn>
+      <Btn t={t} onClick={onNext}>{txt("Começar agora")}</Btn>
+      <Btn t={t} variant="secondary" onClick={onLogin}>{txt("Já tenho conta")}</Btn>
     </div>
   </div>
 );
@@ -696,9 +707,9 @@ const RiskWarning = ({ t, onNext, onToggleTheme }) => {
   const [ok, setOk] = useState(false);
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Antes de continuar" t={t} onToggleTheme={onToggleTheme} />
+      <ScreenHeader title={txt("Antes de continuar")} t={t} onToggleTheme={onToggleTheme} />
       <div style={{ padding: "0 24px", marginTop: -6, marginBottom: 14, flexShrink: 0 }}>
-        <Label t={t} color={t.warn}>⚠ Aviso importante</Label>
+        <Label t={t} color={t.warn}>{txt("⚠ Aviso importante")}</Label>
       </div>
       <Scroll style={{ padding: "0 24px" }}>
         <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
@@ -724,15 +735,15 @@ const RiskWarning = ({ t, onNext, onToggleTheme }) => {
             display: "flex", alignItems: "center", justifyContent: "center" }}>
             {ok && <span style={{ color: t.activeText, fontSize: 13, fontWeight: 900 }}>✓</span>}
           </div>
-          <span style={{ fontSize: 14, color: t.text, fontFamily: FONT }}>Li e concordo com os termos de uso</span>
+          <span style={{ fontSize: 14, color: t.text, fontFamily: FONT }}>{txt("Li e concordo com os termos de uso")}</span>
         </div>
-        <Btn t={t} onClick={onNext} disabled={!ok}>Continuar</Btn>
+        <Btn t={t} onClick={onNext} disabled={!ok}>{txt("Continuar")}</Btn>
       </div>
     </div>
   );
 };
 
-const Login = ({ t, txt, onNext, onToggleTheme, onAuth, onForgot, onCreateAccount }) => {
+const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot, onCreateAccount }) => {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
@@ -767,11 +778,11 @@ const Login = ({ t, txt, onNext, onToggleTheme, onAuth, onForgot, onCreateAccoun
       <Scroll style={{ padding: "8px 24px 0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
           <BoltLogo t={t} size={28} />
-          <Label t={t}>Bem-vindo de volta</Label>
+          <Label t={t}>{txt("Bem-vindo de volta")}</Label>
         </div>
         <h1 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 28px", letterSpacing: -0.5,
           lineHeight: 1.2, color: t.text, fontFamily: FONT }}>
-          Entrar no<br /><span style={{ color: t.accent }}>Infinity Signals</span>
+          {txt("Entrar no")}<br /><span style={{ color: t.accent }}>Infinity Signals</span>
         </h1>
         {[
           { lbl: "E-mail", val: email, set: setEmail, ph: "seu@email.com", type: "email" },
@@ -788,7 +799,7 @@ const Login = ({ t, txt, onNext, onToggleTheme, onAuth, onForgot, onCreateAccoun
         ))}
         <div style={{ textAlign: "right", marginTop: 6 }}>
           <span onClick={forgot} style={{ color: t.accent, fontSize: 13, fontWeight: 700, cursor: "pointer",
-            fontFamily: FONT }}>Esqueci minha senha</span>
+            fontFamily: FONT }}>{txt("Esqueci minha senha")}</span>
         </div>
         {notice && (
           <p style={{ marginTop: 12, fontSize: 12, color: t.buy, textAlign: "center", fontFamily: FONT }}>{notice}</p>
@@ -804,21 +815,18 @@ const Login = ({ t, txt, onNext, onToggleTheme, onAuth, onForgot, onCreateAccoun
           </div>
         )}
         <Btn t={t} onClick={handle} disabled={busy}>{busy ? "Entrando…" : txt("entrar")}</Btn>
-        <Btn t={t} variant="secondary" onClick={onCreateAccount} disabled={busy}>Criar conta</Btn>
+        <Btn t={t} variant="secondary" onClick={onCreateAccount} disabled={busy}>{txt("Criar conta")}</Btn>
       </div>
     </div>
   );
 };
 
-const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount }) => {
+const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount, language, onChangeLanguage }) => {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [pass, setPass] = useState("");
   const [pass2, setPass2] = useState("");
-  const [coupon, setCoupon] = useState(() => {
-    try { return localStorage.getItem("tfx_ref") || ""; } catch { return ""; }
-  });
   const [hasAluno, setHasAluno] = useState(false);
   const [alunoCoupon, setAlunoCoupon] = useState("");
   const [err, setErr] = useState("");
@@ -839,7 +847,7 @@ const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount }) => {
       if (hasAluno && alunoCoupon.trim()) localStorage.setItem("tfx_aluno_coupon", alunoCoupon.trim());
       else localStorage.removeItem("tfx_aluno_coupon");
     } catch { /* ignore */ }
-    const r = await onSignup({ name: name.trim(), email: email.trim(), phone: phone.trim(), pass, coupon: coupon.trim() });
+    const r = await onSignup({ name: name.trim(), email: email.trim(), phone: phone.trim(), pass, coupon: "" });
     setBusy(false);
     if (r?.ok && r?.needsConfirm) { setNotice("Conta criada! Confirme seu e-mail (veja a caixa de entrada/spam) e depois faça login."); return; }
     if (r?.ok) onNext();
@@ -863,18 +871,33 @@ const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount }) => {
       <Scroll style={{ padding: "8px 24px 0" }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 8 }}>
           <BoltLogo t={t} size={28} />
-          <Label t={t}>Criar sua conta</Label>
+          <Label t={t}>{txt("Criar sua conta")}</Label>
         </div>
-        <h1 style={{ fontSize: 25, fontWeight: 900, margin: "0 0 22px", letterSpacing: -0.5,
+        <h1 style={{ fontSize: 25, fontWeight: 900, margin: "0 0 18px", letterSpacing: -0.5,
           lineHeight: 1.2, color: t.text, fontFamily: FONT }}>
-          Bem-vindo ao<br /><span style={{ color: t.accent }}>Infinity Signals</span>
+          {txt("Bem-vindo ao")}<br /><span style={{ color: t.accent }}>Infinity Signals</span>
         </h1>
-        {field("Nome completo", name, setName, { placeholder: "Seu nome" })}
-        {field("E-mail", email, setEmail, { type: "email", placeholder: "seu@email.com" })}
-        {field("Telefone / WhatsApp", phone, setPhone, { placeholder: "(00) 00000-0000", type: "tel" })}
-        {field("Senha", pass, setPass, { type: "password", placeholder: "mín. 6 caracteres" })}
-        {field("Confirmar senha", pass2, setPass2, { type: "password", placeholder: "repita a senha" })}
-        {field("Cupom de convite (opcional)", coupon, setCoupon, { placeholder: "código de quem te indicou" })}
+
+        {/* Seletor de idioma no cadastro */}
+        <div style={{ display: "flex", gap: 8, marginBottom: 18 }}>
+          {["pt", "en", "es"].map(lang => (
+            <button key={lang} onClick={() => onChangeLanguage?.(lang)} style={{
+              flex: 1, height: 38, borderRadius: 10, cursor: "pointer",
+              fontWeight: language === lang ? 800 : 600, fontSize: 12, fontFamily: FONT,
+              border: `1.5px solid ${language === lang ? t.accent : t.bdr}`,
+              background: language === lang ? t.accent : t.card,
+              color: language === lang ? t.bg0 : t.text,
+            }}>
+              {lang === "pt" ? "🇧🇷 PT" : lang === "en" ? "🇺🇸 EN" : "🇪🇸 ES"}
+            </button>
+          ))}
+        </div>
+
+        {field(txt("Nome completo"), name, setName, { placeholder: txt("Seu nome") })}
+        {field(txt("E-mail"), email, setEmail, { type: "email", placeholder: txt("seu@email.com") })}
+        {field(txt("Telefone / WhatsApp"), phone, setPhone, { placeholder: "(00) 00000-0000", type: "tel" })}
+        {field(txt("Senha"), pass, setPass, { type: "password", placeholder: txt("mín. 6 caracteres") })}
+        {field(txt("Confirmar senha"), pass2, setPass2, { type: "password", placeholder: txt("repita a senha") })}
 
         {/* Cupom de aluno: libera acesso de aluno (15 dias) automaticamente. */}
         <div onClick={() => setHasAluno(v => !v)} style={{ display: "flex", alignItems: "center", gap: 10,
@@ -883,19 +906,19 @@ const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount }) => {
             border: `1.5px solid ${hasAluno ? t.accent : t.bdr}`, background: hasAluno ? t.accent : "transparent",
             display: "flex", alignItems: "center", justifyContent: "center",
             color: t.activeText, fontSize: 14, fontWeight: 900 }}>{hasAluno ? "✓" : ""}</div>
-          <span style={{ fontSize: 13, color: t.text, fontWeight: 700, fontFamily: FONT }}>🎓 Tenho cupom de aluno</span>
+          <span style={{ fontSize: 13, color: t.text, fontWeight: 700, fontFamily: FONT }}>{txt("🎓 Tenho cupom de aluno")}</span>
         </div>
         {hasAluno && (
           <>
             {field("Cupom de aluno", alunoCoupon, setAlunoCoupon, { placeholder: "digite o cupom" })}
             <p style={{ fontSize: 11, color: t.sub, margin: "-4px 2px 10px", lineHeight: 1.5, fontFamily: FONT }}>
-              Com um cupom válido, seu acesso de <span style={{ fontWeight: 700, color: t.text }}>aluno é liberado por 15 dias</span> automaticamente.
+              {txt("Com um cupom válido, seu acesso de")} <span style={{ fontWeight: 700, color: t.text }}>{txt("aluno é liberado por 15 dias")}</span> {txt("automaticamente.")}
             </p>
           </>
         )}
 
         <p style={{ fontSize: 11, color: t.muted, margin: "-4px 2px 8px", lineHeight: 1.5, fontFamily: FONT }}>
-          🔒 Seus dados são protegidos e usados só para o serviço. Ao criar conta você concorda com os Termos e a Política de Privacidade.
+          {txt("🔒 Seus dados são protegidos e usados só para o serviço. Ao criar conta você concorda com os Termos e a Política de Privacidade.")}
         </p>
       </Scroll>
       <div style={{ padding: "12px 24px 32px", display: "flex", flexDirection: "column", gap: 10, flexShrink: 0 }}>
@@ -916,11 +939,11 @@ const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount }) => {
           </div>
         )}
         {notice ? (
-          <Btn t={t} onClick={onHaveAccount}>Ir para o login</Btn>
+          <Btn t={t} onClick={onHaveAccount}>{txt("Ir para o login")}</Btn>
         ) : (
           <>
             <Btn t={t} onClick={handle} disabled={busy}>{busy ? "Criando…" : "Criar conta"}</Btn>
-            <Btn t={t} variant="secondary" onClick={onHaveAccount} disabled={busy}>Já tenho conta</Btn>
+            <Btn t={t} variant="secondary" onClick={onHaveAccount} disabled={busy}>{txt("Já tenho conta")}</Btn>
           </>
         )}
       </div>
@@ -962,14 +985,14 @@ const Plans = ({ t, onNext, onBack, onToggleTheme, plan, setPlan, currentPlan })
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
                 <div>
                   <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ fontWeight: 900, fontSize: 17, color: t.text, fontFamily: FONT }}>{p.name}</div>
+                    <div style={{ fontWeight: 900, fontSize: 17, color: t.text, fontFamily: FONT }}>{txt(p.name)}</div>
                     {upgrade && p.id === currentPlan && (
                       <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 6,
-                        background: t.bg2, color: t.sub, border: `1px solid ${t.bdr}`, fontFamily: FONT }}>ATUAL</span>
+                        background: t.bg2, color: t.sub, border: `1px solid ${t.bdr}`, fontFamily: FONT }}>{txt("ATUAL")}</span>
                     )}
                   </div>
                   <div style={{ color: t.accent, fontWeight: 800, fontSize: 16, marginTop: 2, fontFamily: FONT }}>{p.price}</div>
-                  <div style={{ color: t.muted, fontSize: 11, marginTop: 2, fontFamily: FONT }}>{p.sub}</div>
+                  <div style={{ color: t.muted, fontSize: 11, marginTop: 2, fontFamily: FONT }}>{txt(p.sub)}</div>
                 </div>
                 <div style={{ width: 24, height: 24, borderRadius: "50%",
                   border: `2px solid ${plan === p.id ? t.accent : t.bdr}`,
@@ -1000,24 +1023,24 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected, locke
   const daysLeft = nextChange ? Math.max(1, Math.ceil((nextChange.getTime() - Date.now()) / 86400000)) : 0;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Seus ativos" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <ScreenHeader title={txt("Seus ativos")} t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
         <p style={{ fontSize: 13, color: t.sub, margin: "0 0 14px", fontFamily: FONT }}>
-          Os sinais exibidos serão apenas dos ativos que você escolher aqui.
+          {txt("Os sinais exibidos serão apenas dos ativos que você escolher aqui.")}
         </p>
         {locked && (
           <div style={{ display: "flex", gap: 10, alignItems: "center", marginBottom: 14,
             background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "10px 14px" }}>
             <span style={{ fontSize: 16 }}>🔒</span>
             <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.5, fontFamily: FONT }}>
-              <span style={{ fontWeight: 800 }}>Atenção:</span> você só pode alterar ativos/timeframes 1 vez a cada 7 dias.
+              <span style={{ fontWeight: 800 }}>{txt("Atenção:")}</span> você só pode alterar ativos/timeframes 1 vez a cada 7 dias.
               Poderá alterar de novo em <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
             </span>
           </div>
         )}
         <Card t={t} accent style={{ marginBottom: 14, padding: "12px 16px" }}>
           <p style={{ fontSize: 12, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-            <span style={{ fontWeight: 800, color: t.accent }}>1 timeframe fixo por ativo.</span> Você
+            <span style={{ fontWeight: 800, color: t.accent }}>{txt("1 timeframe fixo por ativo.")}</span> Você
             escolhe o melhor tempo pelo histórico — e só pode trocar 1 vez por semana.
           </p>
         </Card>
@@ -1053,7 +1076,7 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected, locke
         <p style={{ fontSize: 12, color: t.sub, textAlign: "center", margin: "0 0 12px", fontFamily: FONT }}>
           {n} ativo{n !== 1 ? "s" : ""} · 1 timeframe fixo por ativo
         </p>
-        <Btn t={t} onClick={onNext} disabled={n === 0}>Continuar</Btn>
+        <Btn t={t} onClick={onNext} disabled={n === 0}>{txt("Continuar")}</Btn>
       </div>
     </div>
   );
@@ -1071,14 +1094,14 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
   const daysLeft = nextChange ? Math.max(1, Math.ceil((nextChange.getTime() - Date.now()) / 86400000)) : 0;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Tempos gráficos" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <ScreenHeader title={txt("Tempos gráficos")} t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
         <Card t={t} accent style={{ marginBottom: 14, padding: "12px 16px" }}>
           <p style={{ fontSize: 12, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-            <span style={{ fontWeight: 800, color: t.accent }}>1 timeframe fixo por ativo.</span> Escolha o melhor tempo pelo histórico — você só pode trocar 1 vez por semana.
+            <span style={{ fontWeight: 800, color: t.accent }}>{txt("1 timeframe fixo por ativo.")}</span> Escolha o melhor tempo pelo histórico — você só pode trocar 1 vez por semana.
             {plan === "anual"
-              ? <span style={{ color: t.accent, fontWeight: 700 }}> O M1 é exclusivo do seu plano Anual.</span>
-              : <span style={{ color: t.muted }}> O M1 é exclusivo do Premium Anual.</span>}
+              ? <span style={{ color: t.accent, fontWeight: 700 }}> {txt("O M1 é exclusivo do seu plano Anual.")}</span>
+              : <span style={{ color: t.muted }}> {txt("O M1 é exclusivo do Premium Anual.")}</span>}
           </p>
         </Card>
         {locked && (
@@ -1086,7 +1109,7 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
             background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "10px 14px" }}>
             <span style={{ fontSize: 16 }}>🔒</span>
             <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.5, fontFamily: FONT }}>
-              Timeframes travados. Você poderá trocar em <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
+              {txt("Timeframes travados. Você poderá trocar em")} <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
             </span>
           </div>
         )}
@@ -1117,13 +1140,13 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
         </div>
       </Scroll>
       <div style={{ padding: "14px 24px 28px", flexShrink: 0 }}>
-        <Btn t={t} onClick={save}>Salvar preferências</Btn>
+        <Btn t={t} onClick={save}>{txt("Salvar preferências")}</Btn>
       </div>
     </div>
   );
 };
 
-const Home = ({ t, txt, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, closeAlerts = [], onToggleCloseAlert, userName }) => {
+const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, closeAlerts = [], onToggleCloseAlert, userName }) => {
   const [dashTf, setDashTf] = useState("Todos");
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
   const recentSignals = live?.recent?.length ? live.recent.map(mapSignal) : null;
@@ -1167,8 +1190,8 @@ const Home = ({ t, txt, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan
               borderRadius: 16, padding: "14px 16px", marginBottom: 14, display: "flex", gap: 10, alignItems: "flex-start" }}>
               <span style={{ fontSize: 22, flexShrink: 0 }}>🛌</span>
               <div style={{ fontSize: 12.8, color: t.text, lineHeight: 1.5, fontFamily: FONT }}>
-                <b>Hoje não há operações</b> — fim de semana, o mercado Forex está fechado.<br />
-                As operações voltam no <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> (horário de Brasília). Bom descanso! 📈
+                <b>{txt("Hoje não há operações")}</b> {txt("— fim de semana, o mercado Forex está fechado.")}<br />
+                {txt("As operações voltam no")} <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> (horário de Brasília). Bom descanso! 📈
               </div>
             </div>
           )}
@@ -1188,8 +1211,8 @@ const Home = ({ t, txt, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan
                 <span style={{ fontSize: 20 }}>⏳</span>
                 <span style={{ fontSize: 12.5, color: t.text, lineHeight: 1.45, fontFamily: FONT }}>
                   {venceu
-                    ? <>Seu plano <b>venceu</b> — sua conta voltou para o <b style={{ color: t.warn }}>Free</b>. Renove para recuperar o acesso completo.</>
-                    : <>Seu plano vence em <b style={{ color: t.warn }}>{dias} dia{dias !== 1 ? "s" : ""}</b>. Renove para não cair no Free.</>}
+                    ? <>{txt("Seu plano")} <b>{txt("venceu")}</b> {txt("— sua conta voltou para o")} <b style={{ color: t.warn }}>{txt("Free")}</b>{txt(". Renove para recuperar o acesso completo.")}</>
+                    : <>{txt("Seu plano vence em")} <b style={{ color: t.warn }}>{dias} dia{dias !== 1 ? "s" : ""}</b>{txt(". Renove para não cair no Free.")}</>}
                 </span>
               </div>
             );
@@ -1198,7 +1221,7 @@ const Home = ({ t, txt, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan
           <div style={{ background: t.card2, border: `1.5px solid ${t.accentBdr}`,
             borderRadius: 22, padding: "20px 20px 18px", marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
-              <Label t={t}>Sinais hoje</Label>
+              <Label t={t}>{txt("Sinais hoje")}</Label>
               <span style={{ fontSize: 11, color: t.blue, fontWeight: 700, fontFamily: FONT }}>🕐 {schedTxt}</span>
             </div>
             <div style={{ fontSize: 44, fontWeight: 900, color: t.accent, lineHeight: 1, marginBottom: 8, fontFamily: FONT }}>
@@ -1208,12 +1231,12 @@ const Home = ({ t, txt, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan
             <p style={{ fontSize: 12, color: t.sub, margin: "8px 0 0", fontFamily: FONT }}>
               {plan === "free"
                 ? "Plano Free — operações sorteadas (M5/M15)"
-                : `${info.name} — até 20 operações por dia`}
+                : `${txt(info.name)} — ${txt("até 20 operações por dia")}`}
             </p>
           </div>
 
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <Label t={t}>Últimos sinais</Label>
+            <Label t={t}>{txt("Últimos sinais")}</Label>
             {/* Filtro M5/M15 só para quem recebe vários timeframes (admin/aluno).
                 Cliente comum vê só o tf que escolheu — sem mistura, sem botões. */}
             {live?.seeAll && (
@@ -1233,7 +1256,7 @@ const Home = ({ t, txt, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan
           {recent.length === 0 ? (
             <Card t={t} style={{ textAlign: "center", padding: "24px 18px" }}>
               <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-                {dashTf === "Todos" ? <>Nenhum sinal ainda hoje.<br />Você será avisado quando chegar um.</> : `Nenhum sinal em ${dashTf} agora.`}
+                {dashTf === "Todos" ? <>{txt("Nenhum sinal ainda hoje.")}<br />{txt("Você será avisado quando chegar um.")}</> : `Nenhum sinal em ${dashTf} agora.`}
               </p>
             </Card>
           ) : recent.map((s, i) => (
@@ -1246,11 +1269,11 @@ const Home = ({ t, txt, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan
 
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
             <Card t={t}>
-              <div style={{ fontSize: 11, color: t.sub, marginBottom: 4, fontFamily: FONT }}>Assertividade</div>
+              <div style={{ fontSize: 11, color: t.sub, marginBottom: 4, fontFamily: FONT }}>{txt("Assertividade")}</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: t.accent, fontFamily: FONT }}>{assertTxt}</div>
             </Card>
             <Card t={t}>
-              <div style={{ fontSize: 11, color: t.sub, marginBottom: 4, fontFamily: FONT }}>Resultado do mês</div>
+              <div style={{ fontSize: 11, color: t.sub, marginBottom: 4, fontFamily: FONT }}>{txt("Resultado do mês")}</div>
               <div style={{ fontSize: 22, fontWeight: 900, color: t.buy, fontFamily: FONT }}>{acumTxt}</div>
             </Card>
           </div>
@@ -1261,7 +1284,7 @@ const Home = ({ t, txt, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan
   );
 };
 
-const SignalsFeed = ({ t, txt, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live, stats, showMock, closeAlerts = [], onToggleCloseAlert }) => {
+const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live, stats, showMock, closeAlerts = [], onToggleCloseAlert }) => {
   const [filter, setFilter] = useState("Todos");
   const [tfStats, setTfStats] = useState("Geral"); // Filtro simples: Geral, M5, M15
   const inWindow = h => schedule.allDay || (h >= parseInt(schedule.start) && h < parseInt(schedule.end));
@@ -1279,9 +1302,9 @@ const SignalsFeed = ({ t, txt, onNav, onOpenSignal, onToggleTheme, onOpenFilters
   const shown = filtered.sort(sortSignals);
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Sinais" t={t} onToggleTheme={onToggleTheme}
+      <ScreenHeader title={txt("Sinais")} t={t} onToggleTheme={onToggleTheme}
         right={
-          <button onClick={onOpenFilters} aria-label="Abrir filtros" style={{
+          <button onClick={onOpenFilters} aria-label={txt("Abrir filtros")} style={{
             width: 38, height: 38, borderRadius: 12, cursor: "pointer",
             background: t.card, border: `1.5px solid ${t.bdr}`,
             display: "flex", alignItems: "center", justifyContent: "center",
@@ -1383,7 +1406,7 @@ const SignalsFeed = ({ t, txt, onNav, onOpenSignal, onToggleTheme, onOpenFilters
           <div style={{ background: `${t.warn}10`, border: `1px solid ${t.warn}30`,
             borderRadius: 12, padding: "8px 12px", marginBottom: 4 }}>
             <p style={{ fontSize: 11, color: t.warn, margin: 0, fontFamily: FONT }}>
-              Plano Free: 2 a 4 operações por dia (M5/M15 sortidos) em horários fixos. Faça upgrade para escolher ativos.
+              {txt("Plano Free: 2 a 4 operações por dia (M5/M15 sortidos) em horários fixos. Faça upgrade para escolher ativos.")}
             </p>
           </div>
         )}
@@ -1394,8 +1417,8 @@ const SignalsFeed = ({ t, txt, onNav, onOpenSignal, onToggleTheme, onOpenFilters
             borderRadius: 16, padding: "14px 16px", marginBottom: 12, display: "flex", gap: 10, alignItems: "flex-start" }}>
             <span style={{ fontSize: 22, flexShrink: 0 }}>🛌</span>
             <div style={{ fontSize: 12.8, color: t.text, lineHeight: 1.5, fontFamily: FONT }}>
-              <b>Hoje não há operações</b> — fim de semana, o mercado Forex está fechado.<br />
-              Voltam no <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> (Brasília).
+              <b>{txt("Hoje não há operações")}</b> {txt("— fim de semana, o mercado Forex está fechado.")}<br />
+              {txt("Voltam no")} <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> (Brasília).
             </div>
           </div>
         )}
@@ -1403,7 +1426,7 @@ const SignalsFeed = ({ t, txt, onNav, onOpenSignal, onToggleTheme, onOpenFilters
           forexClosed() ? null : (
           <Card t={t} style={{ textAlign: "center", padding: "28px 18px" }}>
             <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-              Nenhum sinal no seu horário e filtros atuais.<br />Ajuste nos Filtros ou no Perfil.
+              {txt("Nenhum sinal no seu horário e filtros atuais.")}<br />{txt("Ajuste nos Filtros ou no Perfil.")}
             </p>
           </Card>
           )
@@ -1425,7 +1448,7 @@ const SignalsFeed = ({ t, txt, onNav, onOpenSignal, onToggleTheme, onOpenFilters
 };
 
 /* DETALHE — agora com navegação inferior */
-const SignalDetail = ({ t, txt, signal, onNav, onBack, onToggleTheme, showMock }) => {
+const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme, showMock }) => {
   const s = signal || (showMock ? SIGNALS_DATA[0] : null);
   if (!s) {
     return (
@@ -1438,7 +1461,7 @@ const SignalDetail = ({ t, txt, signal, onNav, onBack, onToggleTheme, showMock }
             </div>
             <Card t={t} style={{ textAlign: "center", padding: "28px 18px" }}>
               <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-                Sinal indisponível.
+                {txt("Sinal indisponível.")}
               </p>
             </Card>
           </div>
@@ -1465,7 +1488,7 @@ const SignalDetail = ({ t, txt, signal, onNav, onBack, onToggleTheme, showMock }
               <div>
                 <div style={{ fontSize: 28, fontWeight: 900, letterSpacing: -1, color: t.text, fontFamily: FONT }}>{s.asset}</div>
                 <div style={{ display: "flex", gap: 8, marginTop: 6 }}>
-                  <Badge text={s.dir} color={ac} />
+                  <Badge text={txt(s.dir)} color={ac} />
                   <Badge text={s.tf} color={t.blue} />
                 </div>
               </div>
@@ -1493,12 +1516,12 @@ const SignalDetail = ({ t, txt, signal, onNav, onBack, onToggleTheme, showMock }
             display: "flex", gap: 10, alignItems: "flex-start" }}>
             <span style={{ color: t.warn, fontSize: 16 }}>⚠</span>
             <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.6, fontFamily: FONT }}>
-              Este é um estudo operacional, não uma recomendação financeira. Avalie o risco antes de operar.
+              {txt("Este é um estudo operacional, não uma recomendação financeira. Avalie o risco antes de operar.")}
             </span>
           </div>
           {canCopy ? (
             <div style={{ display: "flex", gap: 10 }}>
-              <Btn t={t} style={{ flex: 1, height: 50 }}>Copiar sinal</Btn>
+              <Btn t={t} style={{ flex: 1, height: 50 }}>{txt("Copiar sinal")}</Btn>
               <Btn t={t} variant="secondary" style={{ flex: 1, height: 50 }}
                 onClick={() => onNav("history")}>{txt("historico")}</Btn>
             </div>
@@ -1509,12 +1532,12 @@ const SignalDetail = ({ t, txt, signal, onNav, onBack, onToggleTheme, showMock }
                 display: "flex", gap: 10, alignItems: "center" }}>
                 <span style={{ fontSize: 18 }}>⏱️</span>
                 <span style={{ fontSize: 12.5, color: t.sub, lineHeight: 1.5, fontFamily: FONT }}>
-                  <span style={{ fontWeight: 800, color: t.text }}>Janela de entrada encerrada.</span> Este
+                  <span style={{ fontWeight: 800, color: t.text }}>{txt("Janela de entrada encerrada.")}</span> Este
                   sinal passou de {COPY_WINDOW_MIN} min — você pode acompanhar, mas não entrar mais.
                 </span>
               </div>
               <Btn t={t} variant="secondary" style={{ height: 50 }}
-                onClick={() => onNav("history")}>Ver histórico</Btn>
+                onClick={() => onNav("history")}>{txt("Ver histórico")}</Btn>
             </>
           )}
         </div>
@@ -1544,9 +1567,9 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
           </div>
           <div style={{ marginBottom: 6 }}><Badge text={isAdmin ? "ADMIN" : "PREMIUM"} color={t.accent} /></div>
           <h1 style={{ fontSize: 26, fontWeight: 900, margin: "8px 0 8px", letterSpacing: -0.5,
-            color: t.text, fontFamily: FONT }}>Timeframe por ativo</h1>
+            color: t.text, fontFamily: FONT }}>{txt("Timeframe por ativo")}</h1>
           <p style={{ fontSize: 12.5, color: t.sub, margin: "0 0 18px", lineHeight: 1.55, fontFamily: FONT }}>
-            Você recebe os sinais no timeframe escolhido para cada ativo — <span style={{ fontWeight: 700, color: t.text }}>1 por ativo</span>.{" "}
+            {txt("Você recebe os sinais no timeframe escolhido para cada ativo —")} <span style={{ fontWeight: 700, color: t.text }}>{txt("1 por ativo")}</span>.{" "}
             {isAdmin ? "Como admin, você troca quando quiser." : "Você pode trocar 1× por semana."}
           </p>
 
@@ -1555,7 +1578,7 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
               background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "11px 14px" }}>
               <span style={{ fontSize: 16 }}>🔒</span>
               <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.55, fontFamily: FONT }}>
-                Você escolheu em <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(new Date(nextChange.getTime() - 7 * 86400000))}</span> —
+                {txt("Você escolheu em")} <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(new Date(nextChange.getTime() - 7 * 86400000))}</span> —
                 poderá trocar a partir de <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} dia{daysLeft !== 1 ? "s" : ""}).
                 A troca é 1× por semana pra manter o histórico correto.
               </span>
@@ -1563,7 +1586,7 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
           )}
           {!locked && !isAdmin && (
             <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 14px", lineHeight: 1.5, fontFamily: FONT }}>
-              ⚠️ Ao trocar o timeframe de um ativo, ele fica <span style={{ fontWeight: 700, color: t.text }}>travado por 7 dias</span> (pra contar o histórico de forma correta).
+              {txt("⚠️ Ao trocar o timeframe de um ativo, ele fica")} <span style={{ fontWeight: 700, color: t.text }}>{txt("travado por 7 dias")}</span> (pra contar o histórico de forma correta).
             </p>
           )}
 
@@ -1579,7 +1602,7 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
                       <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>{ASSET_NAMES[a] || a}</div>
                     </div>
                     <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>
-                      atual: <span style={{ fontWeight: 800, color: t.accent }}>{cur || "—"}</span>
+                      {txt("atual:")} <span style={{ fontWeight: 800, color: t.accent }}>{cur || "—"}</span>
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
@@ -1606,7 +1629,7 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
               color: t.buy, fontFamily: FONT }}>✓ Timeframe atualizado: {toast}</p>
           )}
           <p style={{ marginTop: 16, fontSize: 11.5, color: t.muted, lineHeight: 1.55, fontFamily: FONT }}>
-            Para comparar qual timeframe rende mais em cada ativo, veja <span style={{ color: t.accent, fontWeight: 700 }}>Desempenho → Histórico por timeframe</span>.
+            {txt("Para comparar qual timeframe rende mais em cada ativo, veja")} <span style={{ color: t.accent, fontWeight: 700 }}>{txt("Desempenho → Histórico por timeframe")}</span>.
           </p>
         </div>
       </Scroll>
@@ -1637,17 +1660,17 @@ const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerA
   const statFor = (a, tf) => data.find(d => d.asset === a && d.tf === tf);
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Histórico por timeframe" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <ScreenHeader title={txt("Histórico por timeframe")} t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
         <p style={{ fontSize: 12.5, color: t.sub, margin: "0 0 12px", lineHeight: 1.55, fontFamily: FONT }}>
-          Veja qual tempo rende mais em cada ativo e escolha o melhor. Lembre: <span style={{ fontWeight: 700, color: t.text }}>1 troca por semana</span>.
+          {txt("Veja qual tempo rende mais em cada ativo e escolha o melhor. Lembre:")} <span style={{ fontWeight: 700, color: t.text }}>{txt("1 troca por semana")}</span>.
         </p>
         {locked && nextChange && (
           <div style={{ display: "flex", gap: 10, alignItems: "flex-start", marginBottom: 12,
             background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "11px 14px" }}>
             <span style={{ fontSize: 16 }}>🔒</span>
             <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.55, fontFamily: FONT }}>
-              Escolhido em <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(new Date(nextChange.getTime() - 7 * 86400000))}</span> —
+              {txt("Escolhido em")} <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(new Date(nextChange.getTime() - 7 * 86400000))}</span> —
               troca liberada em <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} dia{daysLeft !== 1 ? "s" : ""}).
             </span>
           </div>
@@ -1675,7 +1698,7 @@ const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerA
                         cursor: (!locked && !isCur && s) ? "pointer" : "default", opacity: s ? 1 : 0.45 }}>
                       <div style={{ width: 42, textAlign: "center", flexShrink: 0 }}>
                         <span style={{ fontSize: 13, fontWeight: 800, color: t.text, fontFamily: FONT }}>{tf}</span>
-                        {tf === best && s && <div style={{ fontSize: 8, fontWeight: 800, color: t.accent, fontFamily: FONT }}>MELHOR</div>}
+                        {tf === best && s && <div style={{ fontSize: 8, fontWeight: 800, color: t.accent, fontFamily: FONT }}>{txt("MELHOR")}</div>}
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
@@ -1688,8 +1711,8 @@ const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerA
                       </div>
                       <div style={{ width: 56, textAlign: "right", flexShrink: 0 }}>
                         {isCur
-                          ? <span style={{ fontSize: 10, fontWeight: 800, color: t.accent, fontFamily: FONT }}>● ATUAL</span>
-                          : (!locked && s) ? <span style={{ fontSize: 11, fontWeight: 800, color: t.accent, fontFamily: FONT }}>Usar ›</span> : null}
+                          ? <span style={{ fontSize: 10, fontWeight: 800, color: t.accent, fontFamily: FONT }}>{txt("● ATUAL")}</span>
+                          : (!locked && s) ? <span style={{ fontSize: 11, fontWeight: 800, color: t.accent, fontFamily: FONT }}>{txt("Usar ›")}</span> : null}
                       </div>
                     </div>
                   );
@@ -1751,7 +1774,7 @@ const EquityCurve = ({ t, closed, height = 120, defaultPeriod = "Geral" }) => {
   return (
     <Card t={t} style={{ marginBottom: 16 }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: 10 }}>
-        <Label t={t}>Curva de capital</Label>
+        <Label t={t}>{txt("Curva de capital")}</Label>
         <span style={{ fontSize: 16, fontWeight: 900, color: col, fontFamily: FONT }}>
           {pos ? "+" : ""}{Math.round(final)} pips
         </span>
@@ -1763,7 +1786,7 @@ const EquityCurve = ({ t, closed, height = 120, defaultPeriod = "Geral" }) => {
       </div>
       {chart || (
         <p style={{ fontSize: 12, color: t.sub, margin: "10px 0", textAlign: "center", fontFamily: FONT }}>
-          Poucas operações fechadas neste período.
+          {txt("Poucas operações fechadas neste período.")}
         </p>
       )}
       <p style={{ fontSize: 10.5, color: t.muted, margin: "8px 0 0", fontFamily: FONT }}>
@@ -1773,7 +1796,7 @@ const EquityCurve = ({ t, closed, height = 120, defaultPeriod = "Geral" }) => {
   );
 };
 
-const Performance = ({ t, txt, onNav, onToggleTheme, selectedAssets, stats, breakdown, tfPerAsset = {}, onTfPerf, showMock, live }) => {
+const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown, tfPerAsset = {}, onTfPerf, showMock, live }) => {
   // Agrega o desempenho por TIMEFRAME (M5, M15) e o geral — a partir do
   // breakdown por ativo×tf. Deixa claro de onde vem o número acumulado.
   const bd = breakdown?.breakdown || [];
@@ -1813,7 +1836,7 @@ const Performance = ({ t, txt, onNav, onToggleTheme, selectedAssets, stats, brea
   const perAsset = { XAUUSD: 88, NAS100: 74, EURUSD: 65, GBPUSD: 58, US30: 70 };
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Desempenho" t={t} onToggleTheme={onToggleTheme} />
+      <ScreenHeader title={txt("Desempenho")} t={t} onToggleTheme={onToggleTheme} />
       <Scroll>
         <div style={{ padding: "0 24px 24px" }}>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
@@ -1828,9 +1851,9 @@ const Performance = ({ t, txt, onNav, onToggleTheme, selectedAssets, stats, brea
           {/* Resultado discriminado por timeframe — clareza total do acumulado. */}
           {tfRows.length > 0 && (
             <Card t={t} style={{ marginBottom: 16 }}>
-              <Label t={t} style={{ marginBottom: 4 }}>Resultado por timeframe</Label>
+              <Label t={t} style={{ marginBottom: 4 }}>{txt("Resultado por timeframe")}</Label>
               <p style={{ fontSize: 11, color: t.sub, margin: "0 0 12px", lineHeight: 1.5, fontFamily: FONT }}>
-                Acumulado de cada tempo gráfico e o geral (soma de todos).
+                {txt("Acumulado de cada tempo gráfico e o geral (soma de todos).")}
               </p>
               {tfRows.map(({ label, d, accent }) => {
                 const pos = d.pips >= 0;
@@ -1838,7 +1861,7 @@ const Performance = ({ t, txt, onNav, onToggleTheme, selectedAssets, stats, brea
                   <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
                     padding: "9px 0", borderTop: accent ? `1px solid ${t.bdr}` : "none" }}>
                     <span style={{ fontSize: 13, fontWeight: accent ? 800 : 700,
-                      color: accent ? t.accent : t.text, fontFamily: FONT, width: 100 }}>{label}</span>
+                      color: accent ? t.accent : t.text, fontFamily: FONT, width: 100 }}>{txt(label)}</span>
                     <span style={{ fontSize: 11.5, color: t.sub, fontFamily: FONT, flex: 1, textAlign: "center" }}>
                       {d.total} ops · {d.assert}%
                     </span>
@@ -1857,8 +1880,8 @@ const Performance = ({ t, txt, onNav, onToggleTheme, selectedAssets, stats, brea
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 18 }}>📊</span>
               <div>
-                <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT }}>Histórico por timeframe</div>
-                <div style={{ fontSize: 11, color: t.sub, marginTop: 1, fontFamily: FONT }}>Veja qual tempo rende mais e escolha o melhor</div>
+                <div style={{ fontSize: 14, fontWeight: 800, color: t.text, fontFamily: FONT }}>{txt("Histórico por timeframe")}</div>
+                <div style={{ fontSize: 11, color: t.sub, marginTop: 1, fontFamily: FONT }}>{txt("Veja qual tempo rende mais e escolha o melhor")}</div>
               </div>
             </div>
             <span style={{ color: t.accent, fontSize: 18 }}>›</span>
@@ -1879,7 +1902,7 @@ const Performance = ({ t, txt, onNav, onToggleTheme, selectedAssets, stats, brea
               Infinity <span style={{ color: t.accent }}>Signals</span>
             </div>
             <div style={{ fontSize: 11.5, color: t.sub, fontFamily: FONT, letterSpacing: 1, textTransform: "uppercase" }}>
-              Desempenho real · operações verificadas
+              {txt("Desempenho real · operações verificadas")}
             </div>
             <div style={{ fontSize: 10.5, color: t.muted, fontFamily: FONT, marginTop: 2 }}>
               © {new Date().getFullYear()} MrThiagoFX · Todos os direitos reservados
@@ -1888,7 +1911,7 @@ const Performance = ({ t, txt, onNav, onToggleTheme, selectedAssets, stats, brea
 
           {showMock && (<>
           <Card t={t} style={{ marginBottom: 12 }}>
-            <Label t={t} style={{ marginBottom: 14 }}>Evolução — últimos 30 dias</Label>
+            <Label t={t} style={{ marginBottom: 14 }}>{txt("Evolução — últimos 30 dias")}</Label>
             <svg width="100%" height={H+10} viewBox={`0 0 ${W} ${H+10}`} style={{ overflow: "visible" }}>
               <defs>
                 <linearGradient id="perfGrad" x1="0" y1="0" x2="0" y2="1">
@@ -1910,7 +1933,7 @@ const Performance = ({ t, txt, onNav, onToggleTheme, selectedAssets, stats, brea
             </div>
           </Card>
           <Card t={t}>
-            <Label t={t} style={{ marginBottom: 14 }}>Assertividade por ativo</Label>
+            <Label t={t} style={{ marginBottom: 14 }}>{txt("Assertividade por ativo")}</Label>
             {selectedAssets.map(a => {
               const v = perAsset[a] || 60;
               return (
@@ -1936,7 +1959,7 @@ const Performance = ({ t, txt, onNav, onToggleTheme, selectedAssets, stats, brea
   );
 };
 
-const History = ({ t, txt, onNav, onOpenSignal, onToggleTheme, schedule, live, stats, plan }) => {
+const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, stats, plan }) => {
   const [tab, setTab] = useState("Todos");
   const [period, setPeriod] = useState("Mês");
   const [tfStats, setTfStats] = useState("Geral"); // Filtro simples: Geral, M5, M15
@@ -1978,10 +2001,10 @@ const History = ({ t, txt, onNav, onOpenSignal, onToggleTheme, schedule, live, s
   const schedTxt = schedule.allDay ? "dia todo" : `${schedule.start}–${schedule.end}`;
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Histórico" t={t} onToggleTheme={onToggleTheme} />
+      <ScreenHeader title={txt("Histórico")} t={t} onToggleTheme={onToggleTheme} />
       <div style={{ padding: "0 24px", flexShrink: 0 }}>
         {/* Período: Hoje / Semana / Mês */}
-        <Label t={t} style={{ marginBottom: 8 }}>Período</Label>
+        <Label t={t} style={{ marginBottom: 8 }}>{txt("Período")}</Label>
         <div style={{ display: "flex", gap: 8, marginBottom: 10 }}>
           {["Hoje", "Semana", "Mês", "3 meses"].map(x => (
             <Chip key={x} label={x} active={period === x} onClick={() => setPeriod(x)} t={t} />
@@ -2030,7 +2053,7 @@ const History = ({ t, txt, onNav, onOpenSignal, onToggleTheme, schedule, live, s
         {shown.length === 0 ? (
           <Card t={t} style={{ textAlign: "center", padding: "28px 18px" }}>
             <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-              Nenhuma operação no período.<br />Seu histórico aparece aqui conforme os sinais são fechados.
+              {txt("Nenhuma operação no período.")}<br />{txt("Seu histórico aparece aqui conforme os sinais são fechados.")}
             </p>
           </Card>
         ) : (<>
@@ -2101,25 +2124,25 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
             <ThemeToggle t={t} onToggle={onToggleTheme} />
           </div>
           <h1 style={{ fontSize: 26, fontWeight: 900, margin: "0 0 20px", letterSpacing: -0.5,
-            color: t.text, fontFamily: FONT }}>Notificações</h1>
+            color: t.text, fontFamily: FONT }}>{txt("Notificações")}</h1>
           {toggles.map(({ id, label, sub }) => (
             <Card key={id} t={t} style={{ display: "flex", justifyContent: "space-between",
               alignItems: "center", marginBottom: 10 }}>
               <div style={{ flex: 1, marginRight: 12 }}>
-                <div style={{ fontWeight: 700, fontSize: 14, color: t.text, marginBottom: 3, fontFamily: FONT }}>{label}</div>
-                <div style={{ fontSize: 11, color: t.sub, lineHeight: 1.45, fontFamily: FONT }}>{sub}</div>
+                <div style={{ fontWeight: 700, fontSize: 14, color: t.text, marginBottom: 3, fontFamily: FONT }}>{txt(label)}</div>
+                <div style={{ fontSize: 11, color: t.sub, lineHeight: 1.45, fontFamily: FONT }}>{txt(sub)}</div>
               </div>
               <Toggle on={tog[id]} onChange={v => setTogV(id, v)} t={t} />
             </Card>
           ))}
-          <Label t={t} style={{ marginTop: 22, marginBottom: 12 }}>Mais opções</Label>
+          <Label t={t} style={{ marginTop: 22, marginBottom: 12 }}>{txt("Mais opções")}</Label>
           {expandables.map(({ id, label, body }) => {
             const open = expanded === id;
             return (
               <div key={id} style={{ marginBottom: 8 }}>
                 <Card t={t} onClick={() => setExpanded(open ? null : id)}
                   style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                  <span style={{ fontSize: 14, color: t.text, fontWeight: 600, fontFamily: FONT }}>{label}</span>
+                  <span style={{ fontSize: 14, color: t.text, fontWeight: 600, fontFamily: FONT }}>{txt(label)}</span>
                   <span style={{ color: t.sub, fontSize: 18, transition: "transform .2s",
                     transform: open ? "rotate(90deg)" : "none" }}>›</span>
                 </Card>
@@ -2163,12 +2186,12 @@ const NotifCenter = ({ t, onNav, onBack, onToggleTheme, onOpenSignal, live }) =>
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Notificações" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <ScreenHeader title={txt("Notificações")} t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
         {events.length === 0 ? (
           <Card t={t} style={{ textAlign: "center", padding: "28px 18px" }}>
             <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-              Nenhuma notificação ainda.<br />Os alertas de entrada e de fechamento aparecem aqui.
+              {txt("Nenhuma notificação ainda.")}<br />{txt("Os alertas de entrada e de fechamento aparecem aqui.")}
             </p>
           </Card>
         ) : events.map((e) => {
@@ -2179,7 +2202,7 @@ const NotifCenter = ({ t, onNav, onBack, onToggleTheme, onOpenSignal, live }) =>
             ? `Nova entrada · ${e.asset}`
             : `Fechou · ${e.asset}`;
           const sub = entrada
-            ? `${e.dir} · ${e.tf}`
+            ? `${txt(e.dir)} · ${e.tf}`
             : `${e.win ? "Alvo (TP)" : "Stop"} · ${e.pips >= 0 ? "+" : ""}${e.pips} pips`;
           const col = entrada ? t.text : (e.win ? t.buy : t.sell);
           return (
@@ -2231,10 +2254,10 @@ const Faq = ({ t, onNav, onBack, onToggleTheme, onSupport }) => {
   const [open, setOpen] = useState(null);
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Central de ajuda" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <ScreenHeader title={txt("Central de ajuda")} t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
         <p style={{ fontSize: 12.5, color: t.sub, margin: "0 0 14px", lineHeight: 1.5, fontFamily: FONT }}>
-          Dúvidas frequentes sobre os sinais e o app. Toque para expandir.
+          {txt("Dúvidas frequentes sobre os sinais e o app. Toque para expandir.")}
         </p>
         {FAQ_ITEMS.map((item, i) => {
           const isOpen = open === i;
@@ -2244,14 +2267,14 @@ const Faq = ({ t, onNav, onBack, onToggleTheme, onSupport }) => {
                 background: t.card, border: `1px solid ${isOpen ? t.accentBdr : t.bdr}`,
                 borderRadius: isOpen ? "14px 14px 0 0" : 14, padding: "13px 15px", cursor: "pointer",
                 display: "flex", justifyContent: "space-between", alignItems: "center", gap: 10 }}>
-                <span style={{ fontSize: 13.5, fontWeight: 700, color: t.text, fontFamily: FONT }}>{item.q}</span>
+                <span style={{ fontSize: 13.5, fontWeight: 700, color: t.text, fontFamily: FONT }}>{txt(item.q)}</span>
                 <span style={{ color: t.sub, fontSize: 18, lineHeight: 1, flexShrink: 0,
                   transition: "transform .2s", transform: isOpen ? "rotate(90deg)" : "none" }}>›</span>
               </div>
               {isOpen && (
                 <div style={{ background: t.bg2, border: `1px solid ${t.accentBdr}`, borderTop: "none",
                   borderRadius: "0 0 14px 14px", padding: "12px 15px" }}>
-                  <p style={{ fontSize: 12.5, color: t.sub, lineHeight: 1.65, margin: 0, fontFamily: FONT }}>{item.a}</p>
+                  <p style={{ fontSize: 12.5, color: t.sub, lineHeight: 1.65, margin: 0, fontFamily: FONT }}>{txt(item.a)}</p>
                 </div>
               )}
             </div>
@@ -2259,9 +2282,9 @@ const Faq = ({ t, onNav, onBack, onToggleTheme, onSupport }) => {
         })}
         <Card t={t} style={{ marginTop: 14, marginBottom: 16, textAlign: "center", padding: "18px 16px" }}>
           <p style={{ fontSize: 13, color: t.text, margin: "0 0 12px", fontWeight: 700, fontFamily: FONT }}>
-            Não achou sua resposta?
+            {txt("Não achou sua resposta?")}
           </p>
-          <Btn t={t} onClick={onSupport}>💬 Falar com o suporte</Btn>
+          <Btn t={t} onClick={onSupport}>{txt("💬 Falar com o suporte")}</Btn>
         </Card>
         <div style={{ height: 16 }} />
       </Scroll>
@@ -2363,12 +2386,12 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Editar perfil" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <ScreenHeader title={txt("Editar perfil")} t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 12, marginBottom: 18 }}>
           <AvatarCircle url={avatar} t={t} size={92} fontSize={42} />
           <label style={{ cursor: "pointer", color: t.accent, fontSize: 13, fontWeight: 800, fontFamily: FONT }}>
-            📷 Trocar foto
+            {txt("📷 Trocar foto")}
             <input type="file" accept="image/png,image/jpeg,image/webp" onChange={pickPhoto} style={{ display: "none" }} />
           </label>
         </div>
@@ -2379,29 +2402,29 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
         {field("Telefone / WhatsApp", phone, setPhone, { placeholder: "(00) 00000-0000" })}
 
         <div style={{ marginBottom: 14 }}>
-          <Label t={t} style={{ marginBottom: 6 }}>Seu código de convite</Label>
-          <input value={referralCode} placeholder="ex.: mrthiago"
+          <Label t={t} style={{ marginBottom: 6 }}>{txt("Seu código de convite")}</Label>
+          <input value={referralCode} placeholder={txt("ex.: mrthiago")}
             onChange={e => setReferralCode(e.target.value)}
             style={{ width: "100%", height: 50, background: t.card, border: `1.5px solid ${t.bdr}`,
               borderRadius: 14, padding: "0 16px", color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
           <p style={{ fontSize: 11, color: t.muted, margin: "6px 2px 0", fontFamily: FONT }}>
-            É o que vai no seu link de convite (`/?ref=seucódigo`). Só letras e números.
+            {txt("É o que vai no seu link de convite (`/?ref=seucódigo`). Só letras e números.")}
           </p>
         </div>
 
-        <Label t={t} style={{ marginBottom: 6 }}>Plano</Label>
+        <Label t={t} style={{ marginBottom: 6 }}>{txt("Plano")}</Label>
         <Card t={t} onClick={onUpgrade} style={{ display: "flex", justifyContent: "space-between",
           alignItems: "center", marginBottom: 8, cursor: "pointer" }}>
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: t.text, fontFamily: FONT }}>{info.name}</div>
+            <div style={{ fontWeight: 800, fontSize: 15, color: t.text, fontFamily: FONT }}>{txt(info.name)}</div>
             <div style={{ fontSize: 11, color: t.muted, fontFamily: FONT }}>{info.price}</div>
           </div>
-          <span style={{ color: t.accent, fontSize: 13, fontWeight: 800, fontFamily: FONT }}>Mudar ›</span>
+          <span style={{ color: t.accent, fontSize: 13, fontWeight: 800, fontFamily: FONT }}>{txt("Mudar ›")}</span>
         </Card>
 
-        <Label t={t} style={{ margin: "8px 0 6px" }}>🔑 Trocar senha</Label>
+        <Label t={t} style={{ margin: "8px 0 6px" }}>{txt("🔑 Trocar senha")}</Label>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-          <input type="password" value={newPass} placeholder="Nova senha (mín. 6)"
+          <input type="password" value={newPass} placeholder={txt("Nova senha (mín. 6)")}
             onChange={e => setNewPass(e.target.value)}
             style={{ flex: 1, minWidth: 0, height: 46, background: t.card,
               border: `1.5px solid ${t.bdr}`, borderRadius: 12, padding: "0 14px",
@@ -2430,7 +2453,7 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
   );
 };
 
-const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
+const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   const [data, setData] = useState(null);
   const [msg, setMsg] = useState("");
   const [histDate, setHistDate] = useState("");
@@ -2514,7 +2537,7 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
 
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title="Painel admin" t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
+      <ScreenHeader title={txt("Painel admin")} t={t} onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
         {msg && (
           <p style={{ margin: "0 0 10px", fontSize: 12.5, fontWeight: 700, fontFamily: FONT,
@@ -2522,9 +2545,9 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
         )}
 
         <Card t={t} accent style={{ marginBottom: 14 }}>
-          <Label t={t} style={{ marginBottom: 8 }}>🗓️ Ativação do histórico</Label>
+          <Label t={t} style={{ marginBottom: 8 }}>{txt("🗓️ Ativação do histórico")}</Label>
           <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
-            Desempenho/Histórico contam só a partir desta data (descarta o período de teste). Vazio = conta tudo.
+            {txt("Desempenho/Histórico contam só a partir desta data (descarta o período de teste). Vazio = conta tudo.")}
           </p>
           <div style={{ display: "flex", gap: 8 }}>
             <input type="date" value={histDate} onChange={e => setHistDate(e.target.value)}
@@ -2532,14 +2555,14 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
                 borderRadius: 12, padding: "0 12px", color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
             <button onClick={saveHist} style={{ flexShrink: 0, height: 44, padding: "0 16px", borderRadius: 12,
               cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: FONT, border: "none",
-              background: t.accent, color: t.activeText }}>Salvar</button>
+              background: t.accent, color: t.activeText }}>{txt("Salvar")}</button>
           </div>
         </Card>
 
         <Card t={t} accent style={{ marginBottom: 14 }}>
-          <Label t={t} style={{ marginBottom: 8 }}>🩺 Saúde do sistema (laudo)</Label>
+          <Label t={t} style={{ marginBottom: 8 }}>{txt("🩺 Saúde do sistema (laudo)")}</Label>
           <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
-            Recomputa o laudo a partir dos sinais e compara. Se divergir, reconstrói sozinho. Roda automático todo dia; aqui você força na hora.
+            {txt("Recomputa o laudo a partir dos sinais e compara. Se divergir, reconstrói sozinho. Roda automático todo dia; aqui você força na hora.")}
           </p>
           {health && (
             <div style={{ marginBottom: 10, background: t.card, border: `1px solid ${health.ok ? t.buy : t.warn}55`,
@@ -2548,9 +2571,9 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
                 {health.ok ? "✓ Tudo íntegro e consistente" : "⚠️ Corrigido / atenção"}
               </div>
               <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT, lineHeight: 1.6 }}>
-                Divergências: <b style={{ color: t.text }}>{health.divergencias ?? "—"}</b>{health.reconstruido ? " (reconstruído ✓)" : ""} ·
+                {txt("Divergências:")} <b style={{ color: t.text }}>{health.divergencias ?? "—"}</b>{health.reconstruido ? " (reconstruído ✓)" : ""} ·
                 Presas: <b style={{ color: (health.presas ? t.warn : t.text) }}>{health.presas ?? "—"}</b><br />
-                {health.auto_resolvidas > 0 && (<>Auto-encerradas (+24h): <b style={{ color: t.warn }}>{health.auto_resolvidas}</b><br /></>)}
+                {health.auto_resolvidas > 0 && (<>{txt("Auto-encerradas (+24h):")} <b style={{ color: t.warn }}>{health.auto_resolvidas}</b><br /></>)}
                 Fechados: <b style={{ color: t.text }}>{health.fechados ?? "—"}</b> · Laudo: <b style={{ color: t.buy }}>{health.laudo_pips >= 0 ? "+" : ""}{health.laudo_pips} pips</b>
               </div>
             </div>
@@ -2563,14 +2586,14 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
             <button onClick={() => runCheck(true)} disabled={checking} style={{
               flex: 1, height: 44, borderRadius: 12, cursor: "pointer", fontWeight: 800, fontSize: 13,
               fontFamily: FONT, border: "none", background: t.accent, color: t.activeText }}>
-              Reconstruir laudo</button>
+              {txt("Reconstruir laudo")}</button>
           </div>
         </Card>
 
         <Card t={t} accent style={{ marginBottom: 14 }}>
-          <Label t={t} style={{ marginBottom: 8 }}>🩺 Monitoramento de erros</Label>
+          <Label t={t} style={{ marginBottom: 8 }}>{txt("🩺 Monitoramento de erros")}</Label>
           <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
-            Últimas falhas 500 registradas nas APIs. Se estiver vazio, está tudo rodando sem erros.
+            {txt("Últimas falhas 500 registradas nas APIs. Se estiver vazio, está tudo rodando sem erros.")}
           </p>
           {(() => {
             const errs = data?.errors || [];
@@ -2578,7 +2601,7 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
               return (
                 <div style={{ fontSize: 12.5, fontWeight: 700, color: t.buy, fontFamily: FONT,
                   background: t.card, border: `1px solid ${t.buy}44`, borderRadius: 12, padding: "10px 12px" }}>
-                  ✓ Nenhum erro registrado
+                  {txt("✓ Nenhum erro registrado")}
                 </div>
               );
             }
@@ -2603,7 +2626,7 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
                   width: "100%", height: 40, marginTop: 10, borderRadius: 10, cursor: "pointer",
                   fontWeight: 700, fontSize: 12, fontFamily: FONT, border: "none",
                   background: t.accent, color: t.activeText }}>
-                  🗑️ Limpar erros
+                  {txt("🗑️ Limpar erros")}
                 </button>
               </>
             );
@@ -2611,9 +2634,9 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
         </Card>
 
         <Card t={t} accent style={{ marginBottom: 14 }}>
-          <Label t={t} style={{ marginBottom: 8 }}>🎁 Operações grátis por dia (Free)</Label>
+          <Label t={t} style={{ marginBottom: 8 }}>{txt("🎁 Operações grátis por dia (Free)")}</Label>
           <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
-            Define quantas operações os usuários Free recebem nesta semana (2 a 4). Vale pra todos do plano Free.
+            {txt("Define quantas operações os usuários Free recebem nesta semana (2 a 4). Vale pra todos do plano Free.")}
           </p>
           <div style={{ display: "flex", gap: 8 }}>
             {[2, 3, 4].map(v => (
@@ -2627,25 +2650,25 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
         </Card>
 
         <Card t={t} accent style={{ marginBottom: 14 }}>
-          <Label t={t} style={{ marginBottom: 8 }}>🎓 Cupom de aluno</Label>
+          <Label t={t} style={{ marginBottom: 8 }}>{txt("🎓 Cupom de aluno")}</Label>
           <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
-            Quem se cadastrar com este cupom vira <span style={{ fontWeight: 700, color: t.text }}>aluno por 15 dias</span> automático. Depois você muda pra "sem limite" no usuário. Vazio = desativa.
+            {txt("Quem se cadastrar com este cupom vira")} <span style={{ fontWeight: 700, color: t.text }}>{txt("aluno por 15 dias")}</span> automático. Depois você muda pra "sem limite" no usuário. Vazio = desativa.
           </p>
           <div style={{ display: "flex", gap: 8 }}>
-            <input value={alunoCoupon} placeholder="ex.: aluno2026" onChange={e => setAlunoCoupon(e.target.value)}
+            <input value={alunoCoupon} placeholder={txt("ex.: aluno2026")} onChange={e => setAlunoCoupon(e.target.value)}
               style={{ flex: 1, height: 44, background: t.card, border: `1.5px solid ${t.bdr}`,
                 borderRadius: 12, padding: "0 14px", color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
             <button onClick={saveAlunoCoupon} style={{ flexShrink: 0, height: 44, padding: "0 16px", borderRadius: 12,
               cursor: "pointer", fontWeight: 800, fontSize: 13, fontFamily: FONT, border: "none",
-              background: t.accent, color: t.activeText }}>Salvar</button>
+              background: t.accent, color: t.activeText }}>{txt("Salvar")}</button>
           </div>
         </Card>
 
         {(data?.openSignals || []).length > 0 && (
           <Card t={t} accent style={{ marginBottom: 14 }}>
-            <Label t={t} style={{ marginBottom: 8 }}>🔧 Operações abertas (reconciliar)</Label>
+            <Label t={t} style={{ marginBottom: 8 }}>{txt("🔧 Operações abertas (reconciliar)")}</Label>
             <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
-              Se o CLOSE se perdeu (EA reiniciou), feche aqui pelo que aconteceu na VPS. Acima de 12h some do app sozinho.
+              {txt("Se o CLOSE se perdeu (EA reiniciou), feche aqui pelo que aconteceu na VPS. Acima de 12h some do app sozinho.")}
             </p>
             <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
               {data.openSignals.map(s => {
@@ -2655,7 +2678,7 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
                     borderRadius: 12, padding: "10px 12px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 8 }}>
                       <span style={{ fontSize: 13, fontWeight: 800, color: t.text, fontFamily: FONT }}>
-                        {s.asset} {s.tf} · {s.dir}
+                        {s.asset} {s.tf} · {txt(s.dir)}
                       </span>
                       <span style={{ fontSize: 10.5, color: old ? t.warn : t.muted, fontWeight: 700, fontFamily: FONT }}>
                         {hrs(s.created_at)}h {old ? "⚠️" : ""}
@@ -2682,7 +2705,7 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 8 }}>
           <Label t={t}>Usuários ({data?.count ?? "…"})</Label>
         </div>
-        <input value={q} placeholder="Buscar por e-mail, nome ou código" onChange={e => setQ(e.target.value)}
+        <input value={q} placeholder={txt("Buscar por e-mail, nome ou código")} onChange={e => setQ(e.target.value)}
           style={{ width: "100%", height: 44, background: t.card, border: `1.5px solid ${t.bdr}`,
             borderRadius: 12, padding: "0 14px", color: t.text, fontSize: 13, fontFamily: FONT, outline: "none", marginBottom: 12 }} />
 
@@ -2714,7 +2737,7 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
                 ))}
               </div>
               <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center" }}>
-                <span style={{ fontSize: 10.5, color: t.muted, fontFamily: FONT, flexShrink: 0 }}>Validade:</span>
+                <span style={{ fontSize: 10.5, color: t.muted, fontFamily: FONT, flexShrink: 0 }}>{txt("Validade:")}</span>
                 {[["+15d", 15], ["+30d", 30], ["Sem limite", 0]].map(([lbl, d]) => {
                   const active = d === 0 && !u.plan_expires_at; // "Sem limite" aceso quando ilimitado
                   return (
@@ -2730,7 +2753,7 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
             </Card>
           ))}
           {data && users.length === 0 && (
-            <p style={{ fontSize: 12, color: t.sub, textAlign: "center", fontFamily: FONT }}>Nenhum usuário encontrado.</p>
+            <p style={{ fontSize: 12, color: t.sub, textAlign: "center", fontFamily: FONT }}>{txt("Nenhum usuário encontrado.")}</p>
           )}
         </div>
       </Scroll>
@@ -2739,7 +2762,7 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
   );
 };
 
-const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCenter, onOpenFaq, onEdit, onEditAssets, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock, language, onChangeLanguage, tr }) => {
+const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCenter, onOpenFaq, onEdit, onEditAssets, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock, language, onChangeLanguage, tr }) => {
   const [expanded, setExpanded] = useState(null);
   const [langModalOpen, setLangModalOpen] = useState(false);
   const [selectedLang, setSelectedLang] = useState(language);
@@ -2797,13 +2820,13 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
             <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, letterSpacing: -0.5,
               color: t.text, fontFamily: FONT }}>{txt("perfil")}</h1>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
-              <button onClick={() => setLangModalOpen(true)} aria-label="Mudar idioma" style={{
+              <button onClick={() => setLangModalOpen(true)} aria-label={txt("Mudar idioma")} style={{
                 width: 38, height: 38, borderRadius: 12, cursor: "pointer",
                 background: t.card, border: `1.5px solid ${t.bdr}`,
                 display: "flex", alignItems: "center", justifyContent: "center",
                 fontSize: 17, padding: 0 }}>🌐</button>
               {onEdit && (
-                <button onClick={onEdit} aria-label="Editar perfil" style={{
+                <button onClick={onEdit} aria-label={txt("Editar perfil")} style={{
                   width: 38, height: 38, borderRadius: 12, cursor: "pointer",
                   background: t.card, border: `1.5px solid ${t.bdr}`,
                   display: "flex", alignItems: "center", justifyContent: "center",
@@ -2830,15 +2853,15 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
             borderRadius: 22, padding: 20, marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 14 }}>
               <div>
-                <Label t={t} style={{ marginBottom: 4 }}>Plano atual</Label>
-                <div style={{ fontSize: 22, fontWeight: 900, color: t.accent, fontFamily: FONT }}>{info.name}</div>
+                <Label t={t} style={{ marginBottom: 4 }}>{txt("Plano atual")}</Label>
+                <div style={{ fontSize: 22, fontWeight: 900, color: t.accent, fontFamily: FONT }}>{txt(info.name)}</div>
                 <div style={{ fontSize: 11, color: t.muted, marginTop: 2, fontFamily: FONT }}>{info.price}</div>
               </div>
               <div style={{ background: t.accentSoft, border: `1px solid ${t.accentBdr}`,
                 borderRadius: 10, padding: "5px 12px", height: "fit-content",
                 fontSize: 11, fontWeight: 800, color: t.accent, fontFamily: FONT }}>ATIVO</div>
             </div>
-            <Label t={t} style={{ marginBottom: 8 }}>Sinais usados hoje</Label>
+            <Label t={t} style={{ marginBottom: 8 }}>{txt("Sinais usados hoje")}</Label>
             <Bar pct={quota ? (used / quota) * 100 : 0} t={t} />
             <p style={{ fontSize: 12, color: t.sub, margin: "7px 0 0", fontFamily: FONT }}>
               {used} de {quota} sinais
@@ -2847,10 +2870,10 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
 
           <Card t={t} accent style={{ marginBottom: 14 }}>
             <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-              <Label t={t}>🕐 Horário de sinais</Label>
+              <Label t={t}>{txt("🕐 Horário de sinais")}</Label>
               {isAnual && (
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{ fontSize: 11, color: t.sub, fontWeight: 700, fontFamily: FONT }}>Dia todo</span>
+                  <span style={{ fontSize: 11, color: t.sub, fontWeight: 700, fontFamily: FONT }}>{txt("Dia todo")}</span>
                   <Toggle on={schedule.allDay}
                     onChange={v => setSchedule(s => ({ ...s, allDay: v }))} t={t} />
                 </div>
@@ -2858,13 +2881,13 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
             </div>
             {schedule.allDay && isAnual ? (
               <p style={{ fontSize: 13, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-                <span style={{ fontWeight: 800, color: t.accent }}>Desbloqueado:</span> você recebe
+                <span style={{ fontWeight: 800, color: t.accent }}>{txt("Desbloqueado:")}</span> você recebe
                 todos os sinais, 24 horas por dia — exclusivo do Premium Anual.
               </p>
             ) : isFree ? (
               <>
                 <p style={{ fontSize: 12, color: t.sub, margin: "0 0 12px", lineHeight: 1.55, fontFamily: FONT }}>
-                  No plano Free as <span style={{ fontWeight: 800, color: t.text }}>operações do dia</span> (2 a 4, M5/M15 sortidos) chegam em <span style={{ fontWeight: 800, color: t.text }}>horários fixos</span>:
+                  {txt("No plano Free as")} <span style={{ fontWeight: 800, color: t.text }}>{txt("operações do dia")}</span> (2 a 4, M5/M15 sortidos) chegam em <span style={{ fontWeight: 800, color: t.text }}>{txt("horários fixos")}</span>:
                 </p>
                 <div style={{ display: "flex", gap: 8 }}>
                   {FREE_SLOTS.map(h => (
@@ -2875,23 +2898,23 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
                   ))}
                 </div>
                 <p style={{ fontSize: 11, color: t.muted, margin: "10px 0 0", fontFamily: FONT }}>
-                  💡 Faça upgrade para o Premium e escolha o seu próprio horário.
+                  {txt("💡 Faça upgrade para o Premium e escolha o seu próprio horário.")}
                 </p>
               </>
             ) : (
               <>
                 <p style={{ fontSize: 12, color: t.sub, margin: "0 0 12px", lineHeight: 1.55, fontFamily: FONT }}>
-                  Receba sinais apenas no período que você definir. O histórico contabiliza dentro desta janela.
+                  {txt("Receba sinais apenas no período que você definir. O histórico contabiliza dentro desta janela.")}
                 </p>
                 <div style={{ display: "flex", gap: 10, alignItems: "flex-end" }}>
                   <div style={{ flex: 1 }}>
-                    <Label t={t} style={{ marginBottom: 6, fontSize: 10 }}>Início</Label>
+                    <Label t={t} style={{ marginBottom: 6, fontSize: 10 }}>{txt("Início")}</Label>
                     <HourSelect value={schedule.start}
                       onChange={v => setSchedule(s => ({ ...s, start: v }))} t={t} />
                   </div>
                   <span style={{ color: t.muted, fontSize: 16, paddingBottom: 12 }}>→</span>
                   <div style={{ flex: 1 }}>
-                    <Label t={t} style={{ marginBottom: 6, fontSize: 10 }}>Fim</Label>
+                    <Label t={t} style={{ marginBottom: 6, fontSize: 10 }}>{txt("Fim")}</Label>
                     <HourSelect value={schedule.end}
                       onChange={v => setSchedule(s => ({ ...s, end: v }))} t={t} />
                   </div>
@@ -2904,7 +2927,7 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
                   <>
                     <div style={{ display: "flex", alignItems: "center", gap: 8, margin: "12px 0 10px" }}>
                       <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>
-                        Recebendo sinais das <span style={{ fontWeight: 800, color: t.text }}>{schedule.start}</span> às <span style={{ fontWeight: 800, color: t.text }}>{schedule.end}</span>.
+                        {txt("Recebendo sinais das")} <span style={{ fontWeight: 800, color: t.text }}>{schedule.start}</span> {txt("às")} <span style={{ fontWeight: 800, color: t.text }}>{schedule.end}</span>.
                       </span>
                     </div>
                     <button onClick={confirmSched} style={{
@@ -2918,39 +2941,20 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
                 )}
                 {!isAnual && (
                   <p style={{ fontSize: 11, color: t.muted, margin: "10px 0 0", fontFamily: FONT }}>
-                    💡 No Premium Anual você desbloqueia sinais o dia todo.
+                    {txt("💡 No Premium Anual você desbloqueia sinais o dia todo.")}
                   </p>
                 )}
               </>
             )}
           </Card>
 
-          <Card t={t} accent style={{ marginBottom: 14 }}>
-            <Label t={t} style={{ marginBottom: 12 }}>🌐 {tr.idioma || "Idioma"}</Label>
-            <div style={{ display: "flex", gap: 8 }}>
-              {["pt", "en", "es"].map(lang => (
-                <button key={lang} onClick={() => onChangeLanguage?.(lang)} style={{
-                  flex: 1, height: 40, borderRadius: 10, cursor: "pointer",
-                  fontWeight: language === lang ? 800 : 600, fontSize: 12, fontFamily: FONT,
-                  border: `1.5px solid ${language === lang ? t.accent : t.bdr}`,
-                  background: language === lang ? t.accent : t.card,
-                  color: language === lang ? t.activeText : t.text,
-                }}>
-                  {lang === "pt" ? "🇧🇷 PT" : lang === "en" ? "🇺🇸 EN" : "🇪🇸 ES"}
-                </button>
-              ))}
-            </div>
-            <p style={{ fontSize: 11, color: t.sub, margin: "10px 0 0", fontFamily: FONT }}>
-              {tr.language_desc || "Choose your preferred language. Auto-saved."}
-            </p>
-          </Card>
 
           {isAnual ? (
             <div style={{ marginBottom: 10, background: t.card, border: `1.5px solid ${t.accentBdr}`,
               borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
               <span style={{ fontSize: 18 }}>👑</span>
               <span style={{ fontSize: 12.5, color: t.text, fontFamily: FONT, lineHeight: 1.45 }}>
-                Você já está no <span style={{ fontWeight: 800, color: t.accent }}>plano máximo</span> — acesso completo liberado.
+                {txt("Você já está no")} <span style={{ fontWeight: 800, color: t.accent }}>{txt("plano máximo")}</span> {txt("— acesso completo liberado.")}
               </span>
             </div>
           ) : (
@@ -2958,24 +2962,24 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
           )}
           {onEditAssets && (
             <Btn t={t} variant="secondary" style={{ marginBottom: 10 }} onClick={onEditAssets}>
-              📊 Editar ativos e timeframes
+              {txt("📊 Editar ativos e timeframes")}
             </Btn>
           )}
           <Btn t={t} variant="secondary" style={{ marginBottom: 10 }} onClick={onOpenNotifCenter}>
-            🛎️ Central de notificações
+            {txt("🛎️ Central de notificações")}
           </Btn>
           <Btn t={t} variant="secondary" style={{ marginBottom: 10 }} onClick={onOpenNotifications}>
-            🔔 Ajustes de notificação
+            {txt("🔔 Ajustes de notificação")}
           </Btn>
           <Btn t={t} variant="secondary" style={{ marginBottom: isAdmin ? 10 : 20 }} onClick={onOpenFaq}>
-            ❓ Central de ajuda
+            {txt("❓ Central de ajuda")}
           </Btn>
           {isAdmin && (
             <Btn t={t} style={{ marginBottom: 20, background: t.blue, color: t.id === "dark" ? "#05121A" : "#FFFFFF" }}
-              onClick={onAdmin}>🛠️ Painel admin</Btn>
+              onClick={onAdmin}>{txt("🛠️ Painel admin")}</Btn>
           )}
 
-          <Label t={t} style={{ marginBottom: 12 }}>Conta</Label>
+          <Label t={t} style={{ marginBottom: 12 }}>{txt("Conta")}</Label>
           {items.map(({ id, icon, label, body }) => {
             const open = expanded === id;
             const navItem = id === "suporte";
@@ -3010,13 +3014,13 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
                   width: "100%", padding: "11px", background: "transparent",
                   border: `1px solid ${t.bdr}`, borderRadius: 14, cursor: "pointer",
                   color: t.muted, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
-                  Cancelar plano (voltar ao Free)
+                  {txt("Cancelar plano (voltar ao Free)")}
                 </button>
               ) : (
                 <div style={{ background: t.card, border: `1.5px solid ${t.sell}55`,
                   borderRadius: 16, padding: "14px 16px" }}>
                   <p style={{ fontSize: 12.5, color: t.text, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
-                    Cancelar agora rebaixa sua conta para o <b>Free</b> imediatamente (você perde o acesso premium). Tem certeza?
+                    {txt("Cancelar agora rebaixa sua conta para o")} <b>{txt("Free")}</b> {txt("imediatamente (você perde o acesso premium). Tem certeza?")}
                   </p>
                   <div style={{ display: "flex", gap: 8 }}>
                     <button onClick={doCancel} disabled={cancelling} style={{
@@ -3028,7 +3032,7 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
                     <button onClick={() => setConfirmCancel(false)} disabled={cancelling} style={{
                       flex: 1, padding: "10px", background: "transparent", border: `1px solid ${t.bdr}`,
                       borderRadius: 12, cursor: "pointer", color: t.text, fontSize: 13, fontWeight: 700, fontFamily: FONT }}>
-                      Manter plano
+                      {txt("Manter plano")}
                     </button>
                   </div>
                 </div>
@@ -3037,7 +3041,7 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
           )}
 
           <div style={{ marginTop: 16 }}>
-            <Btn t={t} variant="danger" onClick={onLogout}>Sair da conta</Btn>
+            <Btn t={t} variant="danger" onClick={onLogout}>{txt("Sair da conta")}</Btn>
           </div>
         </div>
       </Scroll>
@@ -3053,7 +3057,7 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
             border: `2px solid ${t.accent}`, boxShadow: `0 10px 40px rgba(0,0,0,0.6)`
           }} onClick={e => e.stopPropagation()}>
             <h2 style={{ fontSize: 18, fontWeight: 900, margin: "0 0 20px", color: t.text, fontFamily: FONT, textAlign: "center" }}>
-              🌐 Escolha o idioma
+              {txt("🌐 Escolha o idioma")}
             </h2>
             <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
               {["pt", "en", "es"].map(lang => (
@@ -3073,7 +3077,7 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
                 flex: 1, height: 48, borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: FONT,
                 border: `1.5px solid ${t.bdr}`, background: "transparent", color: t.text
               }}>
-                Cancelar
+                {txt("Cancelar")}
               </button>
               <button onClick={() => {
                 onChangeLanguage?.(selectedLang);
@@ -3082,11 +3086,11 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
                 flex: 1, height: 48, borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: FONT,
                 border: "none", background: t.accent, color: t.bg0
               }}>
-                OK
+                {txt("OK")}
               </button>
             </div>
             <p style={{ fontSize: 11, color: t.sub, margin: "14px 0 0", textAlign: "center", fontFamily: FONT }}>
-              O app será reiniciado automaticamente.
+              {txt("O app será reiniciado automaticamente.")}
             </p>
           </div>
         </div>
@@ -3387,11 +3391,10 @@ export default function App() {
   }, []);
 
   const t = THEMES[themeId];
-  const tr = translations[language] || translations.pt;
-  const txt = (key) => tr[key] || translations.pt[key] || key; // Helper pra traduções com fallback
   const toggleTheme = useCallback(() => setThemeId(x => x === "dark" ? "light" : "dark"), []);
   const changeLanguage = useCallback((lang) => {
     setLanguage(lang);
+    setLang(lang);
     saveLanguagePreference(lang);
     if (profileData?.id) api.updateProfileFields({ language: lang }).catch(() => {});
   }, [profileData?.id]);
@@ -3402,7 +3405,7 @@ export default function App() {
     if (map[id]) setScreen(map[id]);
   }, []);
 
-  const common = { t, txt, onToggleTheme: toggleTheme };
+  const common = { t, onToggleTheme: toggleTheme };
   // Free usa horário fixo; Premium usa a janela escolhida.
   const effSchedule = plan === "free" ? FREE_SCHEDULE : schedule;
   const bizState = { plan, selectedAssets, tfPerAsset, schedule: effSchedule };
@@ -3410,10 +3413,10 @@ export default function App() {
   const render = () => {
     switch (screen) {
       case "splash":        return <Splash {...common} onNext={() => go("welcome")} />;
-      case "welcome":       return <Welcome {...common} onNext={() => go("risk")} onLogin={() => go("login")} />;
+      case "welcome":       return <Welcome {...common} onNext={() => go("risk")} onLogin={() => go("login")} language={language} onChangeLanguage={changeLanguage} />;
       case "risk":          return <RiskWarning {...common} onNext={() => go("signup")} />;
       case "login":         return <Login {...common} onNext={() => go("home")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} onCreateAccount={() => go("signup")} />;
-      case "signup":        return <Signup {...common} onNext={() => go("plans")} onSignup={hasSupabase ? handleSignup : undefined} onHaveAccount={() => go("login")} />;
+      case "signup":        return <Signup {...common} onNext={() => go("plans")} onSignup={hasSupabase ? handleSignup : undefined} onHaveAccount={() => go("login")} language={language} onChangeLanguage={changeLanguage} />;
       case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go(editingConfig ? "profile" : "plans")} selected={selectedAssets} setSelected={setSelectedAssets} locked={tfLocked} nextChange={tfNextChange} />;
       case "timeframes":    return <Timeframes {...common} onNext={() => { if (!tfLocked) stampTfChange(); api.updateProfileFields({ onboarded: true }); setEditingConfig(false); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
@@ -3427,7 +3430,7 @@ export default function App() {
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
       case "notif-center":  return <NotifCenter {...common} onNav={nav} onBack={() => go("profile")} onOpenSignal={setSignal} live={live} />;
       case "faq":           return <Faq {...common} onNav={nav} onBack={() => go("profile")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onOpenNotifCenter={() => go("notif-center")} onOpenFaq={() => go("faq")} onEdit={() => go("edit-profile")} onEditAssets={openEditAssets} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} language={language} onChangeLanguage={changeLanguage} tr={tr} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onOpenNotifCenter={() => go("notif-center")} onOpenFaq={() => go("faq")} onEdit={() => go("edit-profile")} onEditAssets={openEditAssets} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} language={language} onChangeLanguage={changeLanguage} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
       case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;
