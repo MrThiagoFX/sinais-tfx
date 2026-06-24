@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from "react";
 import * as api from "./lib/api.js";
 import { hasSupabase } from "./lib/supabase.js";
+import { translations, getSavedLanguage, saveLanguagePreference } from "./lib/i18n.js";
 
 /* ════════════════════════════════════════════════════════════
    INFINITY SIGNALS · v4.1 — Vercel/PWA ready
@@ -2735,7 +2736,7 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   );
 };
 
-const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCenter, onOpenFaq, onEdit, onEditAssets, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock }) => {
+const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCenter, onOpenFaq, onEdit, onEditAssets, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock, language, onChangeLanguage, tr }) => {
   const [expanded, setExpanded] = useState(null);
   const [copied, setCopied] = useState(false);
   const [schedSaved, setSchedSaved] = useState(false);
@@ -2914,6 +2915,26 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
             )}
           </Card>
 
+          <Card t={t} accent style={{ marginBottom: 14 }}>
+            <Label t={t} style={{ marginBottom: 12 }}>🌐 {tr.idioma || "Idioma"}</Label>
+            <div style={{ display: "flex", gap: 8 }}>
+              {["pt", "en", "es"].map(lang => (
+                <button key={lang} onClick={() => onChangeLanguage?.(lang)} style={{
+                  flex: 1, height: 40, borderRadius: 10, cursor: "pointer",
+                  fontWeight: language === lang ? 800 : 600, fontSize: 12, fontFamily: FONT,
+                  border: `1.5px solid ${language === lang ? t.accent : t.bdr}`,
+                  background: language === lang ? t.accent : t.card,
+                  color: language === lang ? t.activeText : t.text,
+                }}>
+                  {lang === "pt" ? "🇧🇷 PT" : lang === "en" ? "🇺🇸 EN" : "🇪🇸 ES"}
+                </button>
+              ))}
+            </div>
+            <p style={{ fontSize: 11, color: t.sub, margin: "10px 0 0", fontFamily: FONT }}>
+              {tr.language_desc || "Choose your preferred language. Auto-saved."}
+            </p>
+          </Card>
+
           {isAnual ? (
             <div style={{ marginBottom: 10, background: t.card, border: `1.5px solid ${t.accentBdr}`,
               borderRadius: 14, padding: "12px 16px", display: "flex", alignItems: "center", gap: 10 }}>
@@ -3038,6 +3059,7 @@ const SCREENS = [
 
 export default function App() {
   const [themeId, setThemeId] = useState("dark");
+  const [language, setLanguage] = useState(() => getSavedLanguage());
   const [screen, setScreen] = useState("splash");
   const [signal, setSignal] = useState(null);
   const [plan, setPlan] = useState("anual");
@@ -3304,7 +3326,13 @@ export default function App() {
   }, []);
 
   const t = THEMES[themeId];
+  const tr = translations[language] || translations.pt;
   const toggleTheme = useCallback(() => setThemeId(x => x === "dark" ? "light" : "dark"), []);
+  const changeLanguage = useCallback((lang) => {
+    setLanguage(lang);
+    saveLanguagePreference(lang);
+    if (profileData?.id) api.updateProfileFields({ language: lang }).catch(() => {});
+  }, [profileData?.id]);
   const go = useCallback(id => setScreen(id), []);
   const nav = useCallback(id => {
     const map = { home: "home", signals: "signals", performance: "performance",
@@ -3337,7 +3365,7 @@ export default function App() {
       case "notifications": return <Notifications {...common} onNav={nav} onBack={() => go("profile")} schedule={effSchedule} plan={plan} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} />;
       case "notif-center":  return <NotifCenter {...common} onNav={nav} onBack={() => go("profile")} onOpenSignal={setSignal} live={live} />;
       case "faq":           return <Faq {...common} onNav={nav} onBack={() => go("profile")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} />;
-      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onOpenNotifCenter={() => go("notif-center")} onOpenFaq={() => go("faq")} onEdit={() => go("edit-profile")} onEditAssets={openEditAssets} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} />;
+      case "profile":       return <Profile {...common} onNav={nav} onOpenNotifications={() => go("notifications")} onOpenNotifCenter={() => go("notif-center")} onOpenFaq={() => go("faq")} onEdit={() => go("edit-profile")} onEditAssets={openEditAssets} onUpgrade={openUpgrade} onAdmin={() => go("admin")} onSupport={() => { try { window.open("https://t.me/mrthiagofx", "_blank", "noopener"); } catch { /* ignore */ } }} isAdmin={isAdmin} onLogout={handleLogout} userEmail={session?.user?.email} profile={profileData} referral={{ code: profileData.referral_code || api.refCode(session?.user?.id) || "SEUCODIGO", count: referralCount }} {...bizState} setSchedule={setSchedule} live={live} showMock={showMock} language={language} onChangeLanguage={changeLanguage} tr={tr} />;
       case "admin":         return <AdminPanel {...common} onNav={nav} onBack={() => go("profile")} />;
       case "edit-profile":  return <EditProfile {...common} onNav={nav} onBack={() => go("profile")} onUpgrade={openUpgrade} plan={plan} profile={profileData} userEmail={session?.user?.email} onSaved={(d) => setProfileData(p => ({ ...p, ...d }))} />;
       default:              return <Splash {...common} onNext={() => go("welcome")} />;
