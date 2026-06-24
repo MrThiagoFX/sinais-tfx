@@ -1500,7 +1500,7 @@ const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme, showMock }) => 
             <div style={{ display: "flex", gap: 10 }}>
               <Btn t={t} style={{ flex: 1, height: 50 }}>Copiar sinal</Btn>
               <Btn t={t} variant="secondary" style={{ flex: 1, height: 50 }}
-                onClick={() => onNav("history")}>{{txt("historico")}}</Btn>
+                onClick={() => onNav("history")}>{txt("historico")}}</Btn>
             </div>
           ) : (
             <>
@@ -2793,7 +2793,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
         <div style={{ padding: "16px 24px 32px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, letterSpacing: -0.5,
-              color: t.text, fontFamily: FONT }}>{{txt("perfil")}}</h1>
+              color: t.text, fontFamily: FONT }}>{txt("perfil")}}</h1>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               {onEdit && (
                 <button onClick={onEdit} aria-label="Editar perfil" style={{
@@ -2947,7 +2947,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
               </span>
             </div>
           ) : (
-            <Btn t={t} style={{ marginBottom: 10 }} onClick={onUpgrade}>{{txt("upgrade")}}</Btn>
+            <Btn t={t} style={{ marginBottom: 10 }} onClick={onUpgrade}>{txt("upgrade")}}</Btn>
           )}
           {onEditAssets && (
             <Btn t={t} variant="secondary" style={{ marginBottom: 10 }} onClick={onEditAssets}>
