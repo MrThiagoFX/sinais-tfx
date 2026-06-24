@@ -910,7 +910,7 @@ const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount, language, o
         </div>
         {hasAluno && (
           <>
-            {field("Cupom de aluno", alunoCoupon, setAlunoCoupon, { placeholder: "digite o cupom" })}
+            {field(txt("Cupom de aluno"), alunoCoupon, setAlunoCoupon, { placeholder: txt("digite o cupom") })}
             <p style={{ fontSize: 11, color: t.sub, margin: "-4px 2px 10px", lineHeight: 1.5, fontFamily: FONT }}>
               {txt("Com um cupom válido, seu acesso de")} <span style={{ fontWeight: 700, color: t.text }}>{txt("aluno é liberado por 15 dias")}</span> {txt("automaticamente.")}
             </p>
@@ -968,7 +968,7 @@ const Plans = ({ t, onNext, onBack, onToggleTheme, plan, setPlan, currentPlan })
       <Scroll style={{ padding: "0 24px" }}>
         <p style={{ fontSize: 14, color: t.sub, margin: "0 0 18px", fontFamily: FONT }}>
           {upgrade
-            ? `Seu plano atual é ${PLAN_INFO[currentPlan].name}. Escolha para onde quer ir.`
+            ? `${txt("Seu plano atual é")} ${txt(PLAN_INFO[currentPlan].name)}${txt(". Escolha para onde quer ir.")}`
             : "Altere quando quiser nas configurações."}
         </p>
         <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 12 }}>
@@ -1034,7 +1034,7 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected, locke
             <span style={{ fontSize: 16 }}>🔒</span>
             <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.5, fontFamily: FONT }}>
               <span style={{ fontWeight: 800 }}>{txt("Atenção:")}</span> {txt("você só pode alterar ativos/timeframes 1 vez a cada 7 dias.")}
-              Poderá alterar de novo em <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
+              {txt("Poderá alterar de novo em")} <span style={{ fontWeight: 800 }}>{daysLeft} {txt(daysLeft !== 1 ? "dias" : "dia")}</span>.
             </span>
           </div>
         )}
@@ -1109,7 +1109,7 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
             background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "10px 14px" }}>
             <span style={{ fontSize: 16 }}>🔒</span>
             <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.5, fontFamily: FONT }}>
-              {txt("Timeframes travados. Você poderá trocar em")} <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
+              {txt("Timeframes travados. Você poderá trocar em")} <span style={{ fontWeight: 800 }}>{daysLeft} {txt(daysLeft !== 1 ? "dias" : "dia")}</span>.
             </span>
           </div>
         )}
@@ -1191,7 +1191,7 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
               <span style={{ fontSize: 22, flexShrink: 0 }}>🛌</span>
               <div style={{ fontSize: 12.8, color: t.text, lineHeight: 1.5, fontFamily: FONT }}>
                 <b>{txt("Hoje não há operações")}</b> {txt("— fim de semana, o mercado Forex está fechado.")}<br />
-                {txt("As operações voltam no")} <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> {txt("(horário de Brasília). Bom descanso! 📈")}
+                {txt("As operações voltam no")} <b style={{ color: t.blue }}>{txt("primeiro sinal de domingo, a partir das")} {FOREX_OPEN_BRT}h</b> {txt("(horário de Brasília). Bom descanso! 📈")}
               </div>
             </div>
           )}
@@ -1212,7 +1212,7 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
                 <span style={{ fontSize: 12.5, color: t.text, lineHeight: 1.45, fontFamily: FONT }}>
                   {venceu
                     ? <>{txt("Seu plano")} <b>{txt("venceu")}</b> {txt("— sua conta voltou para o")} <b style={{ color: t.warn }}>{txt("Free")}</b>{txt(". Renove para recuperar o acesso completo.")}</>
-                    : <>{txt("Seu plano vence em")} <b style={{ color: t.warn }}>{dias} dia{dias !== 1 ? "s" : ""}</b>{txt(". Renove para não cair no Free.")}</>}
+                    : <>{txt("Seu plano vence em")} <b style={{ color: t.warn }}>{dias} {txt(dias !== 1 ? "dias" : "dia")}</b>{txt(". Renove para não cair no Free.")}</>}
                 </span>
               </div>
             );
@@ -1418,7 +1418,7 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
             <span style={{ fontSize: 22, flexShrink: 0 }}>🛌</span>
             <div style={{ fontSize: 12.8, color: t.text, lineHeight: 1.5, fontFamily: FONT }}>
               <b>{txt("Hoje não há operações")}</b> {txt("— fim de semana, o mercado Forex está fechado.")}<br />
-              {txt("Voltam no")} <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> {txt("(Brasília).")}
+              {txt("Voltam no")} <b style={{ color: t.blue }}>{txt("primeiro sinal de domingo, a partir das")} {FOREX_OPEN_BRT}h</b> {txt("(Brasília).")}
             </div>
           </div>
         )}
@@ -1532,8 +1532,7 @@ const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme, showMock }) => 
                 display: "flex", gap: 10, alignItems: "center" }}>
                 <span style={{ fontSize: 18 }}>⏱️</span>
                 <span style={{ fontSize: 12.5, color: t.sub, lineHeight: 1.5, fontFamily: FONT }}>
-                  <span style={{ fontWeight: 800, color: t.text }}>{txt("Janela de entrada encerrada.")}</span> Este
-                  sinal passou de {COPY_WINDOW_MIN} min — você pode acompanhar, mas não entrar mais.
+                  <span style={{ fontWeight: 800, color: t.text }}>{txt("Janela de entrada encerrada.")}</span> {txt("Este sinal passou de")} {COPY_WINDOW_MIN} {txt("min — você pode acompanhar, mas não entrar mais.")}
                 </span>
               </div>
               <Btn t={t} variant="secondary" style={{ height: 50 }}
@@ -1579,7 +1578,7 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
               <span style={{ fontSize: 16 }}>🔒</span>
               <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.55, fontFamily: FONT }}>
                 {txt("Você escolheu em")} <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(new Date(nextChange.getTime() - 7 * 86400000))}</span> —
-                {txt("poderá trocar a partir de")} <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} dia{daysLeft !== 1 ? "s" : ""}).
+                {txt("poderá trocar a partir de")} <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} {txt(daysLeft !== 1 ? "dias" : "dia")}).
                 {txt("A troca é 1× por semana pra manter o histórico correto.")}
               </span>
             </div>
@@ -1671,7 +1670,7 @@ const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerA
             <span style={{ fontSize: 16 }}>🔒</span>
             <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.55, fontFamily: FONT }}>
               {txt("Escolhido em")} <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(new Date(nextChange.getTime() - 7 * 86400000))}</span> —
-              troca liberada em <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} dia{daysLeft !== 1 ? "s" : ""}).
+              {txt("troca liberada em")} <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} {txt(daysLeft !== 1 ? "dias" : "dia")}).
             </span>
           </div>
         )}
@@ -1790,7 +1789,7 @@ const EquityCurve = ({ t, closed, height = 120, defaultPeriod = "Geral" }) => {
         </p>
       )}
       <p style={{ fontSize: 10.5, color: t.muted, margin: "8px 0 0", fontFamily: FONT }}>
-        Pips acumulados em {ordered.length} operações ({period.toLowerCase()}) — laudo da ferramenta.
+        {txt("Pips acumulados em")} {ordered.length} {txt("operações")} ({txt(period).toLowerCase()}) {txt("— laudo da ferramenta.")}
       </p>
     </Card>
   );
@@ -2020,7 +2019,7 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, stats,
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 6 }}>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <span style={{ fontSize: 13, color: t.text, fontWeight: 700, fontFamily: FONT }}>
-                {period} · {opsCount} operações
+                {txt(period)} · {opsCount} {txt("operações")}
               </span>
               {/* Dropdown simples: Geral / M5 / M15 (ícone relógio) */}
               <select value={tfStats} onChange={(e) => setTfStats(e.target.value)}
@@ -2105,7 +2104,7 @@ const Notifications = ({ t, onNav, onBack, onToggleTheme, schedule, plan, select
     { id: "horario", label: "Horário de envio",
       body: isFree
         ? "Plano Free: horários fixos (04:00 · 10:30 · 15:00 · 21:00). Faça upgrade para personalizar."
-        : `Janela atual: ${schedTxt}. Para alterar, acesse Perfil → Horário de sinais.` },
+        : `${txt("Janela atual:")} ${schedTxt}${txt(". Para alterar, acesse Perfil → Horário de sinais.")}` },
     { id: "fav2",    label: "Alerta de fechamento (⭐ por operação)",
       body: "Você recebe a notificação de ENTRADA de todos os sinais. Toque na ⭐ de uma operação em andamento (no Início ou em Sinais) para ser avisado quando ELA fechar (TP/Stop). Sem a estrela, você não recebe o alerta de fechamento daquela operação." },
     { id: "ativos",  label: "Ativos monitorados",
@@ -2311,7 +2310,6 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
   const [email, setEmail] = useState(userEmail || "");
   const [avatar, setAvatar] = useState(profile.avatar_url || "");
   const [newAvatarData, setNewAvatarData] = useState(null);
-  const [referralCode, setReferralCode] = useState(profile.referral_code || "");
   const [newPass, setNewPass] = useState("");
   const [pwMsg, setPwMsg] = useState("");
   const [pwBusy, setPwBusy] = useState(false);
@@ -2357,21 +2355,16 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
       avatarUrl = up.url;
     }
     const fields = { name, username, phone, avatar_url: avatarUrl };
-    const rc = referralCode.trim().toLowerCase().replace(/[^a-z0-9]/g, "");
-    if (rc) fields.referral_code = rc;
     const r = await api.updateProfileFields(fields);
-    if (!r.ok && /duplicate|unique/i.test(r.error || "")) {
-      setBusy(false); setMsg("Esse código de convite já está em uso. Escolha outro."); return;
-    }
     let extra = "";
     if (email && email !== userEmail) {
       const er = await api.updateEmail(email);
-      extra = er.ok ? " Confirme o novo e-mail na caixa de entrada." : ` (e-mail não trocou: ${er.error})`;
+      extra = er.ok ? txt(" Confirme o novo e-mail na caixa de entrada.") : `${txt(" (e-mail não trocou: ")}${er.error})`;
     }
     setBusy(false);
     if (r.ok) {
-      setMsg("✓ Perfil salvo." + extra);
-      onSaved?.({ name, username, phone, avatar_url: avatarUrl, ...(rc ? { referral_code: rc } : {}) });
+      setMsg(txt("✓ Perfil salvo.") + extra);
+      onSaved?.({ name, username, phone, avatar_url: avatarUrl });
     } else setMsg(r.error || txt("Não foi possível salvar."));
   };
 
@@ -2396,21 +2389,10 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
           </label>
         </div>
 
-        {field("Nome completo", name, setName, { placeholder: "Seu nome" })}
-        {field("Usuário", username, setUsername, { placeholder: "@usuario" })}
-        {field("E-mail", email, setEmail, { type: "email", placeholder: "seu@email.com" })}
-        {field("Telefone / WhatsApp", phone, setPhone, { placeholder: "(00) 00000-0000" })}
-
-        <div style={{ marginBottom: 14 }}>
-          <Label t={t} style={{ marginBottom: 6 }}>{txt("Seu código de convite")}</Label>
-          <input value={referralCode} placeholder={txt("ex.: mrthiago")}
-            onChange={e => setReferralCode(e.target.value)}
-            style={{ width: "100%", height: 50, background: t.card, border: `1.5px solid ${t.bdr}`,
-              borderRadius: 14, padding: "0 16px", color: t.text, fontSize: 14, fontFamily: FONT, outline: "none" }} />
-          <p style={{ fontSize: 11, color: t.muted, margin: "6px 2px 0", fontFamily: FONT }}>
-            {txt("É o que vai no seu link de convite (`/?ref=seucódigo`). Só letras e números.")}
-          </p>
-        </div>
+        {field(txt("Nome completo"), name, setName, { placeholder: txt("Seu nome") })}
+        {field(txt("Usuário"), username, setUsername, { placeholder: "@usuario" })}
+        {field(txt("E-mail"), email, setEmail, { type: "email", placeholder: txt("seu@email.com") })}
+        {field(txt("Telefone / WhatsApp"), phone, setPhone, { placeholder: "(00) 00000-0000" })}
 
         <Label t={t} style={{ marginBottom: 6 }}>{txt("Plano")}</Label>
         <Card t={t} onClick={onUpgrade} style={{ display: "flex", justifyContent: "space-between",
@@ -2652,7 +2634,7 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
         <Card t={t} accent style={{ marginBottom: 14 }}>
           <Label t={t} style={{ marginBottom: 8 }}>{txt("🎓 Cupom de aluno")}</Label>
           <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 10px", lineHeight: 1.5, fontFamily: FONT }}>
-            {txt("Quem se cadastrar com este cupom vira")} <span style={{ fontWeight: 700, color: t.text }}>{txt("aluno por 15 dias")}</span> automático. Depois você muda pra "sem limite" no usuário. Vazio = desativa.
+            {txt("Quem se cadastrar com este cupom vira")} <span style={{ fontWeight: 700, color: t.text }}>{txt("aluno por 15 dias")}</span> {txt("automático. Depois você muda pra \"sem limite\" no usuário. Vazio = desativa.")}
           </p>
           <div style={{ display: "flex", gap: 8 }}>
             <input value={alunoCoupon} placeholder={txt("ex.: aluno2026")} onChange={e => setAlunoCoupon(e.target.value)}
@@ -2847,7 +2829,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
             <Label t={t} style={{ marginBottom: 8 }}>{txt("Sinais usados hoje")}</Label>
             <Bar pct={quota ? (used / quota) * 100 : 0} t={t} />
             <p style={{ fontSize: 12, color: t.sub, margin: "7px 0 0", fontFamily: FONT }}>
-              {used} de {quota} sinais
+              {used} {txt("de")} {quota} {txt("sinais")}
             </p>
           </div>
 
@@ -2864,7 +2846,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
             </div>
             {schedule.allDay && isAnual ? (
               <p style={{ fontSize: 13, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
-                <span style={{ fontWeight: 800, color: t.accent }}>{txt("Desbloqueado:")}</span> você recebe
+                <span style={{ fontWeight: 800, color: t.accent }}>{txt("Desbloqueado:")}</span> {txt("você recebe")}
                 {txt("todos os sinais, 24 horas por dia — exclusivo do Premium Anual.")}
               </p>
             ) : isFree ? (
