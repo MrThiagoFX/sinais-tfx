@@ -311,7 +311,10 @@ const NAV = [
 ];
 
 const BottomNav = ({ active, onNav, t }) => (
-  <div className="nav-safe" style={{ background: t.bg0, borderTop: `1px solid ${t.bdrMid}`,
+  <div className="nav-safe" style={{
+    background: t.bg0,
+    borderTop: `2px solid ${t.accent}`,
+    boxShadow: `0 -2px 12px ${t.accentSoft}`,
     display: "flex", paddingTop: 5, flexShrink: 0 }}>
     {NAV.map(({ id, label, icon }) => (
       <button key={id} onClick={() => onNav(id)} style={{
