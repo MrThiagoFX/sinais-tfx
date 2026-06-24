@@ -307,7 +307,7 @@ const NAV = [
   { id: "signals",     label: "Sinais",     icon: "◈" },
   { id: "performance", label: "Desempenho", icon: "◉" },
   { id: "history",     label: "Histórico",  icon: "◷" },
-  { id: "profile",     label: txt("mais"),       icon: "≡" },
+  { id: "profile",     label: "Mais",       icon: "≡" },
 ];
 
 const BottomNav = ({ active, onNav, t }) => (
@@ -732,7 +732,7 @@ const RiskWarning = ({ t, onNext, onToggleTheme }) => {
   );
 };
 
-const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot, onCreateAccount }) => {
+const Login = ({ t, txt, onNext, onToggleTheme, onAuth, onForgot, onCreateAccount }) => {
   const [email, setEmail] = useState("");
   const [pass, setPass] = useState("");
   const [err, setErr] = useState("");
@@ -1425,7 +1425,7 @@ const SignalsFeed = ({ t, txt, onNav, onOpenSignal, onToggleTheme, onOpenFilters
 };
 
 /* DETALHE — agora com navegação inferior */
-const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme, showMock }) => {
+const SignalDetail = ({ t, txt, signal, onNav, onBack, onToggleTheme, showMock }) => {
   const s = signal || (showMock ? SIGNALS_DATA[0] : null);
   if (!s) {
     return (
@@ -1500,7 +1500,7 @@ const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme, showMock }) => 
             <div style={{ display: "flex", gap: 10 }}>
               <Btn t={t} style={{ flex: 1, height: 50 }}>Copiar sinal</Btn>
               <Btn t={t} variant="secondary" style={{ flex: 1, height: 50 }}
-                onClick={() => onNav("history")}>{txt("historico")}}</Btn>
+                onClick={() => onNav("history")}>{txt("historico")}</Btn>
             </div>
           ) : (
             <>
@@ -2795,7 +2795,7 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
         <div style={{ padding: "16px 24px 32px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, letterSpacing: -0.5,
-              color: t.text, fontFamily: FONT }}>{txt("perfil")}}</h1>
+              color: t.text, fontFamily: FONT }}>{txt("perfil")}</h1>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               <button onClick={() => setLangModalOpen(true)} aria-label="Mudar idioma" style={{
                 width: 38, height: 38, borderRadius: 12, cursor: "pointer",
@@ -2954,7 +2954,7 @@ const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNoti
               </span>
             </div>
           ) : (
-            <Btn t={t} style={{ marginBottom: 10 }} onClick={onUpgrade}>{txt("upgrade")}}</Btn>
+            <Btn t={t} style={{ marginBottom: 10 }} onClick={onUpgrade}>{txt("upgrade")}</Btn>
           )}
           {onEditAssets && (
             <Btn t={t} variant="secondary" style={{ marginBottom: 10 }} onClick={onEditAssets}>
