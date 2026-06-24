@@ -3215,6 +3215,12 @@ export default function App() {
         if (Object.keys(patch).length) { try { await api.updateProfileFields(patch); Object.assign(p, patch); } catch { /* ignore */ } }
       }
       if (alive && p) {
+        // Idioma salvo na conta (sync entre dispositivos). Recarrega 1x p/ aplicar.
+        if (p.language && p.language !== getSavedLanguage()) {
+          saveLanguagePreference(p.language);
+          window.location.reload();
+          return;
+        }
         if (p.plan) setPlan(p.plan);
         if (Array.isArray(p.assets) && p.assets.length) setSelectedAssets(p.assets);
         if (p.tf_per_asset && Object.keys(p.tf_per_asset).length) setTfPerAsset(sanitizeTfPerAsset(p.tf_per_asset));
