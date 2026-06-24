@@ -1120,7 +1120,7 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
   );
 };
 
-const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, closeAlerts = [], onToggleCloseAlert, userName }) => {
+const Home = ({ t, txt, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, closeAlerts = [], onToggleCloseAlert, userName }) => {
   const [dashTf, setDashTf] = useState("Todos");
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
   const recentSignals = live?.recent?.length ? live.recent.map(mapSignal) : null;
@@ -3327,6 +3327,7 @@ export default function App() {
 
   const t = THEMES[themeId];
   const tr = translations[language] || translations.pt;
+  const txt = (key) => tr[key] || translations.pt[key] || key; // Helper pra traduções com fallback
   const toggleTheme = useCallback(() => setThemeId(x => x === "dark" ? "light" : "dark"), []);
   const changeLanguage = useCallback((lang) => {
     setLanguage(lang);
@@ -3340,7 +3341,7 @@ export default function App() {
     if (map[id]) setScreen(map[id]);
   }, []);
 
-  const common = { t, onToggleTheme: toggleTheme };
+  const common = { t, txt, onToggleTheme: toggleTheme };
   // Free usa horário fixo; Premium usa a janela escolhida.
   const effSchedule = plan === "free" ? FREE_SCHEDULE : schedule;
   const bizState = { plan, selectedAssets, tfPerAsset, schedule: effSchedule };
