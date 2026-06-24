@@ -286,7 +286,7 @@ const BackBtn = ({ onClick, t }) => (
   }}>← Voltar</button>
 );
 
-const ScreenHeader = ({ title, t, onToggleTheme, right, onBack }) => (
+const ScreenHeader = ({ title, t, txt, onToggleTheme, right, onBack }) => (
   <div style={{ padding: "16px 24px 0", flexShrink: 0 }}>
     {onBack && (
       <div style={{ marginBottom: 10 }}><BackBtn onClick={onBack} t={t} /></div>
@@ -1142,8 +1142,8 @@ const Home = ({ t, txt, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan
             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
               <BoltLogo t={t} size={32} />
               <div>
-                <div style={{ fontSize: 13, color: t.sub, fontFamily: FONT }}>Olá, {userName || "Trader"} 👋</div>
-                <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5, color: t.text, fontFamily: FONT }}>Dashboard</div>
+                <div style={{ fontSize: 13, color: t.sub, fontFamily: FONT }}>{txt("ola")}, {userName || "Trader"} 👋</div>
+                <div style={{ fontSize: 22, fontWeight: 900, letterSpacing: -0.5, color: t.text, fontFamily: FONT }}>{txt("dashboard")}</div>
               </div>
             </div>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
@@ -1258,7 +1258,7 @@ const Home = ({ t, txt, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan
   );
 };
 
-const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live, stats, showMock, closeAlerts = [], onToggleCloseAlert }) => {
+const SignalsFeed = ({ t, txt, onNav, onOpenSignal, onToggleTheme, onOpenFilters, selectedAssets, plan, tfPerAsset, schedule, live, stats, showMock, closeAlerts = [], onToggleCloseAlert }) => {
   const [filter, setFilter] = useState("Todos");
   const [tfStats, setTfStats] = useState("Geral"); // Filtro simples: Geral, M5, M15
   const inWindow = h => schedule.allDay || (h >= parseInt(schedule.start) && h < parseInt(schedule.end));
@@ -1770,7 +1770,7 @@ const EquityCurve = ({ t, closed, height = 120, defaultPeriod = "Geral" }) => {
   );
 };
 
-const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown, tfPerAsset = {}, onTfPerf, showMock, live }) => {
+const Performance = ({ t, txt, onNav, onToggleTheme, selectedAssets, stats, breakdown, tfPerAsset = {}, onTfPerf, showMock, live }) => {
   // Agrega o desempenho por TIMEFRAME (M5, M15) e o geral — a partir do
   // breakdown por ativo×tf. Deixa claro de onde vem o número acumulado.
   const bd = breakdown?.breakdown || [];
@@ -1933,7 +1933,7 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown
   );
 };
 
-const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, stats, plan }) => {
+const History = ({ t, txt, onNav, onOpenSignal, onToggleTheme, schedule, live, stats, plan }) => {
   const [tab, setTab] = useState("Todos");
   const [period, setPeriod] = useState("Mês");
   const [tfStats, setTfStats] = useState("Geral"); // Filtro simples: Geral, M5, M15
@@ -2427,7 +2427,7 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
   );
 };
 
-const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
+const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
   const [data, setData] = useState(null);
   const [msg, setMsg] = useState("");
   const [histDate, setHistDate] = useState("");
