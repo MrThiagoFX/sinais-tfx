@@ -758,16 +758,16 @@ const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot, onCreateAccount }) 
     const r = await onAuth(email.trim(), pass, false);
     setBusy(false);
     if (r?.ok) onNext();
-    else setErr(r?.error || "Não foi possível entrar. Verifique os dados.");
+    else setErr(r?.error || txt("Não foi possível entrar. Verifique os dados."));
   };
 
   const forgot = async () => {
     if (!onForgot) return;
     setErr(""); setNotice("");
-    if (!email.trim()) { setErr("Digite seu e-mail acima para receber o link."); return; }
+    if (!email.trim()) { setErr(txt("Digite seu e-mail acima para receber o link.")); return; }
     const r = await onForgot(email.trim());
-    if (r?.ok) setNotice("Enviamos um link de redefinição para o seu e-mail.");
-    else setErr(r?.error || "Não foi possível enviar o link.");
+    if (r?.ok) setNotice(txt("Enviamos um link de redefinição para o seu e-mail."));
+    else setErr(r?.error || txt("Não foi possível enviar o link."));
   };
 
   return (
@@ -837,10 +837,10 @@ const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount, language, o
 
   const handle = async () => {
     if (!onSignup) return onNext();
-    if (name.trim().length < 2) { setErr("Digite seu nome completo."); return; }
-    if (!emailOk) { setErr("Digite um e-mail válido."); return; }
-    if (pass.length < 6) { setErr("A senha deve ter pelo menos 6 caracteres."); return; }
-    if (pass !== pass2) { setErr("As senhas não conferem."); return; }
+    if (name.trim().length < 2) { setErr(txt("Digite seu nome completo.")); return; }
+    if (!emailOk) { setErr(txt("Digite um e-mail válido.")); return; }
+    if (pass.length < 6) { setErr(txt("A senha deve ter pelo menos 6 caracteres.")); return; }
+    if (pass !== pass2) { setErr(txt("As senhas não conferem.")); return; }
     setErr(""); setNotice(""); setBusy(true);
     // Guarda o cupom de aluno para resgatar logo após a autenticação.
     try {
@@ -849,9 +849,9 @@ const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount, language, o
     } catch { /* ignore */ }
     const r = await onSignup({ name: name.trim(), email: email.trim(), phone: phone.trim(), pass, coupon: "" });
     setBusy(false);
-    if (r?.ok && r?.needsConfirm) { setNotice("Conta criada! Confirme seu e-mail (veja a caixa de entrada/spam) e depois faça login."); return; }
+    if (r?.ok && r?.needsConfirm) { setNotice(txt("Conta criada! Confirme seu e-mail (veja a caixa de entrada/spam) e depois faça login.")); return; }
     if (r?.ok) onNext();
-    else setErr(r?.error || "Não foi possível criar a conta.");
+    else setErr(r?.error || txt("Não foi possível criar a conta."));
   };
 
   const field = (lbl, val, set, props = {}) => (
@@ -1033,7 +1033,7 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected, locke
             background: `${t.warn}12`, border: `1px solid ${t.warn}38`, borderRadius: 12, padding: "10px 14px" }}>
             <span style={{ fontSize: 16 }}>🔒</span>
             <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.5, fontFamily: FONT }}>
-              <span style={{ fontWeight: 800 }}>{txt("Atenção:")}</span> você só pode alterar ativos/timeframes 1 vez a cada 7 dias.
+              <span style={{ fontWeight: 800 }}>{txt("Atenção:")}</span> {txt("você só pode alterar ativos/timeframes 1 vez a cada 7 dias.")}
               Poderá alterar de novo em <span style={{ fontWeight: 800 }}>{daysLeft} dia{daysLeft !== 1 ? "s" : ""}</span>.
             </span>
           </div>
@@ -1041,7 +1041,7 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected, locke
         <Card t={t} accent style={{ marginBottom: 14, padding: "12px 16px" }}>
           <p style={{ fontSize: 12, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
             <span style={{ fontWeight: 800, color: t.accent }}>{txt("1 timeframe fixo por ativo.")}</span> Você
-            escolhe o melhor tempo pelo histórico — e só pode trocar 1 vez por semana.
+            {txt("escolhe o melhor tempo pelo histórico — e só pode trocar 1 vez por semana.")}
           </p>
         </Card>
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 8 }}>
@@ -1058,7 +1058,7 @@ const Assets = ({ t, onNext, onBack, onToggleTheme, selected, setSelected, locke
                   <AssetIcon asset={a} />
                   <div>
                     <div style={{ fontWeight: 800, fontSize: 15, color: t.text, fontFamily: FONT }}>{a}</div>
-                    <div style={{ fontSize: 11, color: t.sub, marginTop: 2, fontFamily: FONT }}>{ASSET_NAMES[a]}</div>
+                    <div style={{ fontSize: 11, color: t.sub, marginTop: 2, fontFamily: FONT }}>{txt(ASSET_NAMES[a])}</div>
                   </div>
                 </div>
                 <div style={{ width: 24, height: 24, borderRadius: 8, flexShrink: 0,
@@ -1191,7 +1191,7 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
               <span style={{ fontSize: 22, flexShrink: 0 }}>🛌</span>
               <div style={{ fontSize: 12.8, color: t.text, lineHeight: 1.5, fontFamily: FONT }}>
                 <b>{txt("Hoje não há operações")}</b> {txt("— fim de semana, o mercado Forex está fechado.")}<br />
-                {txt("As operações voltam no")} <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> (horário de Brasília). Bom descanso! 📈
+                {txt("As operações voltam no")} <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> {txt("(horário de Brasília). Bom descanso! 📈")}
               </div>
             </div>
           )}
@@ -1418,7 +1418,7 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
             <span style={{ fontSize: 22, flexShrink: 0 }}>🛌</span>
             <div style={{ fontSize: 12.8, color: t.text, lineHeight: 1.5, fontFamily: FONT }}>
               <b>{txt("Hoje não há operações")}</b> {txt("— fim de semana, o mercado Forex está fechado.")}<br />
-              {txt("Voltam no")} <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> (Brasília).
+              {txt("Voltam no")} <b style={{ color: t.blue }}>primeiro sinal de domingo, a partir das {FOREX_OPEN_BRT}h</b> {txt("(Brasília).")}
             </div>
           </div>
         )}
@@ -1579,14 +1579,14 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
               <span style={{ fontSize: 16 }}>🔒</span>
               <span style={{ fontSize: 12, color: t.warn, lineHeight: 1.55, fontFamily: FONT }}>
                 {txt("Você escolheu em")} <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(new Date(nextChange.getTime() - 7 * 86400000))}</span> —
-                poderá trocar a partir de <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} dia{daysLeft !== 1 ? "s" : ""}).
-                A troca é 1× por semana pra manter o histórico correto.
+                {txt("poderá trocar a partir de")} <span style={{ fontWeight: 800 }}>{BRT_DDMM.format(nextChange)}</span> ({daysLeft} dia{daysLeft !== 1 ? "s" : ""}).
+                {txt("A troca é 1× por semana pra manter o histórico correto.")}
               </span>
             </div>
           )}
           {!locked && !isAdmin && (
             <p style={{ fontSize: 11.5, color: t.sub, margin: "0 0 14px", lineHeight: 1.5, fontFamily: FONT }}>
-              {txt("⚠️ Ao trocar o timeframe de um ativo, ele fica")} <span style={{ fontWeight: 700, color: t.text }}>{txt("travado por 7 dias")}</span> (pra contar o histórico de forma correta).
+              {txt("⚠️ Ao trocar o timeframe de um ativo, ele fica")} <span style={{ fontWeight: 700, color: t.text }}>{txt("travado por 7 dias")}</span> {txt("(pra contar o histórico de forma correta).")}
             </p>
           )}
 
@@ -1599,7 +1599,7 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
                     <AssetIcon asset={a} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ fontWeight: 800, fontSize: 15, color: t.text, fontFamily: FONT }}>{a}</div>
-                      <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>{ASSET_NAMES[a] || a}</div>
+                      <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>{txt(ASSET_NAMES[a] || a)}</div>
                     </div>
                     <div style={{ fontSize: 11, color: t.sub, fontFamily: FONT }}>
                       {txt("atual:")} <span style={{ fontWeight: 800, color: t.accent }}>{cur || "—"}</span>
@@ -2320,7 +2320,7 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
     setPwBusy(true); setPwMsg("");
     const r = await api.updatePassword(newPass);
     setPwBusy(false);
-    setPwMsg(r.ok ? "✓ Senha alterada com sucesso." : (r.error || "Não foi possível alterar."));
+    setPwMsg(r.ok ? "✓ Senha alterada com sucesso." : (r.error || txt("Não foi possível alterar.")));
     if (r.ok) setNewPass("");
   };
   const [busy, setBusy] = useState(false);
@@ -2353,7 +2353,7 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
     let avatarUrl = profile.avatar_url;
     if (newAvatarData) {
       const up = await api.uploadAvatar(newAvatarData);
-      if (!up.ok) { setBusy(false); setMsg(up.error || "Falha ao enviar a foto."); return; }
+      if (!up.ok) { setBusy(false); setMsg(up.error || txt("Falha ao enviar a foto.")); return; }
       avatarUrl = up.url;
     }
     const fields = { name, username, phone, avatar_url: avatarUrl };
@@ -2372,7 +2372,7 @@ const EditProfile = ({ t, onToggleTheme, onBack, onNav, onUpgrade, plan, profile
     if (r.ok) {
       setMsg("✓ Perfil salvo." + extra);
       onSaved?.({ name, username, phone, avatar_url: avatarUrl, ...(rc ? { referral_code: rc } : {}) });
-    } else setMsg(r.error || "Não foi possível salvar.");
+    } else setMsg(r.error || txt("Não foi possível salvar."));
   };
 
   const field = (label, value, set, props = {}) => (
@@ -2775,7 +2775,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
     const r = await api.cancelPlan();
     setCancelling(false);
     if (r?.ok) window.location.reload(); // recarrega p/ refletir Free em todo o app
-    else { setCancelling(false); alert(r?.error || "Não foi possível cancelar agora."); }
+    else { setCancelling(false); alert(r?.error || txt("Não foi possível cancelar agora.")); }
   };
   const confirmSched = () => { setSchedSaved(true); setTimeout(() => setSchedSaved(false), 1800); };
   const refCode = referral?.code || "SEUCODIGO";
@@ -2791,26 +2791,9 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
   const isAnual = isAnualLikePlan(plan);
   const isFree = plan === "free";
   const items = [
-    { id: "termos",  icon: "📄", label: "Termos de uso",
-      body: "INFINITY SIGNALS — TERMOS DE USO\n\n"
-        + "1. Natureza do serviço. O Infinity Signals fornece alertas e estudos operacionais (sinais) gerados por indicadores técnicos no MetaTrader, de caráter educacional e informativo.\n\n"
-        + "2. Não é recomendação. Os sinais NÃO constituem recomendação, oferta ou solicitação de compra/venda de ativos, nem consultoria ou gestão de investimentos, conforme as normas da CVM. Nada aqui é aconselhamento financeiro individualizado.\n\n"
-        + "3. Risco. Operar Forex, índices e metais envolve alto risco e pode resultar em perda total do capital. Resultados passados não garantem resultados futuros. As decisões e operações são de sua exclusiva responsabilidade.\n\n"
-        + "4. Sem garantia. Não garantimos lucro, assertividade ou desempenho. As estatísticas exibidas são informativas e podem variar.\n\n"
-        + "5. Responsabilidade. O Infinity Signals e MrThiagoFX não se responsabilizam por perdas decorrentes do uso dos sinais. Opere conforme seu perfil de risco.\n\n"
-        + "6. Conta. Você é responsável por suas credenciais. É proibido revender ou redistribuir os sinais.\n\n"
-        + "Versão 1.0 — 2026. Ao usar o app, você declara que leu e concorda com estes termos." },
-    { id: "priv",    icon: "🔒", label: "Política de privacidade",
-      body: "INFINITY SIGNALS — POLÍTICA DE PRIVACIDADE\n\n"
-        + "1. Dados coletados. E-mail, nome, telefone e foto (opcionais) que você fornecer, e suas preferências (ativos, timeframes, horários, plano).\n\n"
-        + "2. Uso. Usamos seus dados apenas para autenticar seu acesso, entregar os sinais/alertas e prestar suporte. Não vendemos nem compartilhamos seus dados com terceiros para marketing.\n\n"
-        + "3. Notificações. Ao permitir, registramos a inscrição de push do seu dispositivo para enviar alertas. Você pode revogar a qualquer momento nas configurações do navegador/celular.\n\n"
-        + "4. Armazenamento. Seus dados ficam em infraestrutura segura (Supabase), com medidas razoáveis de proteção.\n\n"
-        + "5. Seus direitos. Você pode solicitar acesso, correção ou exclusão dos seus dados pelo suporte.\n\n"
-        + "6. Indicações. Registramos o vínculo de indicação (quem indicou quem) para o programa de bônus.\n\n"
-        + "Direitos reservados © MrThiagoFX. Versão 1.0 — 2026." },
-    { id: "suporte", icon: "💬", label: "Suporte (Telegram)",
-      body: "" },
+    { id: "termos",  icon: "📄", label: txt("Termos de uso"),  body: txt("@termos_body") },
+    { id: "priv",    icon: "🔒", label: txt("Política de privacidade"), body: txt("@priv_body") },
+    { id: "suporte", icon: "💬", label: txt("Suporte (Telegram)"), body: "" },
   ];
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
@@ -2882,7 +2865,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
             {schedule.allDay && isAnual ? (
               <p style={{ fontSize: 13, color: t.text, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
                 <span style={{ fontWeight: 800, color: t.accent }}>{txt("Desbloqueado:")}</span> você recebe
-                todos os sinais, 24 horas por dia — exclusivo do Premium Anual.
+                {txt("todos os sinais, 24 horas por dia — exclusivo do Premium Anual.")}
               </p>
             ) : isFree ? (
               <>

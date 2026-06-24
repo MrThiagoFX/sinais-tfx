@@ -2,6 +2,7 @@
 // Tudo aqui é tolerante a falha: se o Supabase não estiver configurado ou a
 // API falhar, as funções retornam null/erro e o App mantém os mocks visuais.
 import { supabase, hasSupabase } from "./supabase.js";
+import { txt } from "./i18n.js";
 
 export { hasSupabase };
 
@@ -10,18 +11,18 @@ export { hasSupabase };
 export function friendlyAuthError(error) {
   const raw = (typeof error === "string" ? error : error?.message) || "";
   const m = raw.toLowerCase();
-  if (!raw) return "Algo deu errado. Tente novamente.";
-  if (m.includes("invalid login credentials")) return "E-mail ou senha incorretos.";
-  if (m.includes("email not confirmed")) return "Confirme seu e-mail antes de entrar (veja sua caixa de entrada).";
+  if (!raw) return txt("Algo deu errado. Tente novamente.");
+  if (m.includes("invalid login credentials")) return txt("E-mail ou senha incorretos.");
+  if (m.includes("email not confirmed")) return txt("Confirme seu e-mail antes de entrar (veja sua caixa de entrada).");
   if (m.includes("user already registered") || m.includes("already been registered"))
-    return "Este e-mail já tem conta. Use “Entrar”.";
-  if (m.includes("password should be at least")) return "A senha deve ter pelo menos 6 caracteres.";
-  if (m.includes("unable to validate email") || m.includes("invalid format")) return "E-mail inválido.";
-  if (m.includes("signups not allowed")) return "Cadastro desativado no momento.";
+    return txt("Este e-mail já tem conta. Use “Entrar”.");
+  if (m.includes("password should be at least")) return txt("A senha deve ter pelo menos 6 caracteres.");
+  if (m.includes("unable to validate email") || m.includes("invalid format")) return txt("E-mail inválido.");
+  if (m.includes("signups not allowed")) return txt("Cadastro desativado no momento.");
   if (m.includes("for security purposes") || m.includes("rate limit") || m.includes("too many"))
-    return "Muitas tentativas. Aguarde alguns segundos e tente de novo.";
+    return txt("Muitas tentativas. Aguarde alguns segundos e tente de novo.");
   if (m.includes("failed to fetch") || m.includes("networkerror") || m.includes("load failed"))
-    return "Sem conexão com o servidor. Verifique sua internet.";
+    return txt("Sem conexão com o servidor. Verifique sua internet.");
   return raw; // mensagem desconhecida → mostra a original
 }
 

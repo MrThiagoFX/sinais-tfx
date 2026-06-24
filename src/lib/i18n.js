@@ -14,8 +14,12 @@ export function saveLanguagePreference(lang) {
 let _lang = getSavedLanguage();
 export function setLang(lang) { _lang = lang; }
 
-// DICIONÁRIO — chave = texto em português. Só EN e ES (PT é identidade).
+// DICIONÁRIO — chave = texto em português. EN e ES; `pt` só para chaves sintéticas (textos legais).
 const DICT = {
+  pt: {
+    "@termos_body": "INFINITY SIGNALS — TERMOS DE USO\n\n1. Natureza do serviço. O Infinity Signals fornece alertas e estudos operacionais (sinais) gerados por indicadores técnicos no MetaTrader, de caráter educacional e informativo.\n\n2. Não é recomendação. Os sinais NÃO constituem recomendação, oferta ou solicitação de compra/venda de ativos, nem consultoria ou gestão de investimentos, conforme as normas da CVM. Nada aqui é aconselhamento financeiro individualizado.\n\n3. Risco. Operar Forex, índices e metais envolve alto risco e pode resultar em perda total do capital. Resultados passados não garantem resultados futuros. As decisões e operações são de sua exclusiva responsabilidade.\n\n4. Sem garantia. Não garantimos lucro, assertividade ou desempenho. As estatísticas exibidas são informativas e podem variar.\n\n5. Responsabilidade. O Infinity Signals e MrThiagoFX não se responsabilizam por perdas decorrentes do uso dos sinais. Opere conforme seu perfil de risco.\n\n6. Conta. Você é responsável por suas credenciais. É proibido revender ou redistribuir os sinais.\n\nVersão 1.0 — 2026. Ao usar o app, você declara que leu e concorda com estes termos.",
+    "@priv_body": "INFINITY SIGNALS — POLÍTICA DE PRIVACIDADE\n\n1. Dados coletados. E-mail, nome, telefone e foto (opcionais) que você fornecer, e suas preferências (ativos, timeframes, horários, plano).\n\n2. Uso. Usamos seus dados apenas para autenticar seu acesso, entregar os sinais/alertas e prestar suporte. Não vendemos nem compartilhamos seus dados com terceiros para marketing.\n\n3. Notificações. Ao permitir, registramos a inscrição de push do seu dispositivo para enviar alertas. Você pode revogar a qualquer momento nas configurações do navegador/celular.\n\n4. Armazenamento. Seus dados ficam em infraestrutura segura (Supabase), com medidas razoáveis de proteção.\n\n5. Seus direitos. Você pode solicitar acesso, correção ou exclusão dos seus dados pelo suporte.\n\n6. Indicações. Registramos o vínculo de indicação (quem indicou quem) para o programa de bônus.\n\nDireitos reservados © MrThiagoFX. Versão 1.0 — 2026.",
+  },
   en: {
     // Navegação / telas
     "Início": "Home", "Sinais": "Signals", "Desempenho": "Performance", "Histórico": "History", "Mais": "More",
@@ -103,6 +107,7 @@ const DICT = {
     "travado por 7 dias": "locked for 7 days", "1 troca por semana": "1 change per week", "1 timeframe fixo por ativo.": "1 fixed timeframe per asset.",
     "1 por ativo": "1 per asset", "1 timeframe fixo por ativo": "1 fixed timeframe per asset",
     "Você escolheu em": "You chose on", "Escolhido em": "Chosen on", "poderá trocar a partir de": "can change from",
+    "A troca é 1× por semana pra manter o histórico correto.": "Changes are allowed once a week to keep history accurate.",
     "troca liberada em": "change unlocked in", "Poderá alterar de novo em": "Can change again in",
     "O M1 é exclusivo do Premium Anual.": "M1 is exclusive to Annual Premium.", "O M1 é exclusivo do seu plano Anual.": "M1 is exclusive to your Annual plan.",
     // Planos
@@ -162,6 +167,40 @@ const DICT = {
     "Não. Desempenho passado NÃO garante resultados futuros. Operar envolve risco de perda. Os sinais são estudos operacionais informativos e não constituem recomendação de investimento (conforme normas da CVM). Opere com responsabilidade.": "No. Past performance does NOT guarantee future results. Trading involves risk of loss. The signals are informational operational studies and do not constitute investment advice (per CVM rules). Trade responsibly.",
     "Como troco ou cancelo meu plano?": "How do I change or cancel my plan?",
     "Para mudar de ativos/timeframes: Perfil → Editar ativos. Para cancelar e voltar ao Free: Perfil → Cancelar plano. Ao vencer sem renovar, sua conta volta automaticamente ao Free.": "To change assets/timeframes: Profile → Edit assets. To cancel and go back to Free: Profile → Cancel plan. When it expires without renewal, your account automatically returns to Free.",
+    // Mensagens de erro / validação
+    "Digite seu e-mail acima para receber o link.": "Enter your email above to receive the link.",
+    "Enviamos um link de redefinição para o seu e-mail.": "We've sent a reset link to your email.",
+    "Digite seu nome completo.": "Enter your full name.",
+    "Digite um e-mail válido.": "Enter a valid email.",
+    "A senha deve ter pelo menos 6 caracteres.": "The password must be at least 6 characters.",
+    "As senhas não conferem.": "The passwords don't match.",
+    "Conta criada! Confirme seu e-mail (veja a caixa de entrada/spam) e depois faça login.": "Account created! Confirm your email (check inbox/spam) and then log in.",
+    "Falha ao enviar a foto.": "Failed to upload the photo.",
+    "Não foi possível alterar.": "Couldn't update.",
+    "Não foi possível cancelar agora.": "Couldn't cancel right now.",
+    "Não foi possível criar a conta.": "Couldn't create the account.",
+    "Não foi possível entrar. Verifique os dados.": "Couldn't sign in. Check your details.",
+    "Não foi possível enviar o link.": "Couldn't send the link.",
+    "Não foi possível salvar.": "Couldn't save.",
+    // Erros de auth (api.js)
+    "Algo deu errado. Tente novamente.": "Something went wrong. Try again.",
+    "E-mail ou senha incorretos.": "Incorrect email or password.",
+    "Confirme seu e-mail antes de entrar (veja sua caixa de entrada).": "Confirm your email before signing in (check your inbox).",
+    "Este e-mail já tem conta. Use “Entrar”.": "This email already has an account. Use “Sign in”.",
+    "E-mail inválido.": "Invalid email.",
+    "Cadastro desativado no momento.": "Sign-up is currently disabled.",
+    "Muitas tentativas. Aguarde alguns segundos e tente de novo.": "Too many attempts. Wait a few seconds and try again.",
+    "Sem conexão com o servidor. Verifique sua internet.": "No connection to the server. Check your internet.",
+    // Nomes de ativos + período
+    "Ouro / Dólar": "Gold / Dollar", "Nasdaq 100": "Nasdaq 100", "Dow Jones 30": "Dow Jones 30", "Semana": "Week",
+    // Fragmentos
+    "(horário de Brasília). Bom descanso! 📈": "(Brasília time). Enjoy your rest! 📈",
+    "(Brasília).": "(Brasília).",
+    "(pra contar o histórico de forma correta).": "(to count history correctly).",
+    // Rótulos + textos legais
+    "Termos de uso": "Terms of use", "Política de privacidade": "Privacy policy", "Suporte (Telegram)": "Support (Telegram)",
+    "@termos_body": "INFINITY SIGNALS — TERMS OF USE\n\n1. Nature of the service. Infinity Signals provides operational alerts and studies (signals) generated by technical indicators in MetaTrader, for educational and informational purposes.\n\n2. Not a recommendation. The signals do NOT constitute a recommendation, offer or solicitation to buy/sell assets, nor investment advisory or management, per CVM rules. Nothing here is individualized financial advice.\n\n3. Risk. Trading Forex, indices and metals involves high risk and may result in total loss of capital. Past results do not guarantee future results. Decisions and trades are your sole responsibility.\n\n4. No guarantee. We do not guarantee profit, accuracy or performance. The statistics shown are informational and may vary.\n\n5. Liability. Infinity Signals and MrThiagoFX are not liable for losses arising from the use of the signals. Trade according to your risk profile.\n\n6. Account. You are responsible for your credentials. Reselling or redistributing the signals is prohibited.\n\nVersion 1.0 — 2026. By using the app, you declare that you have read and agree to these terms.",
+    "@priv_body": "INFINITY SIGNALS — PRIVACY POLICY\n\n1. Data collected. Email, name, phone and photo (optional) that you provide, and your preferences (assets, timeframes, schedule, plan).\n\n2. Use. We use your data only to authenticate your access, deliver the signals/alerts and provide support. We do not sell or share your data with third parties for marketing.\n\n3. Notifications. When allowed, we register your device's push subscription to send alerts. You can revoke it anytime in your browser/phone settings.\n\n4. Storage. Your data is kept on secure infrastructure (Supabase), with reasonable protection measures.\n\n5. Your rights. You can request access, correction or deletion of your data through support.\n\n6. Referrals. We record the referral link (who referred whom) for the bonus program.\n\nAll rights reserved © MrThiagoFX. Version 1.0 — 2026.",
   },
 
   es: {
@@ -241,6 +280,7 @@ const DICT = {
     "travado por 7 dias": "bloqueado por 7 días", "1 troca por semana": "1 cambio por semana", "1 timeframe fixo por ativo.": "1 marco fijo por activo.",
     "1 por ativo": "1 por activo", "1 timeframe fixo por ativo": "1 marco fijo por activo",
     "Você escolheu em": "Elegiste el", "Escolhido em": "Elegido el", "poderá trocar a partir de": "podrás cambiar a partir de",
+    "A troca é 1× por semana pra manter o histórico correto.": "El cambio es 1× por semana para mantener el historial correcto.",
     "troca liberada em": "cambio disponible en", "Poderá alterar de novo em": "Podrás cambiar de nuevo en",
     "O M1 é exclusivo do Premium Anual.": "M1 es exclusivo del Premium Anual.", "O M1 é exclusivo do seu plano Anual.": "M1 es exclusivo de tu plan Anual.",
     "Plano": "Plan", "Free": "Free", "MELHOR": "MEJOR", "ATUAL": "ACTUAL", "● ATUAL": "● ACTUAL",
@@ -295,6 +335,35 @@ const DICT = {
     "Não. Desempenho passado NÃO garante resultados futuros. Operar envolve risco de perda. Os sinais são estudos operacionais informativos e não constituem recomendação de investimento (conforme normas da CVM). Opere com responsabilidade.": "No. El rendimiento pasado NO garantiza resultados futuros. Operar implica riesgo de pérdida. Las señales son estudios operativos informativos y no constituyen recomendación de inversión (según normas de la CVM). Opera con responsabilidad.",
     "Como troco ou cancelo meu plano?": "¿Cómo cambio o cancelo mi plan?",
     "Para mudar de ativos/timeframes: Perfil → Editar ativos. Para cancelar e voltar ao Free: Perfil → Cancelar plano. Ao vencer sem renovar, sua conta volta automaticamente ao Free.": "Para cambiar activos/marcos de tiempo: Perfil → Editar activos. Para cancelar y volver a Free: Perfil → Cancelar plan. Al vencer sin renovar, tu cuenta vuelve automáticamente a Free.",
+    "Digite seu e-mail acima para receber o link.": "Escribe tu correo arriba para recibir el enlace.",
+    "Enviamos um link de redefinição para o seu e-mail.": "Enviamos un enlace de restablecimiento a tu correo.",
+    "Digite seu nome completo.": "Escribe tu nombre completo.",
+    "Digite um e-mail válido.": "Escribe un correo válido.",
+    "A senha deve ter pelo menos 6 caracteres.": "La contraseña debe tener al menos 6 caracteres.",
+    "As senhas não conferem.": "Las contraseñas no coinciden.",
+    "Conta criada! Confirme seu e-mail (veja a caixa de entrada/spam) e depois faça login.": "¡Cuenta creada! Confirma tu correo (revisa bandeja/spam) y luego inicia sesión.",
+    "Falha ao enviar a foto.": "No se pudo subir la foto.",
+    "Não foi possível alterar.": "No se pudo actualizar.",
+    "Não foi possível cancelar agora.": "No se pudo cancelar ahora.",
+    "Não foi possível criar a conta.": "No se pudo crear la cuenta.",
+    "Não foi possível entrar. Verifique os dados.": "No se pudo iniciar sesión. Verifica los datos.",
+    "Não foi possível enviar o link.": "No se pudo enviar el enlace.",
+    "Não foi possível salvar.": "No se pudo guardar.",
+    "Algo deu errado. Tente novamente.": "Algo salió mal. Inténtalo de nuevo.",
+    "E-mail ou senha incorretos.": "Correo o contraseña incorrectos.",
+    "Confirme seu e-mail antes de entrar (veja sua caixa de entrada).": "Confirma tu correo antes de entrar (revisa tu bandeja).",
+    "Este e-mail já tem conta. Use “Entrar”.": "Este correo ya tiene cuenta. Usa “Iniciar sesión”.",
+    "E-mail inválido.": "Correo inválido.",
+    "Cadastro desativado no momento.": "El registro está desactivado por ahora.",
+    "Muitas tentativas. Aguarde alguns segundos e tente de novo.": "Demasiados intentos. Espera unos segundos e inténtalo de nuevo.",
+    "Sem conexão com o servidor. Verifique sua internet.": "Sin conexión con el servidor. Revisa tu internet.",
+    "Ouro / Dólar": "Oro / Dólar", "Nasdaq 100": "Nasdaq 100", "Dow Jones 30": "Dow Jones 30", "Semana": "Semana",
+    "(horário de Brasília). Bom descanso! 📈": "(hora de Brasilia). ¡Buen descanso! 📈",
+    "(Brasília).": "(Brasilia).",
+    "(pra contar o histórico de forma correta).": "(para contar el historial correctamente).",
+    "Termos de uso": "Términos de uso", "Política de privacidade": "Política de privacidad", "Suporte (Telegram)": "Soporte (Telegram)",
+    "@termos_body": "INFINITY SIGNALS — TÉRMINOS DE USO\n\n1. Naturaleza del servicio. Infinity Signals ofrece alertas y estudios operativos (señales) generados por indicadores técnicos en MetaTrader, con carácter educativo e informativo.\n\n2. No es recomendación. Las señales NO constituyen recomendación, oferta o solicitud de compra/venta de activos, ni asesoría o gestión de inversiones, según las normas de la CVM. Nada aquí es asesoramiento financiero individualizado.\n\n3. Riesgo. Operar Forex, índices y metales implica alto riesgo y puede resultar en pérdida total del capital. Los resultados pasados no garantizan resultados futuros. Las decisiones y operaciones son de tu exclusiva responsabilidad.\n\n4. Sin garantía. No garantizamos ganancia, acierto ni rendimiento. Las estadísticas mostradas son informativas y pueden variar.\n\n5. Responsabilidad. Infinity Signals y MrThiagoFX no se responsabilizan por pérdidas derivadas del uso de las señales. Opera según tu perfil de riesgo.\n\n6. Cuenta. Eres responsable de tus credenciales. Está prohibido revender o redistribuir las señales.\n\nVersión 1.0 — 2026. Al usar la app, declaras que has leído y aceptas estos términos.",
+    "@priv_body": "INFINITY SIGNALS — POLÍTICA DE PRIVACIDAD\n\n1. Datos recopilados. Correo, nombre, teléfono y foto (opcionales) que proporciones, y tus preferencias (activos, marcos de tiempo, horarios, plan).\n\n2. Uso. Usamos tus datos solo para autenticar tu acceso, entregar las señales/alertas y dar soporte. No vendemos ni compartimos tus datos con terceros para marketing.\n\n3. Notificaciones. Al permitirlo, registramos la suscripción push de tu dispositivo para enviar alertas. Puedes revocarla en cualquier momento en los ajustes del navegador/teléfono.\n\n4. Almacenamiento. Tus datos se guardan en infraestructura segura (Supabase), con medidas razonables de protección.\n\n5. Tus derechos. Puedes solicitar acceso, corrección o eliminación de tus datos a través de soporte.\n\n6. Referidos. Registramos el vínculo de referido (quién refirió a quién) para el programa de bonos.\n\nTodos los derechos reservados © MrThiagoFX. Versión 1.0 — 2026.",
   },
 };
 
@@ -302,7 +371,7 @@ const DICT = {
 export function txt(s) {
   if (s == null) return s;
   const d = DICT[_lang];
-  return (d && d[s]) || s;
+  return (d && d[s]) || (DICT.pt && DICT.pt[s]) || s;
 }
 
 // Compat: alguns lugares antigos importavam `translations`.
