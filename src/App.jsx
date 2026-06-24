@@ -307,7 +307,7 @@ const NAV = [
   { id: "signals",     label: "Sinais",     icon: "◈" },
   { id: "performance", label: "Desempenho", icon: "◉" },
   { id: "history",     label: "Histórico",  icon: "◷" },
-  { id: "profile",     label: "Mais",       icon: "≡" },
+  { id: "profile",     label: txt("mais"),       icon: "≡" },
 ];
 
 const BottomNav = ({ active, onNav, t }) => (
@@ -800,7 +800,7 @@ const Login = ({ t, onNext, onToggleTheme, onAuth, onForgot, onCreateAccount }) 
             <span style={{ fontSize: 13, fontWeight: 600, color: t.sell, lineHeight: 1.35 }}>{err}</span>
           </div>
         )}
-        <Btn t={t} onClick={handle} disabled={busy}>{busy ? "Entrando…" : "Entrar"}</Btn>
+        <Btn t={t} onClick={handle} disabled={busy}>{busy ? "Entrando…" : txt("entrar")}</Btn>
         <Btn t={t} variant="secondary" onClick={onCreateAccount} disabled={busy}>Criar conta</Btn>
       </div>
     </div>
@@ -1497,7 +1497,7 @@ const SignalDetail = ({ t, signal, onNav, onBack, onToggleTheme, showMock }) => 
             <div style={{ display: "flex", gap: 10 }}>
               <Btn t={t} style={{ flex: 1, height: 50 }}>Copiar sinal</Btn>
               <Btn t={t} variant="secondary" style={{ flex: 1, height: 50 }}
-                onClick={() => onNav("history")}>Histórico</Btn>
+                onClick={() => onNav("history")}>{{txt("historico")}}</Btn>
             </div>
           ) : (
             <>
@@ -2790,7 +2790,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
         <div style={{ padding: "16px 24px 32px" }}>
           <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
             <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, letterSpacing: -0.5,
-              color: t.text, fontFamily: FONT }}>Meu perfil</h1>
+              color: t.text, fontFamily: FONT }}>{{txt("perfil")}}</h1>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
               {onEdit && (
                 <button onClick={onEdit} aria-label="Editar perfil" style={{
@@ -2944,7 +2944,7 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
               </span>
             </div>
           ) : (
-            <Btn t={t} style={{ marginBottom: 10 }} onClick={onUpgrade}>Upgrade de plano</Btn>
+            <Btn t={t} style={{ marginBottom: 10 }} onClick={onUpgrade}>{{txt("upgrade")}}</Btn>
           )}
           {onEditAssets && (
             <Btn t={t} variant="secondary" style={{ marginBottom: 10 }} onClick={onEditAssets}>
