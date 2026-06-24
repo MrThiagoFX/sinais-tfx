@@ -490,7 +490,10 @@ const DashSignalCard = ({ s, t, onClick, fav, onToggleFav }) => {
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <AssetIcon asset={s.asset} size={36} />
           <div>
-            <div style={{ fontWeight: 800, fontSize: 15, color: t.text, fontFamily: FONT }}>{s.asset}</div>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <span style={{ fontWeight: 800, fontSize: 15, color: t.text, fontFamily: FONT }}>{s.asset}</span>
+              <Badge text={txt(s.dir)} color={ac} />
+            </div>
             <div style={{ fontSize: 11, color: t.sub, marginTop: 1, fontFamily: FONT }}>{s.time} · {s.tf}</div>
           </div>
         </div>
@@ -534,7 +537,7 @@ const DashSignalCard = ({ s, t, onClick, fav, onToggleFav }) => {
       ) : (
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
           <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>
-            <Badge text={txt(s.dir)} color={ac} /> <span style={{ marginLeft: 6 }}>R:R {s.rr}</span>
+            R:R {s.rr}
           </span>
           <span style={{ fontSize: 12, color: t.sub, fontFamily: FONT }}>
             {s.entry} → {win ? s.tp : s.sl}
