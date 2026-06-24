@@ -2739,8 +2739,10 @@ const AdminPanel = ({ t, txt, onNav, onBack, onToggleTheme }) => {
   );
 };
 
-const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCenter, onOpenFaq, onEdit, onEditAssets, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock, language, onChangeLanguage, tr }) => {
+const Profile = ({ t, txt, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCenter, onOpenFaq, onEdit, onEditAssets, onUpgrade, onAdmin, onSupport, isAdmin, onLogout, userEmail, profile, referral, plan, schedule, setSchedule, selectedAssets, tfPerAsset, live, showMock, language, onChangeLanguage, tr }) => {
   const [expanded, setExpanded] = useState(null);
+  const [langModalOpen, setLangModalOpen] = useState(false);
+  const [selectedLang, setSelectedLang] = useState(language);
   const [copied, setCopied] = useState(false);
   const [schedSaved, setSchedSaved] = useState(false);
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -2795,6 +2797,11 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
             <h1 style={{ fontSize: 26, fontWeight: 900, margin: 0, letterSpacing: -0.5,
               color: t.text, fontFamily: FONT }}>{txt("perfil")}}</h1>
             <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
+              <button onClick={() => setLangModalOpen(true)} aria-label="Mudar idioma" style={{
+                width: 38, height: 38, borderRadius: 12, cursor: "pointer",
+                background: t.card, border: `1.5px solid ${t.bdr}`,
+                display: "flex", alignItems: "center", justifyContent: "center",
+                fontSize: 17, padding: 0 }}>🌐</button>
               {onEdit && (
                 <button onClick={onEdit} aria-label="Editar perfil" style={{
                   width: 38, height: 38, borderRadius: 12, cursor: "pointer",
@@ -3034,6 +3041,57 @@ const Profile = ({ t, onNav, onToggleTheme, onOpenNotifications, onOpenNotifCent
           </div>
         </div>
       </Scroll>
+
+      {/* Modal de mudança de idioma */}
+      {langModalOpen && (
+        <div style={{
+          position: "fixed", inset: 0, background: "rgba(0,0,0,0.8)", zIndex: 999,
+          display: "flex", alignItems: "center", justifyContent: "center", paddingBottom: 80
+        }} onClick={() => setLangModalOpen(false)}>
+          <div style={{
+            background: t.bg0, borderRadius: 20, padding: "28px 24px", maxWidth: 320,
+            border: `2px solid ${t.accent}`, boxShadow: `0 10px 40px rgba(0,0,0,0.6)`
+          }} onClick={e => e.stopPropagation()}>
+            <h2 style={{ fontSize: 18, fontWeight: 900, margin: "0 0 20px", color: t.text, fontFamily: FONT, textAlign: "center" }}>
+              🌐 Escolha o idioma
+            </h2>
+            <div style={{ display: "flex", flexDirection: "column", gap: 12, marginBottom: 20 }}>
+              {["pt", "en", "es"].map(lang => (
+                <button key={lang} onClick={() => setSelectedLang(lang)} style={{
+                  height: 50, borderRadius: 14, cursor: "pointer", fontWeight: 700, fontSize: 15, fontFamily: FONT,
+                  border: `2.5px solid ${selectedLang === lang ? t.accent : t.bdr}`,
+                  background: selectedLang === lang ? t.accent : t.card,
+                  color: selectedLang === lang ? t.bg0 : t.text,
+                  transition: "all .15s"
+                }}>
+                  {lang === "pt" ? "🇧🇷 Português" : lang === "en" ? "🇺🇸 English" : "🇪🇸 Español"}
+                </button>
+              ))}
+            </div>
+            <div style={{ display: "flex", gap: 10 }}>
+              <button onClick={() => setLangModalOpen(false)} style={{
+                flex: 1, height: 48, borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: FONT,
+                border: `1.5px solid ${t.bdr}`, background: "transparent", color: t.text
+              }}>
+                Cancelar
+              </button>
+              <button onClick={() => {
+                onChangeLanguage?.(selectedLang);
+                setTimeout(() => window.location.reload(), 400);
+              }} style={{
+                flex: 1, height: 48, borderRadius: 12, cursor: "pointer", fontWeight: 700, fontSize: 14, fontFamily: FONT,
+                border: "none", background: t.accent, color: t.bg0
+              }}>
+                OK
+              </button>
+            </div>
+            <p style={{ fontSize: 11, color: t.sub, margin: "14px 0 0", textAlign: "center", fontFamily: FONT }}>
+              O app será reiniciado automaticamente.
+            </p>
+          </div>
+        </div>
+      )}
+
       <BottomNav active="profile" onNav={onNav} t={t} />
     </div>
   );
