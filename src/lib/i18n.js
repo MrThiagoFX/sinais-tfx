@@ -23,6 +23,7 @@ const DICT = {
   en: {
     // Navegação / telas
     "Início": "Home", "Sinais": "Signals", "Desempenho": "Performance", "Histórico": "History", "Mais": "More",
+    "Dashboard": "Dashboard", "Fazer upgrade": "Upgrade", "você recebe": "you receive",
     "← Voltar": "← Back", "Voltar": "Back", "Continuar": "Continue", "Começar agora": "Get started",
     "TOQUE PARA CONTINUAR": "TAP TO CONTINUE", "Mais opções": "More options", "Abrir filtros": "Open filters",
     "Alternar tema": "Toggle theme", "Mudar idioma": "Change language", "ou": "or",
@@ -218,6 +219,7 @@ const DICT = {
 
   es: {
     "Início": "Inicio", "Sinais": "Señales", "Desempenho": "Rendimiento", "Histórico": "Historial", "Mais": "Más",
+    "Dashboard": "Panel", "Fazer upgrade": "Mejorar plan", "você recebe": "recibes",
     "← Voltar": "← Atrás", "Voltar": "Atrás", "Continuar": "Continuar", "Começar agora": "Empezar ahora",
     "TOQUE PARA CONTINUAR": "TOCA PARA CONTINUAR", "Mais opções": "Más opciones", "Abrir filtros": "Abrir filtros",
     "Alternar tema": "Cambiar tema", "Mudar idioma": "Cambiar idioma", "ou": "o",
