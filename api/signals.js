@@ -87,11 +87,12 @@ async function postSignal(req, res) {
 
   // AUTO-CURA (supersede): no máximo 1 sinal aberto por (ativo, tf). Se chega uma
   // abertura nova e ainda existe uma órfã aberta do mesmo ativo+tf (o CLOSE anterior
-  // se perdeu), encerra a antiga como "cancelado" (não conta no laudo) antes de
+  // se perdeu), encerra a antiga como "expirado" (não conta no laudo) antes de
   // inserir a nova. Rede de segurança caso o EA também tenha perdido o fechamento.
+  // OBS: "expirado" é o único status de descarte aceito pela constraint do banco.
   try {
     await sb.from("signals")
-      .update({ status: "cancelado", closed_at: new Date().toISOString() })
+      .update({ status: "expirado", closed_at: new Date().toISOString() })
       .eq("asset", asset).eq("tf", tf).eq("status", "aberto");
   } catch { /* não bloqueia a abertura */ }
 

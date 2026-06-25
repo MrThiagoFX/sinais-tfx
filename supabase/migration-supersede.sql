@@ -12,7 +12,7 @@ with ranked as (
   where status = 'aberto'
 )
 update public.signals s
-set status = 'cancelado', closed_at = now()
+set status = 'expirado', closed_at = now()
 from ranked r
 where s.id = r.id and r.rn > 1;
 

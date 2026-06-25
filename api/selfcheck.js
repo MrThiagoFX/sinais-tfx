@@ -82,7 +82,7 @@ export default async function handler(req, res) {
   if (stale.length) {
     const ids = stale.map((o) => o.id);
     const { error: e2 } = await sb.from("signals")
-      .update({ status: "cancelado", closed_at: new Date().toISOString() }).in("id", ids);
+      .update({ status: "expirado", closed_at: new Date().toISOString() }).in("id", ids);
     if (!e2) auto_resolvidas = ids.length;
   }
   // Presas que ainda restam (12h–24h, aguardando o limite de auto-resolução).
