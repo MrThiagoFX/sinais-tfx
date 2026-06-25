@@ -1,13 +1,10 @@
 //+------------------------------------------------------------------+
-//|  TFX_SENDER_EA.mq4  —  Infinity Signals                          |
+//|  TFX_SENDER_EA.mq4  —  Infinity Signals  (v2.0 auto-reconcilia)   |
 //|                                                                  |
 //|  Le a memoria (GlobalVariables) gravada pelo indicador           |
 //|  TFXINFINITY e envia os sinais (abertura/fechamento) para o      |
 //|  backend via WebRequest. Roda sozinho num grafico VAZIO, NAO     |
 //|  abre ordens, NAO altera o grafico, NAO atrapalha outros robos.  |
-//|                                                                  |
-//|  AUTO-DESCOBERTA: acha sozinho todos os simbolos/timeframes que  |
-//|  o TFXINFINITY estiver gerando — sem precisar configurar nada.   |
 //|                                                                  |
 //|  PASSOS NA VPS:                                                  |
 //|   1) Compile (F7) e arraste este EA num grafico VAZIO qualquer.  |
@@ -15,15 +12,23 @@
 //|   3) Ferramentas > Opcoes > Expert Advisors >                    |
 //|        [x] Permitir WebRequest para as URLs listadas             |
 //|        adicione:  https://sinais-tfx.vercel.app                  |
+//|   4) Ferramentas > Opcoes > Expert Advisors >                    |
+//|        [x] Permitir importacao de DLL  NAO e necessario.         |
 //+------------------------------------------------------------------+
 #property strict
-#property version "1.10"
-#property description "Envia os sinais do TFXINFINITY para o app Infinity Signals (com dupla conferencia de fechamento)."
+#property version "2.00"
+#property description "Envia sinais do TFXINFINITY com TRIPLA garantia de fechamento: indicador + preco ao vivo + varredura do historico de barras. Memoria em disco (sobrevive a reinicio)."
 
-// v1.10 — DUPLA CONFERENCIA: alem de obedecer o fechamento marcado pelo
-// indicador, o EA confere o PRECO AO VIVO de cada operacao aberta contra o
-// TP/SL e fecha sozinho quando o preco cruza. Assim nenhuma operacao fica
-// pendurada se o indicador perder o evento de fechamento.
+// ── v2.0 — O QUE MUDOU (resolve operacoes 'penduradas') ───────────
+// 1) MEMORIA EM DISCO: o EA grava o que abriu num arquivo
+//    (MQL4/Files/tfx_sender_state.csv). Reiniciar o MT4/VPS NAO apaga
+//    mais o que estava aberto -> ele continua cuidando de fechar.
+// 2) VARREDURA DE HISTORICO: a cada ciclo, para cada operacao aberta,
+//    o EA varre as BARRAS desde a entrada (iHigh/iLow) e detecta se
+//    bateu TP ou STOP primeiro -> fecha com o RESULTADO REAL, mesmo
+//    que o indicador tenha perdido o evento ou o EA tenha ficado fora.
+// 3) RETRY ETERNO: so para de cuidar de uma operacao quando o backend
+//    confirma o fechamento (HTTP 2xx). Nada fica pendurado.
 
 input string ServidorUrl       = "https://sinais-tfx.vercel.app/api/signals";
 input string Token             = "0393df6d014741badd6a55f12b62f69627168dabf17f60dd63af1fa9fdd9cebf";
@@ -32,7 +37,14 @@ input int    IntervaloSegundos = 5;             // frequencia de verificacao
 input int    TimeoutMs         = 5000;
 input bool   MostrarStatus     = true;
 
-string g_sent[];          // marcas "OPEN:id" / "CLOSE:id" ja enviadas
+string g_stateFile = "tfx_sender_state.csv";
+
+// ── Estado persistente: operacoes que o EA ja ABRIU ──
+// state: "OPEN" = aberta (vigiando p/ fechar) | "DONE" = ja fechada (confirmada)
+string   st_id[];     string st_sym[];   int    st_per[];   int    st_dir[];
+double   st_entry[];  double st_stop[];  double st_target[];
+datetime st_sig[];    string st_state[];
+
 int    g_totalEnviados = 0;
 string g_ultimaAcao    = "iniciando...";
 string g_ultimoErro    = "";
@@ -41,13 +53,10 @@ string g_ultimoErro    = "";
 string Contexto()
 {
    string c = NomeDoIndicador;
-   StringReplace(c, " ", "");
-   StringReplace(c, ".", "");
-   StringReplace(c, "_", "");
+   StringReplace(c, " ", ""); StringReplace(c, ".", ""); StringReplace(c, "_", "");
    if(StringLen(c) == 0) c = "PADRAO";
    return(c);
 }
-
 string Tf(int periodo)
 {
    if(periodo == 1)    return("M1");
@@ -74,14 +83,12 @@ string Sanitiza(string s)
    }
    return(r);
 }
-
 int UltimoIndice(string s, string ch)
 {
    int idx = -1, p = 0;
    while(true) { int f = StringFind(s, ch, p); if(f < 0) break; idx = f; p = f + 1; }
    return(idx);
 }
-
 double Ler(string base, string campo)
 {
    string k = base + campo;
@@ -89,100 +96,147 @@ double Ler(string base, string campo)
    return(GlobalVariableGet(k));
 }
 
-bool JaEnviado(string chave)
+//+------------------------------------------------------------------+
+//|  ESTADO EM DISCO                                                 |
+//+------------------------------------------------------------------+
+int FindState(string id)
 {
-   for(int i = 0; i < ArraySize(g_sent); i++) if(g_sent[i] == chave) return(true);
-   return(false);
-}
-void Marcar(string chave)
-{
-   int n = ArraySize(g_sent);
-   ArrayResize(g_sent, n + 1);
-   g_sent[n] = chave;
+   for(int i = 0; i < ArraySize(st_id); i++) if(st_id[i] == id) return(i);
+   return(-1);
 }
 
+void AddState(string id, string sym, int per, int dir, double entry, double stop, double target, datetime sig, string state)
+{
+   int n = ArraySize(st_id);
+   ArrayResize(st_id, n+1);    ArrayResize(st_sym, n+1);    ArrayResize(st_per, n+1);
+   ArrayResize(st_dir, n+1);   ArrayResize(st_entry, n+1);  ArrayResize(st_stop, n+1);
+   ArrayResize(st_target, n+1);ArrayResize(st_sig, n+1);    ArrayResize(st_state, n+1);
+   st_id[n]=id; st_sym[n]=sym; st_per[n]=per; st_dir[n]=dir; st_entry[n]=entry;
+   st_stop[n]=stop; st_target[n]=target; st_sig[n]=sig; st_state[n]=state;
+}
+
+// Reescreve o arquivo inteiro a partir dos arrays; poda DONE com +7 dias.
+void SaveState()
+{
+   int h = FileOpen(g_stateFile, FILE_WRITE|FILE_TXT|FILE_ANSI);
+   if(h == INVALID_HANDLE) { g_ultimoErro = "nao gravou estado (FileOpen)"; return; }
+   datetime corte = TimeCurrent() - 7*24*3600;
+   for(int i = 0; i < ArraySize(st_id); i++)
+   {
+      if(st_state[i] == "DONE" && st_sig[i] < corte) continue; // poda antigas
+      string line = st_id[i] + ";" + st_sym[i] + ";" + IntegerToString(st_per[i]) + ";"
+                  + IntegerToString(st_dir[i]) + ";" + Num(st_entry[i]) + ";" + Num(st_stop[i]) + ";"
+                  + Num(st_target[i]) + ";" + IntegerToString((int)st_sig[i]) + ";" + st_state[i];
+      FileWriteString(h, line + "\r\n");
+   }
+   FileClose(h);
+}
+
+void LoadState()
+{
+   ArrayResize(st_id,0); ArrayResize(st_sym,0); ArrayResize(st_per,0); ArrayResize(st_dir,0);
+   ArrayResize(st_entry,0); ArrayResize(st_stop,0); ArrayResize(st_target,0);
+   ArrayResize(st_sig,0); ArrayResize(st_state,0);
+   if(!FileIsExist(g_stateFile)) return;
+   int h = FileOpen(g_stateFile, FILE_READ|FILE_TXT|FILE_ANSI);
+   if(h == INVALID_HANDLE) return;
+   while(!FileIsEnding(h))
+   {
+      string line = FileReadString(h);
+      if(StringLen(line) < 5) continue;
+      string p[]; int n = StringSplit(line, ';', p);
+      if(n < 9) continue;
+      AddState(p[0], p[1], (int)StringToInteger(p[2]), (int)StringToInteger(p[3]),
+               StringToDouble(p[4]), StringToDouble(p[5]), StringToDouble(p[6]),
+               (datetime)StringToInteger(p[7]), p[8]);
+   }
+   FileClose(h);
+}
+
+//+------------------------------------------------------------------+
+//|  ENVIO HTTP                                                      |
 //+------------------------------------------------------------------+
 bool Post(string json)
 {
    char data[]; char result[]; string rh = "";
    string headers = "Content-Type: application/json\r\nX-TFX-Token: " + Token + "\r\n";
    StringToCharArray(json, data, 0, WHOLE_ARRAY, CP_UTF8);
-   int sz = ArraySize(data); if(sz > 0) ArrayResize(data, sz - 1); // remove o \0 final
-
+   int sz = ArraySize(data); if(sz > 0) ArrayResize(data, sz - 1);
    ResetLastError();
    int status = WebRequest("POST", ServidorUrl, headers, TimeoutMs, data, result, rh);
-   if(status == -1)
-   {
-      int err = GetLastError();
-      g_ultimoErro = "WebRequest erro " + IntegerToString(err) + " — libere a URL nas Opcoes do MT4";
-      return(false);
-   }
-   if(status < 200 || status >= 300)
-   {
-      g_ultimoErro = "HTTP " + IntegerToString(status);
-      return(false);
-   }
+   if(status == -1) { g_ultimoErro = "WebRequest erro " + IntegerToString(GetLastError()) + " — libere a URL nas Opcoes"; return(false); }
+   if(status < 200 || status >= 300) { g_ultimoErro = "HTTP " + IntegerToString(status); return(false); }
    g_ultimoErro = "";
    return(true);
 }
-
 string JsonAbertura(string id, string symbol, string tf, int dir, double entry, double stop, double target)
 {
-   string j = "{";
-   j += "\"event\":\"SIGNAL_OPEN\",";
-   j += "\"signal_id\":\"" + id + "\",";
-   j += "\"product\":\"TFXINFINITY\",";
-   j += "\"symbol\":\"" + symbol + "\",";
-   j += "\"timeframe\":\"" + tf + "\",";
-   j += "\"direction\":\"" + DirTexto(dir) + "\",";
-   j += "\"entry\":" + Num(entry) + ",";
-   j += "\"stop\":" + Num(stop) + ",";
-   j += "\"target\":" + Num(target);
-   j += "}";
-   return(j);
+   return("{\"event\":\"SIGNAL_OPEN\",\"signal_id\":\"" + id + "\",\"product\":\"TFXINFINITY\",\"symbol\":\""
+        + symbol + "\",\"timeframe\":\"" + tf + "\",\"direction\":\"" + DirTexto(dir) + "\",\"entry\":"
+        + Num(entry) + ",\"stop\":" + Num(stop) + ",\"target\":" + Num(target) + "}");
 }
 string JsonFechamento(string id, string symbol, string tf, int dir, double entry, double exit, int mot)
 {
-   string j = "{";
-   j += "\"event\":\"SIGNAL_CLOSE\",";
-   j += "\"signal_id\":\"" + id + "\",";
-   j += "\"product\":\"TFXINFINITY\",";
-   j += "\"symbol\":\"" + symbol + "\",";
-   j += "\"timeframe\":\"" + tf + "\",";
-   j += "\"direction\":\"" + DirTexto(dir) + "\",";
-   j += "\"entry\":" + Num(entry) + ",";
-   j += "\"exit\":" + Num(exit) + ",";
-   j += "\"close_reason\":\"" + MotivoTexto(mot) + "\"";
-   j += "}";
-   return(j);
+   return("{\"event\":\"SIGNAL_CLOSE\",\"signal_id\":\"" + id + "\",\"product\":\"TFXINFINITY\",\"symbol\":\""
+        + symbol + "\",\"timeframe\":\"" + tf + "\",\"direction\":\"" + DirTexto(dir) + "\",\"entry\":"
+        + Num(entry) + ",\"exit\":" + Num(exit) + ",\"close_reason\":\"" + MotivoTexto(mot) + "\"}");
+}
+
+//+------------------------------------------------------------------+
+//|  VARREDURA DE HISTORICO — bateu TP ou STOP primeiro?            |
+//|  retorna 1=TP, 2=STOP, 0=ainda rodando.  exitOut = preco saida. |
+//+------------------------------------------------------------------+
+int CheckHistory(string sym, int per, int dir, double stop, double target, datetime sig, double &exitOut)
+{
+   SymbolSelect(sym, true);                       // garante dados do simbolo
+   int shift = iBarShift(sym, per, sig, false);   // barra que cobre a entrada
+   if(shift < 0) return(0);
+   // varre do mais antigo (shift) ao mais novo (0)
+   for(int i = shift; i >= 0; i--)
+   {
+      double hi = iHigh(sym, per, i);
+      double lo = iLow(sym, per, i);
+      if(hi <= 0 || lo <= 0) continue;
+      if(dir > 0) // BUY: TP acima, STOP abaixo
+      {
+         bool tp = (hi >= target), sl = (lo <= stop);
+         if(tp && sl) { exitOut = stop;   return(2); } // ambiguo intrabar -> conservador (STOP)
+         if(tp)       { exitOut = target; return(1); }
+         if(sl)       { exitOut = stop;   return(2); }
+      }
+      else // SELL: TP abaixo, STOP acima
+      {
+         bool tp = (lo <= target), sl = (hi >= stop);
+         if(tp && sl) { exitOut = stop;   return(2); }
+         if(tp)       { exitOut = target; return(1); }
+         if(sl)       { exitOut = stop;   return(2); }
+      }
+   }
+   return(0);
 }
 
 //+------------------------------------------------------------------+
 void Varrer()
 {
-   string pref = "TFXI_" + Contexto() + "_";   // ex.: TFXI_TFXINFINITY_
+   bool mudou = false;
+   string pref = "TFXI_" + Contexto() + "_";
    int total = GlobalVariablesTotal();
    int setups = 0;
-   int pendentes = 0;   // abertas que ainda nao bateram TP/SL
 
+   // ── FASE A: descobrir setups no indicador → ABRIR + fechamento PRIMARIO ──
    for(int i = 0; i < total; i++)
    {
       string nome = GlobalVariableName(i);
       if(StringFind(nome, pref) != 0) continue;
       int len = StringLen(nome);
-      if(len < 4 || StringSubstr(nome, len - 4) != "_sig") continue;  // ancora no campo _sig
+      if(len < 4 || StringSubstr(nome, len - 4) != "_sig") continue;
 
-      string base  = StringSubstr(nome, 0, len - 3); // remove "sig", mantem o "_" final
-      // miolo = "<symbol>_<period>_<slot>"
+      string base  = StringSubstr(nome, 0, len - 3);
       int pInicio  = StringLen(pref);
       string miolo = StringSubstr(base, pInicio, StringLen(base) - pInicio - 1);
-
-      int iSlot = UltimoIndice(miolo, "_");
-      if(iSlot < 0) continue;
-      string slotStr = StringSubstr(miolo, iSlot + 1);
+      int iSlot = UltimoIndice(miolo, "_"); if(iSlot < 0) continue;
       string semSlot = StringSubstr(miolo, 0, iSlot);
-      int iPer = UltimoIndice(semSlot, "_");
-      if(iPer < 0) continue;
+      int iPer = UltimoIndice(semSlot, "_"); if(iPer < 0) continue;
       string perStr  = StringSubstr(semSlot, iPer + 1);
       string symbol  = StringSubstr(semSlot, 0, iPer);
       int periodo    = (int)StringToInteger(perStr);
@@ -196,73 +250,71 @@ void Varrer()
       int      mot   = (int)Ler(base, "mot");
       double   exitP = Ler(base, "exitP");
 
-      // setup valido?
-      if(sig <= 0 || dir == 0 || entry <= 0 || stop <= 0) continue;
+      if(sig <= 0 || dir == 0 || entry <= 0 || stop <= 0 || target <= 0) continue;
       setups++;
 
       string tf = Tf(periodo);
       string id = Sanitiza(symbol) + "_" + tf + "_" + DirTexto(dir) + "_" + IntegerToString((int)sig);
       bool fechado = (exitT > 0 && mot > 0);
+      int idx = FindState(id);
 
-      // 1) Abertura (sempre garante que foi enviada)
-      if(target > 0 && !JaEnviado("OPEN:" + id))
+      if(idx < 0)
       {
-         if(Post(JsonAbertura(id, symbol, tf, dir, entry, stop, target)))
+         // setup novo: so abre se ainda estiver RODANDO (nao backfilla antigas
+         // ja fechadas -> evitaria datar errado no banco).
+         if(!fechado)
          {
-            Marcar("OPEN:" + id);
-            g_totalEnviados++;
-            g_ultimaAcao = "ABERTURA " + symbol + " " + tf + " " + DirTexto(dir);
+            if(Post(JsonAbertura(id, symbol, tf, dir, entry, stop, target)))
+            {
+               AddState(id, symbol, periodo, dir, entry, stop, target, sig, "OPEN");
+               g_totalEnviados++; mudou = true;
+               g_ultimaAcao = "ABERTURA " + symbol + " " + tf + " " + DirTexto(dir);
+            }
          }
       }
-
-      // 2) Fechamento PRIMARIO — o indicador marcou (exitT/mot).
-      if(fechado && JaEnviado("OPEN:" + id) && !JaEnviado("CLOSE:" + id))
+      else if(st_state[idx] == "OPEN" && fechado)
       {
+         // fechamento PRIMARIO (indicador marcou)
          if(Post(JsonFechamento(id, symbol, tf, dir, entry, exitP, mot)))
          {
-            Marcar("CLOSE:" + id);
-            g_totalEnviados++;
+            st_state[idx] = "DONE";
+            g_totalEnviados++; mudou = true;
             g_ultimaAcao = "FECHAMENTO " + symbol + " " + tf + " (" + MotivoTexto(mot) + ")";
          }
       }
-      // 2b) DUPLA CONFERENCIA — o indicador NAO marcou, mas o preco ja cruzou
-      //     o TP/SL: o EA fecha sozinho (nada fica pendurado).
-      else if(!fechado && target > 0 && JaEnviado("OPEN:" + id) && !JaEnviado("CLOSE:" + id))
-      {
-         double preco = MarketInfo(symbol, MODE_BID);
-         int    motAuto = 0; double exitAuto = 0;
-         if(preco > 0)
-         {
-            if(dir > 0) {           // BUY
-               if(preco >= target)      { motAuto = 1; exitAuto = target; }  // TP
-               else if(preco <= stop)   { motAuto = 2; exitAuto = stop;   }  // STOP
-            } else {                // SELL
-               if(preco <= target)      { motAuto = 1; exitAuto = target; }  // TP
-               else if(preco >= stop)   { motAuto = 2; exitAuto = stop;   }  // STOP
-            }
-         }
-         if(motAuto > 0)
-         {
-            if(Post(JsonFechamento(id, symbol, tf, dir, entry, exitAuto, motAuto)))
-            {
-               Marcar("CLOSE:" + id);
-               g_totalEnviados++;
-               g_ultimaAcao = "AUTO-FECHAMENTO " + symbol + " " + tf + " (" + MotivoTexto(motAuto) + ")";
-            }
-         }
-         else pendentes++;   // realmente aberta (preco ainda entre TP e SL, ou indisponivel)
-      }
    }
+
+   // ── FASE B: RECONCILIACAO — para CADA aberta conhecida (mesmo que o
+   //    indicador tenha perdido o slot), varre o historico e fecha. ──
+   int abertas = 0;
+   for(int j = 0; j < ArraySize(st_id); j++)
+   {
+      if(st_state[j] != "OPEN") continue;
+      double exitR = 0;
+      int r = CheckHistory(st_sym[j], st_per[j], st_dir[j], st_stop[j], st_target[j], st_sig[j], exitR);
+      if(r > 0)
+      {
+         string tf = Tf(st_per[j]);
+         if(Post(JsonFechamento(st_id[j], st_sym[j], tf, st_dir[j], st_entry[j], exitR, r)))
+         {
+            st_state[j] = "DONE";
+            g_totalEnviados++; mudou = true;
+            g_ultimaAcao = "RECONCILIADO " + st_sym[j] + " " + tf + " (" + MotivoTexto(r) + ")";
+         }
+      }
+      else abertas++;
+   }
+
+   if(mudou) SaveState();
 
    if(MostrarStatus)
    {
-      string s = "TFX SENDER — Infinity Signals (v1.10 dupla conferencia)\n";
-      s += "Indicador: " + NomeDoIndicador + "  |  setups: " + IntegerToString(setups) + "  |  abertas: " + IntegerToString(pendentes) + "\n";
-      s += "Enviados nesta sessao: " + IntegerToString(g_totalEnviados) + "\n";
+      string s = "TFX SENDER — Infinity Signals (v2.0 auto-reconcilia)\n";
+      s += "Indicador: " + NomeDoIndicador + "  |  setups: " + IntegerToString(setups) + "  |  abertas vigiadas: " + IntegerToString(abertas) + "\n";
+      s += "Em memoria (disco): " + IntegerToString(ArraySize(st_id)) + "  |  enviados nesta sessao: " + IntegerToString(g_totalEnviados) + "\n";
       s += "Ultima acao: " + g_ultimaAcao + "\n";
-      if(StringLen(g_ultimoErro) > 0) s += "ATENCAO: " + g_ultimoErro + "\n";
-      else s += "Status: OK (enviando)\n";
-      if(setups == 0) s += "(nenhum setup ainda — o TFXINFINITY esta nos graficos?)\n";
+      if(StringLen(g_ultimoErro) > 0) s += "ATENCAO: " + g_ultimoErro + "\n"; else s += "Status: OK (vigiando + reconciliando)\n";
+      if(setups == 0 && ArraySize(st_id) == 0) s += "(nenhum setup ainda — o TFXINFINITY esta nos graficos?)\n";
       Comment(s);
    }
 }
@@ -270,17 +322,11 @@ void Varrer()
 //+------------------------------------------------------------------+
 int OnInit()
 {
+   LoadState();                                   // recupera o que estava aberto
    EventSetTimer(MathMax(1, IntervaloSegundos));
    Varrer();
    return(INIT_SUCCEEDED);
 }
-void OnDeinit(const int reason)
-{
-   EventKillTimer();
-   if(MostrarStatus) Comment("");
-}
-void OnTimer()
-{
-   Varrer();
-}
+void OnDeinit(const int reason) { EventKillTimer(); if(MostrarStatus) Comment(""); }
+void OnTimer() { Varrer(); }
 //+------------------------------------------------------------------+

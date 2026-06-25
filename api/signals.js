@@ -85,6 +85,16 @@ async function postSignal(req, res) {
     if (ex) return res.status(200).json({ ok: true, duplicate: true, id: ex.id });
   }
 
+  // AUTO-CURA (supersede): no máximo 1 sinal aberto por (ativo, tf). Se chega uma
+  // abertura nova e ainda existe uma órfã aberta do mesmo ativo+tf (o CLOSE anterior
+  // se perdeu), encerra a antiga como "cancelado" (não conta no laudo) antes de
+  // inserir a nova. Rede de segurança caso o EA também tenha perdido o fechamento.
+  try {
+    await sb.from("signals")
+      .update({ status: "cancelado", closed_at: new Date().toISOString() })
+      .eq("asset", asset).eq("tf", tf).eq("status", "aberto");
+  } catch { /* não bloqueia a abertura */ }
+
   const row = { asset, dir, tf, entry, sl, tp, status: "aberto" };
   if (signalId) row.signal_id = signalId;
   const { data, error } = await sb.from("signals").insert(row).select().single();
