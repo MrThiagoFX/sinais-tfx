@@ -4,7 +4,7 @@
 //   entry/stop/target, signal_id) e também o formato legado {asset,dir,tf,entry,sl,tp}.
 // GET → app lista sinais do usuário.
 import {
-  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, startOfForexDayMs, effectivePlan,
+  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, startOfForexDayMs, effectivePlan, freeTrialExpired,
 } from "./_lib/business.js";
 import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
 import { notifyEligibleUsers, notifyClose } from "./_lib/push.js";
@@ -163,6 +163,16 @@ async function getSignals(req, res) {
   // LAUDO (Histórico/Desempenho) — track record COMPLETO da ferramenta, igual
   // para todos: todas as operações, sem filtro por ativo/timeframe do usuário.
   const recentAll = (rows || []).filter((s) => s.status !== "aberto").sort(byTime).slice(0, 3000);
+
+  // CORTE DO FREE: passou dos 15 dias de trial sem assinar → encerra os sinais.
+  // O laudo (recentAll) continua visível (marketing/prova social); o feed para.
+  if (!admin && freeTrialExpired(profile)) {
+    return res.status(200).json({
+      plan: "free", trial_expired: true, quota: 0, delivered: 0,
+      admin: false, seeAll: false, signals: [], recent: [], recentAll,
+      plan_expires_at: null,
+    });
+  }
 
   // Sinais de HOJE (dia do mercado) → contador "sinais hoje" + cota.
   // Admin não tem teto (vê todas as operações do dia).

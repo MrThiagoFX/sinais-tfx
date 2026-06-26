@@ -1164,6 +1164,24 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
   );
 };
 
+// Card mostrado quando o período grátis de 15 dias acabou (corte do Free).
+const TrialLocked = ({ t, onAssinar }) => (
+  <Card t={t} accent style={{ textAlign: "center", padding: "24px 18px", marginBottom: 12 }}>
+    <div style={{ fontSize: 30, marginBottom: 8 }}>🔒</div>
+    <div style={{ fontSize: 16, fontWeight: 900, color: t.text, fontFamily: FONT, marginBottom: 6 }}>
+      {txt("Seu período grátis acabou")}
+    </div>
+    <p style={{ fontSize: 12.5, color: t.sub, lineHeight: 1.55, margin: "0 0 14px", fontFamily: FONT }}>
+      {txt("Os 15 dias grátis terminaram. Assine o Premium Semanal pra continuar recebendo os sinais.")}
+    </p>
+    <button onClick={onAssinar} style={{
+      width: "100%", height: 46, borderRadius: 14, border: "none", cursor: "pointer",
+      background: t.accent, color: t.bg0, fontWeight: 800, fontSize: 14, fontFamily: FONT }}>
+      💬 {txt("Assinar pelo Telegram")}
+    </button>
+  </Card>
+);
+
 const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfPerAsset, schedule, live, stats, closeAlerts = [], onToggleCloseAlert, userName }) => {
   const [dashTf, setDashTf] = useState("Todos");
   const liveSignals = live?.signals?.length ? live.signals.map(mapSignal) : null;
@@ -1271,7 +1289,9 @@ const Home = ({ t, onNav, onOpenSignal, onToggleTheme, selectedAssets, plan, tfP
               </div>
             )}
           </div>
-          {recent.length === 0 ? (
+          {live?.trial_expired ? (
+            <TrialLocked t={t} onAssinar={() => subscribeTelegram({ name: userName })} />
+          ) : recent.length === 0 ? (
             <Card t={t} style={{ textAlign: "center", padding: "24px 18px" }}>
               <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>
                 {dashTf === "Todos" ? <>{txt("Nenhum sinal ainda hoje.")}<br />{txt("Você será avisado quando chegar um.")}</> : `Nenhum sinal em ${dashTf} agora.`}
@@ -1440,7 +1460,9 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
             </div>
           </div>
         )}
-        {shown.length === 0 ? (
+        {live?.trial_expired ? (
+          <TrialLocked t={t} onAssinar={() => subscribeTelegram({})} />
+        ) : shown.length === 0 ? (
           forexClosed() ? null : (
           <Card t={t} style={{ textAlign: "center", padding: "28px 18px" }}>
             <p style={{ fontSize: 13, color: t.sub, margin: 0, lineHeight: 1.6, fontFamily: FONT }}>

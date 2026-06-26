@@ -21,6 +21,18 @@ export function effectivePlan(profile) {
   return profile.plan || "free";
 }
 
+// Período grátis: o Free é um TRIAL de 15 dias a partir do cadastro
+// (profiles.created_at). Depois disso, sem assinar, o acesso aos sinais encerra.
+export const FREE_TRIAL_DAYS = 15;
+export function trialEndsMs(profile) {
+  if (!profile?.created_at) return Infinity; // sem data → não bloqueia (segurança)
+  return new Date(profile.created_at).getTime() + FREE_TRIAL_DAYS * 86400000;
+}
+// Free cujo trial de 15 dias já acabou (não vale para premium/aluno/etc).
+export function freeTrialExpired(profile) {
+  return effectivePlan(profile) === "free" && Date.now() > trialEndsMs(profile);
+}
+
 // Tamanho do "pip"/ponto por ativo, para calcular result_pips no fechamento.
 export const PIP_SIZE = { EURUSD: 0.0001, GBPUSD: 0.0001, XAUUSD: 0.1, NAS100: 1, US30: 1 };
 
