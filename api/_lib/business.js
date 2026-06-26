@@ -6,9 +6,10 @@ export const ASSETS = ["XAUUSD", "NAS100", "US30"];
 export const TFS = ["M5", "M15"];
 export const DIRS = ["Compra", "Venda"];
 
-// Planos "estilo anual" (dia todo): anual + categorias internas aluno/influencer.
+// Planos "estilo anual" (dia todo / acesso total): premium semanal, anual e
+// categorias internas aluno/influencer.
 export function isAnualLike(plan) {
-  return plan === "anual" || plan === "aluno" || plan === "influencer";
+  return plan === "premium" || plan === "anual" || plan === "aluno" || plan === "influencer";
 }
 
 // Plano EFETIVO: se a validade (plan_expires_at) já passou, o usuário cai

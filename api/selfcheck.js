@@ -6,6 +6,7 @@
 //
 // Auth: cron do Vercel (x-vercel-cron) · CRON_SECRET · ?key=MT4_TOKEN · admin logado.
 import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
+import { runWeeklyGuarantee } from "./_lib/guarantee.js";
 
 function autorizado(req, user) {
   if (req.headers["x-vercel-cron"]) return true;
@@ -88,6 +89,10 @@ export default async function handler(req, res) {
   // Presas que ainda restam (12h–24h, aguardando o limite de auto-resolução).
   const presas_restantes = Math.max(0, presas - auto_resolvidas);
 
+  // 7) GARANTIA DA SEMANA (Premium): brinde se a semana fechou negativa.
+  let garantia = null;
+  try { garantia = await runWeeklyGuarantee(sb); } catch (e) { garantia = { ok: false, error: e?.message }; }
+
   const totalPips = Object.values(esperado).reduce((a, b) => a + b.pips, 0);
   return res.status(200).json({
     ok: divergencias === 0 && presas_restantes === 0,
@@ -95,6 +100,7 @@ export default async function handler(req, res) {
     reconstruido,
     presas: presas_restantes,
     auto_resolvidas,
+    garantia,
     buckets: Object.keys(esperado).length,
     fechados: (closed || []).length,
     laudo_pips: Math.round(totalPips),

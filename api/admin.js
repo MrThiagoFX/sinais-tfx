@@ -66,11 +66,22 @@ export default async function handler(req, res) {
 
     if (action === "set-plan") {
       const { userId, plan } = req.body;
-      if (!["free", "mensal", "anual", "aluno", "influencer"].includes(plan))
+      if (!["free", "premium", "mensal", "anual", "aluno", "influencer"].includes(plan))
         return res.status(400).json({ error: "plano inválido" });
       const { error } = await sb.from("profiles").update({ plan }).eq("id", userId);
       if (error) return serverError(res, "Falha na operação", error);
       return res.status(200).json({ ok: true });
+    }
+
+    // Libera Premium Semanal: plano "premium" + validade now+days (default 7).
+    // Atalho do painel após confirmar o Pix do cliente.
+    if (action === "grant-premium") {
+      const { userId } = req.body;
+      const days = parseInt(req.body.days, 10) || 7;
+      const expires = new Date(Date.now() + days * 86400000).toISOString();
+      const { error } = await sb.from("profiles").update({ plan: "premium", plan_expires_at: expires }).eq("id", userId);
+      if (error) return serverError(res, "Falha na operação", error);
+      return res.status(200).json({ ok: true, plan_expires_at: expires });
     }
 
     // Define a validade do plano: days>0 → agora+days; days=0/null → sem limite.

@@ -342,8 +342,8 @@ const ASSET_NAMES = {
 };
 // Planos premium (acesso completo) e planos "estilo anual" (M1 + dia todo).
 // aluno e influencer são categorias internas (só o admin cadastra).
-const PREMIUM_PLANS = ["mensal", "anual", "aluno", "influencer"];
-const ANUAL_LIKE = ["anual", "aluno", "influencer"];
+const PREMIUM_PLANS = ["premium", "mensal", "anual", "aluno", "influencer"];
+const ANUAL_LIKE = ["premium", "anual", "aluno", "influencer"];
 const isPremiumPlan = (p) => PREMIUM_PLANS.includes(p);
 const isAnualLikePlan = (p) => ANUAL_LIKE.includes(p);
 
@@ -354,12 +354,28 @@ const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")
 
 const PLAN_INFO = {
   free:       { name: "Free",            price: "Grátis" },
+  premium:    { name: "Premium Semanal", price: "R$ 49,90/semana" },
   mensal:     { name: "Premium Mensal",  price: "R$ 99/mês" },
   anual:      { name: "Premium Anual",   price: "R$ 79/mês" },
   aluno:      { name: "Aluno",           price: "Acesso de aluno" },
   influencer: { name: "Influencer",      price: "Parceria" },
 };
-const PLAN_BADGE = { free: "FREE", mensal: "PREMIUM", anual: "ANUAL", aluno: "ALUNO", influencer: "INFLUENCER" };
+const PLAN_BADGE = { free: "FREE", premium: "PREMIUM", mensal: "PREMIUM", anual: "ANUAL", aluno: "ALUNO", influencer: "INFLUENCER" };
+
+// Assinatura é manual (Pix no atendimento): abre o Telegram com os dados do
+// cadastro já copiados pro cliente colar. O admin gera o Pix e libera no painel.
+const TELEGRAM_HANDLE = "mrthiagofx";
+function subscribeTelegram({ name, email, username, userId } = {}) {
+  const msg = [
+    "Olá! Quero assinar o Premium Semanal (R$ 49,90).",
+    name ? `Nome: ${name}` : null,
+    email ? `E-mail: ${email}` : null,
+    username ? `Usuário: @${String(username).replace(/^@/, "")}` : null,
+    userId ? `ID: ${String(userId).slice(0, 8)}` : null,
+  ].filter(Boolean).join("\n");
+  try { navigator.clipboard.writeText(msg); } catch { /* ignore */ }
+  try { window.open(`https://t.me/${TELEGRAM_HANDLE}`, "_blank", "noopener"); } catch { /* ignore */ }
+}
 
 // Plano Free tem horário FIXO (não personalizável). Premium escolhe a janela.
 const FREE_SCHEDULE = { start: "08:00", end: "18:00", allDay: false };
@@ -954,67 +970,66 @@ const Signup = ({ t, onNext, onToggleTheme, onSignup, onHaveAccount, language, o
   );
 };
 
-const Plans = ({ t, onNext, onBack, onToggleTheme, plan, setPlan, currentPlan }) => {
+const Plans = ({ t, onNext, onBack, onToggleTheme, currentPlan, userEmail, profile }) => {
   const upgrade = !!currentPlan;
-  const plans = [
-    { id: "free", name: "Free", price: "Grátis", sub: "Para conhecer",
-      items: ["2 a 4 operações por dia (M5/M15)", "Em horários fixos", "Histórico de 7 dias"] },
-    { id: "mensal", name: "Premium Mensal", price: "R$ 99/mês", sub: "Cobrança mensal",
-      items: ["Até 20 operações por dia", "Timeframes M5 e M15", "Escolha seus ativos e horário", "Histórico completo"] },
-    { id: "anual", name: "Premium Anual", price: "R$ 79/mês", sub: "Equivalente — cobrado anualmente", badge: "Mais popular",
-      items: ["Tudo do mensal + timeframe M1", "Até 20 operações por dia", "Sinais o dia todo (ou delimite)", "Suporte prioritário"] },
-  ];
+  const [copiado, setCopiado] = useState(false);
+  const assinar = () => {
+    subscribeTelegram({ name: profile?.name, email: userEmail, username: profile?.username });
+    setCopiado(true); setTimeout(() => setCopiado(false), 2500);
+  };
   return (
     <div style={{ flex: 1, display: "flex", flexDirection: "column", minHeight: 0 }}>
-      <ScreenHeader title={upgrade ? "Mudar de plano" : "Escolha seu plano"} t={t}
+      <ScreenHeader title={upgrade ? txt("Seu plano") : txt("Planos")} t={t}
         onToggleTheme={onToggleTheme} onBack={onBack} />
       <Scroll style={{ padding: "0 24px" }}>
-        <p style={{ fontSize: 14, color: t.sub, margin: "0 0 18px", fontFamily: FONT }}>
-          {upgrade
-            ? `${txt("Seu plano atual é")} ${txt(PLAN_INFO[currentPlan].name)}${txt(". Escolha para onde quer ir.")}`
-            : "Altere quando quiser nas configurações."}
-        </p>
-        <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingBottom: 12 }}>
-          {plans.map(p => (
-            <div key={p.id} onClick={() => setPlan(p.id)} style={{
-              background: t.card, borderRadius: 20, padding: 18,
-              border: `1.5px solid ${plan === p.id ? t.accent : t.bdr}`,
-              cursor: "pointer", position: "relative", overflow: "hidden" }}>
-              {p.badge && (
-                <div style={{ position: "absolute", top: 0, right: 18,
-                  background: t.accent, color: t.activeText, fontSize: 10, fontWeight: 800,
-                  padding: "3px 10px", borderRadius: "0 0 8px 8px", fontFamily: FONT }}>{p.badge}</div>
-              )}
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
-                <div>
-                  <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                    <div style={{ fontWeight: 900, fontSize: 17, color: t.text, fontFamily: FONT }}>{txt(p.name)}</div>
-                    {upgrade && p.id === currentPlan && (
-                      <span style={{ fontSize: 9, fontWeight: 800, padding: "2px 7px", borderRadius: 6,
-                        background: t.bg2, color: t.sub, border: `1px solid ${t.bdr}`, fontFamily: FONT }}>{txt("ATUAL")}</span>
-                    )}
-                  </div>
-                  <div style={{ color: t.accent, fontWeight: 800, fontSize: 16, marginTop: 2, fontFamily: FONT }}>{p.price}</div>
-                  <div style={{ color: t.muted, fontSize: 11, marginTop: 2, fontFamily: FONT }}>{txt(p.sub)}</div>
-                </div>
-                <div style={{ width: 24, height: 24, borderRadius: "50%",
-                  border: `2px solid ${plan === p.id ? t.accent : t.bdr}`,
-                  display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                  {plan === p.id && <div style={{ width: 12, height: 12, borderRadius: "50%", background: t.accent }} />}
-                </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 14, paddingBottom: 12 }}>
+
+          {/* Free */}
+          <div style={{ background: t.card, borderRadius: 20, padding: 18, border: `1.5px solid ${t.bdr}` }}>
+            <div style={{ fontWeight: 900, fontSize: 17, color: t.text, fontFamily: FONT }}>{txt("Free")}</div>
+            <div style={{ color: t.accent, fontWeight: 800, fontSize: 16, marginTop: 2, fontFamily: FONT }}>{txt("15 dias grátis")}</div>
+            {["2 a 4 operações por dia (M5/M15)", "Em horários fixos", "Sem cartão, sem compromisso"].map(it => (
+              <div key={it} style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                <span style={{ color: t.accent, fontSize: 12, fontWeight: 800 }}>✓</span>
+                <span style={{ fontSize: 13, color: t.text, fontFamily: FONT }}>{txt(it)}</span>
               </div>
-              {p.items.map(item => (
-                <div key={item} style={{ display: "flex", gap: 8, alignItems: "center", marginBottom: 6 }}>
-                  <span style={{ color: t.accent, fontSize: 12, fontWeight: 800 }}>✓</span>
-                  <span style={{ fontSize: 13, color: t.text, fontFamily: FONT }}>{item}</span>
-                </div>
-              ))}
+            ))}
+          </div>
+
+          {/* Premium Semanal */}
+          <div style={{ background: t.card2, borderRadius: 20, padding: 18, border: `2px solid ${t.accent}`, position: "relative", overflow: "hidden" }}>
+            <div style={{ position: "absolute", top: 0, right: 18, background: t.accent, color: t.bg0,
+              fontSize: 10, fontWeight: 800, padding: "3px 10px", borderRadius: "0 0 8px 8px", fontFamily: FONT }}>{txt("MELHOR")}</div>
+            <div style={{ fontWeight: 900, fontSize: 18, color: t.text, fontFamily: FONT }}>{txt("Premium Semanal")}</div>
+            <div style={{ color: t.accent, fontWeight: 900, fontSize: 20, marginTop: 2, fontFamily: FONT }}>R$ 49,90<span style={{ fontSize: 13, fontWeight: 700, color: t.sub }}> /{txt("semana")}</span></div>
+            {["Até 20 operações por dia", "Escolhe seus ativos e horário", "Sinais o dia todo"].map(it => (
+              <div key={it} style={{ display: "flex", gap: 8, alignItems: "center", marginTop: 8 }}>
+                <span style={{ color: t.accent, fontSize: 12, fontWeight: 800 }}>✓</span>
+                <span style={{ fontSize: 13, color: t.text, fontFamily: FONT }}>{txt(it)}</span>
+              </div>
+            ))}
+            {/* Garantia */}
+            <div style={{ marginTop: 14, background: `${t.buy}14`, border: `1px solid ${t.buy}40`, borderRadius: 12, padding: "11px 14px" }}>
+              <div style={{ fontSize: 13, fontWeight: 800, color: t.buy, fontFamily: FONT, marginBottom: 3 }}>🛡️ {txt("Garantia da semana")}</div>
+              <div style={{ fontSize: 12, color: t.text, lineHeight: 1.5, fontFamily: FONT }}>
+                {txt("Se a semana fechar negativa, a próxima é por nossa conta — de graça.")}
+              </div>
             </div>
-          ))}
+            <button onClick={assinar} style={{
+              width: "100%", height: 48, borderRadius: 14, marginTop: 14, cursor: "pointer",
+              border: "none", background: copiado ? t.buy : t.accent, color: t.bg0,
+              fontWeight: 800, fontSize: 15, fontFamily: FONT, transition: "background .2s" }}>
+              {copiado ? "✓ Dados copiados — cole no Telegram" : "💬 Assinar pelo Telegram"}
+            </button>
+            <p style={{ fontSize: 11, color: t.sub, margin: "10px 2px 0", lineHeight: 1.5, fontFamily: FONT }}>
+              {txt("Pagamento via Pix no atendimento. Liberação na hora após o pagamento.")}
+            </p>
+          </div>
+
         </div>
       </Scroll>
       <div style={{ padding: "12px 24px 28px", flexShrink: 0 }}>
-        <Btn t={t} onClick={onNext}>{upgrade ? "Confirmar plano" : "Continuar"}</Btn>
+        <Btn t={t} onClick={onNext}>{upgrade ? txt("Voltar") : txt("Começar grátis")}</Btn>
       </div>
     </div>
   );
@@ -2445,7 +2460,7 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
   const [freeQuota, setFreeQuota] = useState(4);
   const [alunoCoupon, setAlunoCoupon] = useState("");
   const [q, setQ] = useState("");
-  const PLANS = ["free", "mensal", "anual", "aluno", "influencer"];
+  const PLANS = ["free", "premium", "mensal", "anual", "aluno", "influencer"];
   const fmtExp = (iso) => {
     if (!iso) return "sem limite";
     const d = new Date(iso);
@@ -2509,6 +2524,14 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
     setMsg(r.ok ? "✓ Plano atualizado" : (r.error || "erro"));
     if (r.ok) setData(d => ({ ...d, users: d.users.map(u => u.id === userId ? { ...u, plan } : u) }));
     setTimeout(() => setMsg(""), 2000);
+  };
+
+  // Libera Premium Semanal: 1 clique = plano premium + validade 7 dias (após o Pix).
+  const liberarPremium = async (userId) => {
+    const r = await api.adminGrantPremium(userId, 7);
+    setMsg(r.ok ? "✓ Premium liberado por 7 dias" : (r.error || "erro"));
+    if (r.ok) setData(d => ({ ...d, users: d.users.map(u => u.id === userId ? { ...u, plan: "premium", plan_expires_at: r.plan_expires_at } : u) }));
+    setTimeout(() => setMsg(""), 2500);
   };
   const saveHist = async () => {
     const iso = histDate ? new Date(histDate + "T00:00:00").toISOString() : null;
@@ -2723,7 +2746,7 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
               </div>
               <div style={{ display: "flex", gap: 6, marginTop: 8, alignItems: "center" }}>
                 <span style={{ fontSize: 10.5, color: t.muted, fontFamily: FONT, flexShrink: 0 }}>{txt("Validade:")}</span>
-                {[["+15d", 15], ["+30d", 30], ["Sem limite", 0]].map(([lbl, d]) => {
+                {[["+7d", 7], ["+15d", 15], ["+30d", 30], ["Sem limite", 0]].map(([lbl, d]) => {
                   const active = d === 0 && !u.plan_expires_at; // "Sem limite" aceso quando ilimitado
                   return (
                     <button key={lbl} onClick={() => setExpiry(u.id, d)} style={{
@@ -2735,6 +2758,12 @@ const AdminPanel = ({ t, onNav, onBack, onToggleTheme }) => {
                   );
                 })}
               </div>
+              {/* Atalho: após o Pix, 1 clique libera Premium por 7 dias */}
+              <button onClick={() => liberarPremium(u.id)} style={{
+                width: "100%", marginTop: 8, padding: "9px 0", borderRadius: 10, fontSize: 12, fontWeight: 800,
+                cursor: "pointer", fontFamily: FONT, border: "none", background: t.buy, color: t.id === "dark" ? "#05121A" : "#FFFFFF" }}>
+                ✅ Liberar Premium 7 dias (após o Pix)
+              </button>
             </Card>
           ))}
           {data && users.length === 0 && (
@@ -3391,7 +3420,7 @@ export default function App() {
       case "risk":          return <RiskWarning {...common} onNext={() => go("signup")} />;
       case "login":         return <Login {...common} onNext={() => go("home")} onAuth={hasSupabase ? handleAuth : undefined} onForgot={hasSupabase ? (email) => api.resetPassword(email) : undefined} onCreateAccount={() => go("signup")} />;
       case "signup":        return <Signup {...common} onNext={() => go("plans")} onSignup={hasSupabase ? handleSignup : undefined} onHaveAccount={() => go("login")} language={language} onChangeLanguage={changeLanguage} />;
-      case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} plan={plan} setPlan={setPlan} />;
+      case "plans":         return <Plans {...common} onNext={upgradeFrom ? closeUpgrade : () => go("assets")} onBack={upgradeFrom ? closeUpgrade : undefined} currentPlan={upgradeFrom} userEmail={session?.user?.email} profile={profileData} />;
       case "assets":        return <Assets {...common} onNext={() => go("timeframes")} onBack={() => go(editingConfig ? "profile" : "plans")} selected={selectedAssets} setSelected={setSelectedAssets} locked={tfLocked} nextChange={tfNextChange} />;
       case "timeframes":    return <Timeframes {...common} onNext={() => { if (!tfLocked) stampTfChange(); api.updateProfileFields({ onboarded: true }); setEditingConfig(false); go("home"); }} onBack={() => go("assets")} selectedAssets={selectedAssets} tfPerAsset={tfPerAsset} setTfPerAsset={setTfPerAsset} plan={plan} locked={tfLocked} nextChange={tfNextChange} />;
       case "home":          return <Home {...common} onNav={nav} onOpenSignal={setSignal} {...bizState} live={live} stats={stats} closeAlerts={closeAlerts} onToggleCloseAlert={toggleCloseAlert} userName={profileData?.name || (session?.user?.email ? session.user.email.split("@")[0] : "")} />;
