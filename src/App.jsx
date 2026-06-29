@@ -337,10 +337,10 @@ const Scroll = ({ children, style = {} }) => (
 /* ════════════════════════════════════════════════════════════
    DADOS + REGRAS
 ════════════════════════════════════════════════════════════ */
-const ASSETS = ["XAUUSD", "US30", "BTCUSD"];
+const ASSETS = ["XAUUSD", "BTCUSD"];
 const ASSET_NAMES = {
-  XAUUSD: "Ouro / Dólar", US30: "Dow Jones 30", BTCUSD: "Bitcoin / Dólar",
-  NAS100: "Nasdaq 100", // legado: histórico antigo ainda exibe
+  XAUUSD: "Ouro / Dólar", BTCUSD: "Bitcoin / Dólar",
+  US30: "Dow Jones 30", NAS100: "Nasdaq 100", // legado: histórico antigo ainda exibe
 };
 // Planos premium (acesso completo) e planos "estilo anual" (M1 + dia todo).
 // aluno e influencer são categorias internas (só o admin cadastra).
@@ -352,8 +352,8 @@ const isAnualLikePlan = (p) => ANUAL_LIKE.includes(p);
 // Timeframes do produto: M5, M15 e M30. Cada ativo oferece os seus.
 const TIMEFRAMES = ["M5", "M15", "M30"];
 // Timeframes disponíveis POR ATIVO (espelha o que o indicador gera na VPS):
-//   XAUUSD → M15/M30 · BTCUSD → M15/M30 · US30 → M5/M15.
-const ASSET_TF_OPTIONS = { XAUUSD: ["M15", "M30"], US30: ["M5", "M15"], BTCUSD: ["M15", "M30"], NAS100: ["M5", "M15"] };
+//   XAUUSD → M15/M30 · BTCUSD → M5/M15 · (US30 legado → M5/M15).
+const ASSET_TF_OPTIONS = { XAUUSD: ["M15", "M30"], BTCUSD: ["M5", "M15"], US30: ["M5", "M15"], NAS100: ["M5", "M15"] };
 const tfOptionsForAsset = (asset) => ASSET_TF_OPTIONS[asset] || ["M5", "M15"];
 const tfOptionsForPlan = () => ["M5", "M15"]; // legado (não usar p/ ativo)
 const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
@@ -1685,18 +1685,10 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
 };
 
 const MOCK_BREAKDOWN = [
-  { asset: "XAUUSD", tf: "M5",  assertividade: 78, pips: 210, total: 40 },
-  { asset: "XAUUSD", tf: "M15", assertividade: 65, pips: 140, total: 26 },
-  { asset: "XAUUSD", tf: "M1",  assertividade: 71, pips: 95,  total: 33 },
-  { asset: "NAS100", tf: "M5",  assertividade: 60, pips: 80,  total: 22 },
-  { asset: "NAS100", tf: "M15", assertividade: 74, pips: 180, total: 19 },
-  { asset: "NAS100", tf: "M1",  assertividade: 58, pips: 40,  total: 28 },
-  { asset: "US30",   tf: "M5",  assertividade: 68, pips: 120, total: 25 },
-  { asset: "US30",   tf: "M15", assertividade: 70, pips: 160, total: 21 },
-  { asset: "EURUSD", tf: "M5",  assertividade: 55, pips: 30,  total: 14 },
-  { asset: "EURUSD", tf: "M15", assertividade: 64, pips: 70,  total: 18 },
-  { asset: "GBPUSD", tf: "M5",  assertividade: 52, pips: 20,  total: 12 },
-  { asset: "GBPUSD", tf: "M15", assertividade: 58, pips: 40,  total: 15 },
+  { asset: "XAUUSD", tf: "M15", assertividade: 72, pips: 240, total: 34 },
+  { asset: "XAUUSD", tf: "M30", assertividade: 78, pips: 320, total: 28 },
+  { asset: "BTCUSD", tf: "M5",  assertividade: 61, pips: 90,  total: 30 },
+  { asset: "BTCUSD", tf: "M15", assertividade: 69, pips: 180, total: 24 },
 ];
 
 const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerAsset, plan, breakdown, locked, nextChange, onPick, showMock }) => {
@@ -3155,9 +3147,9 @@ export default function App() {
   const [screen, setScreen] = useState("splash");
   const [signal, setSignal] = useState(null);
   const [plan, setPlan] = useState("anual");
-  const [selectedAssets, setSelectedAssets] = useState(["XAUUSD", "US30", "BTCUSD"]);
+  const [selectedAssets, setSelectedAssets] = useState(["XAUUSD", "BTCUSD"]);
   const [tfPerAsset, setTfPerAsset] = useState({
-    XAUUSD: ["M15"], US30: ["M5"], BTCUSD: ["M15"],
+    XAUUSD: ["M15"], BTCUSD: ["M5"],
   });
   const [schedule, setSchedule] = useState({ start: "08:00", end: "18:00", allDay: false });
   // Viewport real (largura + altura). Recalcula no resize e ao girar a tela,
