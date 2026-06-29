@@ -186,6 +186,7 @@ const AssetIcon = ({ asset, size = 38 }) => {
     case "XAUUSD": return <FlagPair A={FlagGold} B={FlagUS} size={size} />;
     case "NAS100": return <div style={{ width: size, height: size, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><IndexBadge txt="NQ" bg="#0B5CAB" size={size * 0.85} /></div>;
     case "US30":   return <div style={{ width: size, height: size, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><IndexBadge txt="DJ" bg="#1B3A6B" size={size * 0.85} /></div>;
+    case "BTCUSD": return <div style={{ width: size, height: size, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}><IndexBadge txt="₿" bg="#F7931A" size={size * 0.85} /></div>;
     default:       return <div style={{ width: size, height: size }} />;
   }
 };
@@ -336,9 +337,10 @@ const Scroll = ({ children, style = {} }) => (
 /* ════════════════════════════════════════════════════════════
    DADOS + REGRAS
 ════════════════════════════════════════════════════════════ */
-const ASSETS = ["XAUUSD", "NAS100", "US30"];
+const ASSETS = ["XAUUSD", "US30", "BTCUSD"];
 const ASSET_NAMES = {
-  XAUUSD: "Ouro / Dólar", NAS100: "Nasdaq 100", US30: "Dow Jones 30",
+  XAUUSD: "Ouro / Dólar", US30: "Dow Jones 30", BTCUSD: "Bitcoin / Dólar",
+  NAS100: "Nasdaq 100", // legado: histórico antigo ainda exibe
 };
 // Planos premium (acesso completo) e planos "estilo anual" (M1 + dia todo).
 // aluno e influencer são categorias internas (só o admin cadastra).
@@ -347,9 +349,13 @@ const ANUAL_LIKE = ["premium", "anual", "aluno", "influencer"];
 const isPremiumPlan = (p) => PREMIUM_PLANS.includes(p);
 const isAnualLikePlan = (p) => ANUAL_LIKE.includes(p);
 
-// Timeframes do produto: apenas M5 e M15 (M1 e H1 removidos).
-const TIMEFRAMES = ["M5", "M15"];
-const tfOptionsForPlan = () => ["M5", "M15"];
+// Timeframes do produto: M5, M15 e M30. Cada ativo oferece os seus.
+const TIMEFRAMES = ["M5", "M15", "M30"];
+// Timeframes disponíveis POR ATIVO (espelha o que o indicador gera na VPS):
+//   XAUUSD → M15/M30 · US30 → M5/M15 · BTCUSD → M5/M15.
+const ASSET_TF_OPTIONS = { XAUUSD: ["M15", "M30"], US30: ["M5", "M15"], BTCUSD: ["M5", "M15"], NAS100: ["M5", "M15"] };
+const tfOptionsForAsset = (asset) => ASSET_TF_OPTIONS[asset] || ["M5", "M15"];
+const tfOptionsForPlan = () => ["M5", "M15"]; // legado (não usar p/ ativo)
 const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
 
 const PLAN_INFO = {
@@ -1144,7 +1150,7 @@ const Timeframes = ({ t, onNext, onBack, onToggleTheme, selectedAssets, tfPerAss
                   <span style={{ fontSize: 11, color: t.muted, fontFamily: FONT }}>{cur.length}/{maxTf}</span>
                 </div>
                 <div style={{ display: "flex", gap: 8 }}>
-                  {tfs.map(tf => {
+                  {tfOptionsForAsset(a).map(tf => {
                     const active = cur.includes(tf);
                     return (
                       <Chip key={tf} label={tf} active={active} disabled={locked && !active}
@@ -1438,6 +1444,7 @@ const SignalsFeed = ({ t, onNav, onOpenSignal, onToggleTheme, onOpenFilters, sel
             <option value="Geral">⏱️ Geral</option>
             <option value="M5">⏱️ M5</option>
             <option value="M15">⏱️ M15</option>
+<option value="M30">⏱️ M30</option>
           </select>
         </div>
         {plan === "free" && (
@@ -1645,7 +1652,7 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
                     </div>
                   </div>
                   <div style={{ display: "flex", gap: 8 }}>
-                    {tfs.map(tf => {
+                    {tfOptionsForAsset(a).map(tf => {
                       const active = cur === tf;
                       return (
                         <button key={tf} onClick={() => pick(a, tf)} disabled={!canChange && !active}
@@ -1717,7 +1724,7 @@ const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerA
         <div style={{ display: "flex", flexDirection: "column", gap: 10, paddingBottom: 12 }}>
           {selectedAssets.map(a => {
             const cur = (tfPerAsset[a] || [])[0];
-            const rows = tfs.map(tf => ({ tf, s: statFor(a, tf) }))
+            const rows = tfOptionsForAsset(a).map(tf => ({ tf, s: statFor(a, tf) }))
               .sort((x, y) => (y.s?.assertividade || 0) - (x.s?.assertividade || 0));
             const best = rows[0]?.tf;
             return (
@@ -2071,6 +2078,7 @@ const History = ({ t, onNav, onOpenSignal, onToggleTheme, schedule, live, stats,
                 <option value="Geral">⏱️ Geral</option>
                 <option value="M5">⏱️ M5</option>
                 <option value="M15">⏱️ M15</option>
+<option value="M30">⏱️ M30</option>
               </select>
             </div>
             <span style={{ fontSize: 16, fontWeight: 900,
@@ -2270,7 +2278,7 @@ const NotifCenter = ({ t, onNav, onBack, onToggleTheme, onOpenSignal, live }) =>
 // Central de ajuda / FAQ — conteúdo estático com perguntas expansíveis.
 const FAQ_ITEMS = [
   { q: "O que é o Infinity Signals?",
-    a: "É uma ferramenta que detecta oportunidades operacionais (sinais) no MetaTrader com indicadores técnicos e te avisa em tempo real — para XAUUSD (ouro), US30 e NAS100, nos tempos gráficos M5 e M15. São estudos operacionais de caráter informativo, não recomendação de investimento." },
+    a: "É uma ferramenta que detecta oportunidades operacionais (sinais) no MetaTrader com indicadores técnicos e te avisa em tempo real — para XAUUSD (ouro), US30 e BTCUSD (Bitcoin), nos tempos gráficos M5, M15 e M30. São estudos operacionais de caráter informativo, não recomendação de investimento." },
   { q: "Como eu recebo os sinais?",
     a: "Por notificação (push) assim que o sinal é detectado, e na tela Sinais/Início do app. Ative as notificações em Perfil → Ajustes de notificação e permita o envio quando o app pedir." },
   { q: "O que significa \"Em andamento\"?",
@@ -3147,9 +3155,9 @@ export default function App() {
   const [screen, setScreen] = useState("splash");
   const [signal, setSignal] = useState(null);
   const [plan, setPlan] = useState("anual");
-  const [selectedAssets, setSelectedAssets] = useState(["XAUUSD", "NAS100", "US30"]);
+  const [selectedAssets, setSelectedAssets] = useState(["XAUUSD", "US30", "BTCUSD"]);
   const [tfPerAsset, setTfPerAsset] = useState({
-    XAUUSD: ["M5"], NAS100: ["M15"], US30: ["M5"],
+    XAUUSD: ["M15"], US30: ["M5"], BTCUSD: ["M5"],
   });
   const [schedule, setSchedule] = useState({ start: "08:00", end: "18:00", allDay: false });
   // Viewport real (largura + altura). Recalcula no resize e ao girar a tela,

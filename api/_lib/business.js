@@ -1,9 +1,9 @@
 // Regras de negócio centralizadas (espelham o CLAUDE.md e o App.jsx).
 // Reutilizadas por signals.js (filtro/cota/elegibilidade) e stats.js.
 
-export const ASSETS = ["XAUUSD", "NAS100", "US30"];
-// Apenas M5 e M15 (M1 e H1 removidos do produto).
-export const TFS = ["M5", "M15"];
+export const ASSETS = ["XAUUSD", "US30", "BTCUSD"];
+// M5, M15 e M30 (XAU foca M15/M30; demais M5/M15).
+export const TFS = ["M5", "M15", "M30"];
 export const DIRS = ["Compra", "Venda"];
 
 // Planos "estilo anual" (dia todo / acesso total): premium semanal, anual e
@@ -34,13 +34,14 @@ export function freeTrialExpired(profile) {
 }
 
 // Tamanho do "pip"/ponto por ativo, para calcular result_pips no fechamento.
-export const PIP_SIZE = { EURUSD: 0.0001, GBPUSD: 0.0001, XAUUSD: 0.1, NAS100: 1, US30: 1 };
+export const PIP_SIZE = { EURUSD: 0.0001, GBPUSD: 0.0001, XAUUSD: 0.1, NAS100: 1, US30: 1, BTCUSD: 1 };
 
 // Normaliza o símbolo do MT4 (ex.: "XAUUSD.m", "USTEC", "DJ30") para um dos 5 ativos.
 export function normalizeAsset(symbol) {
   if (!symbol) return null;
   const s = String(symbol).toUpperCase().replace(/[^A-Z0-9]/g, "");
   for (const a of ASSETS) if (s.startsWith(a)) return a;
+  if (s.startsWith("BTC") || s.startsWith("XBT")) return "BTCUSD";
   if (s.startsWith("US100") || s.startsWith("NDX") || s.startsWith("USTEC") || s.startsWith("NAS")) return "NAS100";
   if (s.startsWith("DJ") || s.startsWith("US30") || s.startsWith("DOW") || s.startsWith("WS30")) return "US30";
   if (s.startsWith("GOLD") || s.startsWith("XAU")) return "XAUUSD";
