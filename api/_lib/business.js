@@ -1,7 +1,10 @@
 // Regras de negócio centralizadas (espelham o CLAUDE.md e o App.jsx).
 // Reutilizadas por signals.js (filtro/cota/elegibilidade) e stats.js.
 
-export const ASSETS = ["XAUUSD", "US30", "BTCUSD"];
+// Ativos ATIVOS: XAUUSD e BTCUSD. US30 e NAS100 ficam aqui só como BASE de
+// comparação (histórico das 2 semanas que rodaram) — entram no breakdown/laudo,
+// mas NÃO são selecionáveis no app (frontend ASSETS = [XAUUSD, BTCUSD]).
+export const ASSETS = ["XAUUSD", "BTCUSD", "US30", "NAS100"];
 // M5, M15 e M30 (XAU foca M15/M30; demais M5/M15).
 export const TFS = ["M5", "M15", "M30"];
 export const DIRS = ["Compra", "Venda"];
