@@ -352,8 +352,8 @@ const isAnualLikePlan = (p) => ANUAL_LIKE.includes(p);
 // Timeframes do produto: M5, M15 e M30. Cada ativo oferece os seus.
 const TIMEFRAMES = ["M5", "M15", "M30"];
 // Timeframes disponíveis POR ATIVO (espelha o que o indicador gera na VPS):
-//   XAUUSD → M15/M30 · US30 → M5/M15 · BTCUSD → M5/M15.
-const ASSET_TF_OPTIONS = { XAUUSD: ["M15", "M30"], US30: ["M5", "M15"], BTCUSD: ["M5", "M15"], NAS100: ["M5", "M15"] };
+//   XAUUSD → M15/M30 · BTCUSD → M15/M30 · US30 → M5/M15.
+const ASSET_TF_OPTIONS = { XAUUSD: ["M15", "M30"], US30: ["M5", "M15"], BTCUSD: ["M15", "M30"], NAS100: ["M5", "M15"] };
 const tfOptionsForAsset = (asset) => ASSET_TF_OPTIONS[asset] || ["M5", "M15"];
 const tfOptionsForPlan = () => ["M5", "M15"]; // legado (não usar p/ ativo)
 const HOURS = Array.from({ length: 24 }, (_, i) => `${String(i).padStart(2, "0")}:00`);
@@ -3157,7 +3157,7 @@ export default function App() {
   const [plan, setPlan] = useState("anual");
   const [selectedAssets, setSelectedAssets] = useState(["XAUUSD", "US30", "BTCUSD"]);
   const [tfPerAsset, setTfPerAsset] = useState({
-    XAUUSD: ["M15"], US30: ["M5"], BTCUSD: ["M5"],
+    XAUUSD: ["M15"], US30: ["M5"], BTCUSD: ["M15"],
   });
   const [schedule, setSchedule] = useState({ start: "08:00", end: "18:00", allDay: false });
   // Viewport real (largura + altura). Recalcula no resize e ao girar a tela,
