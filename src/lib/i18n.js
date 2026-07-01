@@ -26,6 +26,10 @@ const DICT = {
     "Dashboard": "Dashboard", "Fazer upgrade": "Upgrade", "você recebe": "you receive",
     // Planos semanais + corte do free
     "Planos": "Plans", "15 dias grátis": "15 days free", "Premium Semanal": "Weekly Premium", "semana": "week",
+    // Boletim do dia + resultado por ativo
+    "Boletim de hoje": "Today's bulletin", "Ainda sem operações fechadas hoje.": "No closed trades yet today.",
+    "acerto": "win rate", "Melhor ativo:": "Best asset:", "Melhores horários:": "Best times:",
+    "Resultado por ativo": "Result by asset", "Desempenho de cada ativo — inclui a base US30/NAS100.": "Performance of each asset — includes the US30/NAS100 baseline.",
     "2 a 4 operações por dia (M5/M15)": "2 to 4 trades per day (M5/M15)", "Em horários fixos": "At fixed times",
     "Sem cartão, sem compromisso": "No card, no commitment", "Até 20 operações por dia": "Up to 20 trades per day",
     "Escolhe seus ativos e horário": "Choose your assets and schedule", "Sinais o dia todo": "Signals all day",
@@ -233,6 +237,9 @@ const DICT = {
     "Início": "Inicio", "Sinais": "Señales", "Desempenho": "Rendimiento", "Histórico": "Historial", "Mais": "Más",
     "Dashboard": "Panel", "Fazer upgrade": "Mejorar plan", "você recebe": "recibes",
     "Planos": "Planes", "15 dias grátis": "15 días gratis", "Premium Semanal": "Premium Semanal", "semana": "semana",
+    "Boletim de hoje": "Boletín de hoy", "Ainda sem operações fechadas hoje.": "Aún sin operaciones cerradas hoy.",
+    "acerto": "acierto", "Melhor ativo:": "Mejor activo:", "Melhores horários:": "Mejores horarios:",
+    "Resultado por ativo": "Resultado por activo", "Desempenho de cada ativo — inclui a base US30/NAS100.": "Rendimiento de cada activo — incluye la base US30/NAS100.",
     "2 a 4 operações por dia (M5/M15)": "2 a 4 operaciones por día (M5/M15)", "Em horários fixos": "En horarios fijos",
     "Sem cartão, sem compromisso": "Sin tarjeta, sin compromiso", "Até 20 operações por dia": "Hasta 20 operaciones por día",
     "Escolhe seus ativos e horário": "Elige tus activos y horario", "Sinais o dia todo": "Señales todo el día",

@@ -1849,8 +1849,44 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown
   const tfRows = [
     { label: "M5", d: aggTf("M5") },
     { label: "M15", d: aggTf("M15") },
+    { label: "M30", d: aggTf("M30") },
     { label: "Geral (todos)", d: aggTf(null), accent: true },
   ].filter(r => r.accent || r.d.total > 0);
+
+  // Desempenho por ATIVO (inclui a base US30/NAS100) — mesmo agregador, por ativo.
+  const aggAsset = (asset) => {
+    const rows = asset ? bd.filter(d => d.asset === asset) : bd;
+    const ganhos = rows.reduce((a, d) => a + (d.ganhos || 0), 0);
+    const perdas = rows.reduce((a, d) => a + (d.perdas || 0), 0);
+    const pips = rows.reduce((a, d) => a + (d.pips || 0), 0);
+    const total = ganhos + perdas;
+    return { pips, total, assert: total ? Math.round((ganhos / total) * 100) : 0 };
+  };
+  const assetRows = [
+    { label: "XAUUSD", d: aggAsset("XAUUSD") },
+    { label: "BTCUSD", d: aggAsset("BTCUSD") },
+    { label: "US30", d: aggAsset("US30") },
+    { label: "NAS100", d: aggAsset("NAS100") },
+    { label: "Geral (todos)", d: aggAsset(null), accent: true },
+  ].filter(r => r.accent || r.d.total > 0);
+
+  // Boletim do DIA (laudo de hoje — dia do mercado começa 21:00 BRT = 00:00 UTC).
+  const forexDayStart = (() => { const d = new Date(); d.setUTCHours(0, 0, 0, 0); return d.getTime(); })();
+  const brtHour = (iso) => Number(new Intl.DateTimeFormat("pt-BR", { timeZone: "America/Sao_Paulo", hour: "2-digit", hour12: false }).format(new Date(iso))) % 24;
+  const todayClosed = (live?.recentAll || []).filter(s => (s.status === "ganho" || s.status === "perda") && new Date(s.created_at).getTime() >= forexDayStart);
+  const bDay = (() => {
+    const g = todayClosed.filter(s => s.status === "ganho").length;
+    const p = todayClosed.filter(s => s.status === "perda").length;
+    const pips = Math.round(todayClosed.reduce((a, s) => a + (Number(s.result_pips) || 0), 0));
+    const total = g + p;
+    const porAtivo = {};
+    for (const s of todayClosed) porAtivo[s.asset] = (porAtivo[s.asset] || 0) + (Number(s.result_pips) || 0);
+    const melhor = Object.entries(porAtivo).sort((a, b) => b[1] - a[1])[0];
+    const porHora = {};
+    for (const s of todayClosed) { const h = brtHour(s.created_at); porHora[h] = (porHora[h] || 0) + (Number(s.result_pips) || 0); }
+    const horas = Object.entries(porHora).filter(([, v]) => v > 0).sort((a, b) => b[1] - a[1]).slice(0, 2).map(([h]) => `${h}h`);
+    return { g, p, pips, total, winRate: total ? Math.round(g / total * 100) : 0, melhor, horas };
+  })();
   const lineData = [38,52,45,68,62,78,72,88,82,91,85,94];
   const metrics = stats ? [
     { label: "Assertividade",       value: `${Math.round((stats.assertividade || 0) * 100)}%`, color: t.accent },
@@ -1877,6 +1913,32 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown
       <ScreenHeader title={txt("Desempenho")} t={t} onToggleTheme={onToggleTheme} />
       <Scroll>
         <div style={{ padding: "0 24px 24px" }}>
+          {/* Boletim do dia — resumo de performance de hoje (todos os ativos). */}
+          <Card t={t} accent style={{ marginBottom: 16 }}>
+            <Label t={t} style={{ marginBottom: 8 }}>📊 {txt("Boletim de hoje")}</Label>
+            {bDay.total === 0 ? (
+              <p style={{ fontSize: 12.5, color: t.sub, margin: 0, lineHeight: 1.5, fontFamily: FONT }}>{txt("Ainda sem operações fechadas hoje.")}</p>
+            ) : (
+              <>
+                <div style={{ display: "flex", alignItems: "baseline", gap: 10, flexWrap: "wrap" }}>
+                  <span style={{ fontSize: 24, fontWeight: 900, color: bDay.pips >= 0 ? t.buy : t.sell, fontFamily: FONT }}>{bDay.pips >= 0 ? "+" : ""}{bDay.pips} pips</span>
+                  <span style={{ fontSize: 12.5, color: t.sub, fontFamily: FONT }}>{bDay.g}✓ {bDay.p}✗ · {bDay.winRate}% {txt("acerto")}</span>
+                </div>
+                {bDay.melhor && (
+                  <div style={{ fontSize: 12.5, color: t.text, marginTop: 8, fontFamily: FONT }}>
+                    🏆 {txt("Melhor ativo:")} <span style={{ fontWeight: 800, color: t.accent }}>{bDay.melhor[0]}</span>{" "}
+                    <span style={{ color: bDay.melhor[1] >= 0 ? t.buy : t.sell, fontWeight: 700 }}>({bDay.melhor[1] >= 0 ? "+" : ""}{Math.round(bDay.melhor[1])} pips)</span>
+                  </div>
+                )}
+                {bDay.horas.length > 0 && (
+                  <div style={{ fontSize: 12.5, color: t.text, marginTop: 4, fontFamily: FONT }}>
+                    🕐 {txt("Melhores horários:")} <span style={{ fontWeight: 700 }}>{bDay.horas.join(", ")}</span>
+                  </div>
+                )}
+              </>
+            )}
+          </Card>
+
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginBottom: 16 }}>
             {metrics.map(m => (
               <Card key={m.label} t={t}>
@@ -1894,6 +1956,33 @@ const Performance = ({ t, onNav, onToggleTheme, selectedAssets, stats, breakdown
                 {txt("Acumulado de cada tempo gráfico e o geral (soma de todos).")}
               </p>
               {tfRows.map(({ label, d, accent }) => {
+                const pos = d.pips >= 0;
+                return (
+                  <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",
+                    padding: "9px 0", borderTop: accent ? `1px solid ${t.bdr}` : "none" }}>
+                    <span style={{ fontSize: 13, fontWeight: accent ? 800 : 700,
+                      color: accent ? t.accent : t.text, fontFamily: FONT, width: 100 }}>{txt(label)}</span>
+                    <span style={{ fontSize: 11.5, color: t.sub, fontFamily: FONT, flex: 1, textAlign: "center" }}>
+                      {d.total} ops · {d.assert}%
+                    </span>
+                    <span style={{ fontSize: 14, fontWeight: 800, color: pos ? t.buy : t.sell, fontFamily: FONT,
+                      width: 96, textAlign: "right", whiteSpace: "nowrap" }}>
+                      {pos ? "+" : ""}{d.pips} pips
+                    </span>
+                  </div>
+                );
+              })}
+            </Card>
+          )}
+
+          {/* Resultado por ATIVO — modo geral vs por ativo (inclui a base). */}
+          {assetRows.length > 0 && (
+            <Card t={t} style={{ marginBottom: 16 }}>
+              <Label t={t} style={{ marginBottom: 4 }}>{txt("Resultado por ativo")}</Label>
+              <p style={{ fontSize: 11, color: t.sub, margin: "0 0 12px", lineHeight: 1.5, fontFamily: FONT }}>
+                {txt("Desempenho de cada ativo — inclui a base US30/NAS100.")}
+              </p>
+              {assetRows.map(({ label, d, accent }) => {
                 const pos = d.pips >= 0;
                 return (
                   <div key={label} style={{ display: "flex", alignItems: "center", justifyContent: "space-between",

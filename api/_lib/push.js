@@ -143,22 +143,30 @@ export async function sendDailyBulletin() {
     .limit(2000);
   const closedToday = rows || [];
 
+  // Boletim do DIA da FERRAMENTA (laudo geral, igual pra todos — não filtra por
+  // perfil). Traz pips totais, acerto e o melhor ativo do dia.
+  const g = closedToday.filter((s) => s.status === "ganho").length;
+  const p = closedToday.filter((s) => s.status === "perda").length;
+  const total = g + p;
+  const pips = Math.round(closedToday.reduce((a, s) => a + (Number(s.result_pips) || 0), 0));
+  const winRate = total ? Math.round((g / total) * 100) : 0;
+  // Melhor ativo do dia (mais pips).
+  const porAtivo = {};
+  for (const s of closedToday) porAtivo[s.asset] = (porAtivo[s.asset] || 0) + (Number(s.result_pips) || 0);
+  const melhor = Object.entries(porAtivo).sort((a, b) => b[1] - a[1])[0];
+
+  const body = total > 0
+    ? `${pips >= 0 ? "+" : ""}${pips} pips · ${g}✓ ${p}✗ · ${winRate}% acerto`
+      + (melhor ? `\n🏆 Melhor: ${melhor[0]} (${melhor[1] >= 0 ? "+" : ""}${Math.round(melhor[1])} pips)` : "")
+    : "Hoje sem operações fechadas. Até amanhã! 📈";
+  // url com ?go=performance → ao tocar, abre no Desempenho (boletim do dia).
+  const payload = JSON.stringify({ title: "📊 Boletim do dia — Infinity Signals", body, url: "/?go=performance" });
+
   let sent = 0, users = 0;
   for (const profile of profiles) {
     const { data: subs } = await sb
       .from("push_subscriptions").select("id, subscription").eq("user_id", profile.id);
     if (!subs?.length) continue;
-
-    const mine = closedToday.filter((s) => isEligible(s, profile));
-    const g = mine.filter((s) => s.status === "ganho").length;
-    const p = mine.filter((s) => s.status === "perda").length;
-    const pips = Math.round(mine.reduce((a, s) => a + (Number(s.result_pips) || 0), 0));
-    const body = (g + p) > 0
-      ? `Hoje: ${g} ✓ · ${p} ✗ · ${pips >= 0 ? "+" : ""}${pips} pips`
-      : "Hoje sem operações fechadas. Até amanhã! 📈";
-    // url com ?go=performance → ao tocar, o app abre direto na curva de capital.
-    const payload = JSON.stringify({ title: "📊 Boletim diário — Infinity Signals", body, url: "/?go=performance" });
-
     let any = false;
     for (const row of subs) {
       try { await webpush.sendNotification(row.subscription, payload); sent++; any = true; }
@@ -170,5 +178,5 @@ export async function sendDailyBulletin() {
     }
     if (any) users++;
   }
-  return { sent, users };
+  return { sent, users, pips, ganhos: g, perdas: p, melhor_ativo: melhor?.[0] || null };
 }
