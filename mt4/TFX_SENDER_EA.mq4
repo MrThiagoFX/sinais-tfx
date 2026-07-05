@@ -16,7 +16,7 @@
 //|        [x] Permitir importacao de DLL  NAO e necessario.         |
 //+------------------------------------------------------------------+
 #property strict
-#property version "2.00"
+#property version "2.10"
 #property description "Envia sinais do TFXINFINITY com TRIPLA garantia de fechamento: indicador + preco ao vivo + varredura do historico de barras. Memoria em disco (sobrevive a reinicio)."
 
 // ── v2.0 — O QUE MUDOU (resolve operacoes 'penduradas') ───────────
@@ -34,7 +34,7 @@ input string ServidorUrl       = "https://sinais-tfx.vercel.app/api/signals";
 input string Token             = "0393df6d014741badd6a55f12b62f69627168dabf17f60dd63af1fa9fdd9cebf";
 input string NomeDoIndicador   = "TFXINFINITY"; // deve casar com o input do indicador
 input int    IntervaloSegundos = 5;             // frequencia de verificacao
-input int    TimeoutMs         = 5000;
+input int    TimeoutMs         = 8000;
 input bool   MostrarStatus     = true;
 
 string g_stateFile = "tfx_sender_state.csv";
@@ -164,10 +164,39 @@ bool Post(string json)
    int sz = ArraySize(data); if(sz > 0) ArrayResize(data, sz - 1);
    ResetLastError();
    int status = WebRequest("POST", ServidorUrl, headers, TimeoutMs, data, result, rh);
-   if(status == -1) { g_ultimoErro = "WebRequest erro " + IntegerToString(GetLastError()) + " — libere a URL nas Opcoes"; return(false); }
-   if(status < 200 || status >= 300) { g_ultimoErro = "HTTP " + IntegerToString(status); return(false); }
+   if(status == -1)
+   {
+      int err = GetLastError();
+      g_ultimoErro = "WebRequest erro " + IntegerToString(err) + " — libere a URL nas Opcoes";
+      Print("TFX DIAG: POST falhou. WebRequest=-1  GetLastError=", err, "  URL=", ServidorUrl);
+      if(err == 5203) Print("TFX DIAG: 5203 = falha SSL/TLS (handshake). Nao e a lista de URL. Provavel TLS/CA do Windows da VPS -> rode Windows Update / atualize o MT4.");
+      if(err == 4014 || err == 4060) Print("TFX DIAG: URL nao liberada -> Ferramentas>Opcoes>Expert Advisors, marque WebRequest e adicione ", ServidorUrl);
+      return(false);
+   }
+   if(status < 200 || status >= 300) { g_ultimoErro = "HTTP " + IntegerToString(status); Print("TFX DIAG: HTTP ", status); return(false); }
    g_ultimoErro = "";
    return(true);
+}
+
+// Auto-teste de conexao (GET /api/health) — escreve o resultado no log Especialistas.
+void TestarConexao()
+{
+   string url = ServidorUrl; StringReplace(url, "/api/signals", "/api/health");
+   char data[]; char result[]; string rh = "";
+   ResetLastError();
+   int status = WebRequest("GET", url, "", TimeoutMs, data, result, rh);
+   if(status == -1)
+   {
+      int err = GetLastError();
+      Print("TFX DIAG: TESTE DE CONEXAO FALHOU. WebRequest=-1  GetLastError=", err,
+            "  (4014=URL nao liberada | 5201=nao conectou | 5202=timeout | 5203=falha SSL/TLS)  URL=", url);
+      if(err == 5203) Print("TFX DIAG: 5203 no teste = e a VPS (SSL/TLS), NAO o EA. Rode Windows Update na VPS e/ou atualize o MT4.");
+   }
+   else
+   {
+      string body = CharArrayToString(result, 0, WHOLE_ARRAY, CP_UTF8);
+      Print("TFX DIAG: CONEXAO OK! HTTP=", status, "  resposta=", StringSubstr(body, 0, 120));
+   }
 }
 string JsonAbertura(string id, string symbol, string tf, int dir, double entry, double stop, double target)
 {
@@ -323,6 +352,8 @@ void Varrer()
 int OnInit()
 {
    LoadState();                                   // recupera o que estava aberto
+   Print("TFX SENDER v2.10 iniciando — testando conexao com o servidor...");
+   TestarConexao();                               // diagnostico: escreve no log Especialistas
    EventSetTimer(MathMax(1, IntervaloSegundos));
    Varrer();
    return(INIT_SUCCEEDED);
