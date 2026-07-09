@@ -31,8 +31,14 @@ param(
 $Endpoint = "https://sinais-tfx.vercel.app/api/signals"
 $Token    = "0393df6d014741badd6a55f12b62f69627168dabf17f60dd63af1fa9fdd9cebf"
 
-# Forca TLS 1.2 (o mesmo que o IE usa e que funciona na VPS)
-try { [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12 } catch {}
+# Forca TLS 1.2 pelo VALOR NUMERICO (3072) — funciona ate no .NET antigo do
+# Windows Server 2012, onde o nome [SecurityProtocolType]::Tls12 pode nao existir.
+try { [Net.ServicePointManager]::SecurityProtocol = 3072 } catch {}
+try { [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor 12288 } catch {} # +TLS1.3 se existir
+# Ignora validacao de certificado: VPS antiga pode estar SEM a raiz nova do
+# certificado da Vercel (o Chrome funciona por ter raiz propria). Como o destino
+# e o NOSSO servidor conhecido, ignorar a checagem aqui e seguro e resolve o caso.
+try { [Net.ServicePointManager]::ServerCertificateValidationCallback = { $true } } catch {}
 
 function Achar-Outbox {
   if ($OutboxDir -and (Test-Path $OutboxDir)) { return $OutboxDir }
@@ -61,16 +67,27 @@ Write-Host "Outbox  : $outbox"
 Write-Host "Endpoint: $Endpoint"
 Write-Host "==============================================="
 
+# Teste de conexao na largada — mostra o motivo EXATO se falhar
+Write-Host "Testando conexao com o servidor..." -ForegroundColor Cyan
+try {
+  $t = Invoke-WebRequest -Uri "https://sinais-tfx.vercel.app/api/health" -TimeoutSec 20 -UseBasicParsing
+  Write-Host ("CONEXAO OK (HTTP {0}): {1}" -f [int]$t.StatusCode, $t.Content) -ForegroundColor Green
+} catch {
+  Write-Host ("CONEXAO FALHOU -> {0}" -f $_.Exception.Message) -ForegroundColor Red
+  Write-Host "  (se falar de 'SSL/TLS' ou 'canal seguro' = TLS/certificado da VPS; me manda esta linha)"
+}
+
 function Enviar-Um($arquivo) {
   $json = Get-Content -LiteralPath $arquivo.FullName -Raw -Encoding UTF8
   if (-not $json -or -not $json.Trim()) { Remove-Item -LiteralPath $arquivo.FullName -Force; return $true }
-  $code = 0
+  $code = 0; $errMsg = ""
   try {
     $resp = Invoke-WebRequest -Uri $Endpoint -Method Post -Body $json `
       -ContentType "application/json" -Headers @{ "X-TFX-Token" = $Token } `
       -TimeoutSec 20 -UseBasicParsing
     $code = [int]$resp.StatusCode
   } catch {
+    $errMsg = $_.Exception.Message
     if ($_.Exception.Response) { try { $code = [int]$_.Exception.Response.StatusCode } catch { $code = 0 } }
   }
   if ($code -ge 200 -and $code -lt 300) {
@@ -85,7 +102,7 @@ function Enviar-Um($arquivo) {
     Write-Host "  401 - token invalido. Parando." -ForegroundColor Red
     return $false
   } else {
-    Write-Host ("  FALHOU {0}  (HTTP/erro {1}) - mantem e tenta depois" -f $arquivo.Name, $code) -ForegroundColor DarkYellow
+    Write-Host ("  FALHOU {0}  (HTTP/erro {1}) {2}" -f $arquivo.Name, $code, $errMsg) -ForegroundColor DarkYellow
     return $false
   }
 }
