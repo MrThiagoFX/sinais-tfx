@@ -4,7 +4,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   computePips, effectivePlan, dailyQuota, normalizeAsset, normalizeTf, normalizeDir,
-  isEligible, startOfForexDayMs, TFS, ASSETS,
+  isEligible, startOfForexDayMs, isMarketClosed, TFS, ASSETS,
 } from "./business.js";
 
 test("computePips — XAUUSD (pip 0.1)", () => {
@@ -19,10 +19,10 @@ test("computePips — US30/NAS100 (pip 1)", () => {
   assert.equal(computePips("NAS100", "Venda", 30533.73, 30365.91), 168); // tp
 });
 
-test("TFS e ASSETS — só M5/M15 e 3 ativos (sem M1, sem EUR/GBP)", () => {
-  assert.deepEqual([...TFS].sort(), ["M15", "M5"]);
+test("TFS e ASSETS — M5/M15/M30 e 4 ativos (XAU/BTC ativos + US30/NAS100 base)", () => {
+  assert.deepEqual([...TFS].sort(), ["M15", "M30", "M5"]);
   assert.ok(!TFS.includes("M1"));
-  assert.deepEqual([...ASSETS].sort(), ["NAS100", "US30", "XAUUSD"]);
+  assert.deepEqual([...ASSETS].sort(), ["BTCUSD", "NAS100", "US30", "XAUUSD"]);
   assert.ok(!ASSETS.includes("EURUSD") && !ASSETS.includes("GBPUSD"));
 });
 
@@ -63,6 +63,15 @@ test("isEligible — premium filtra ativo/tf; free vê tudo", () => {
   assert.equal(isEligible(sig, anualM15), false); // segue M15, sinal é M5
   const free = { plan: "free" }; // free ignora seleção (vê tudo dentro da janela)
   assert.equal(isEligible(sig, free), true);
+});
+
+test("isMarketClosed — bloqueia sáb/dom UTC, libera seg-sex", () => {
+  // 2026-07-11 é sábado, 2026-07-12 domingo (UTC).
+  assert.equal(isMarketClosed(new Date("2026-07-11T12:00:00Z")), true);  // sábado
+  assert.equal(isMarketClosed(new Date("2026-07-12T12:00:00Z")), true);  // domingo
+  assert.equal(isMarketClosed(new Date("2026-07-10T23:59:00Z")), false); // sexta à noite (último sinal)
+  assert.equal(isMarketClosed(new Date("2026-07-13T00:00:00Z")), false); // segunda 00:00 UTC (volta)
+  assert.equal(isMarketClosed("2026-07-11T12:00:00Z"), true);            // aceita string ISO
 });
 
 test("startOfForexDayMs — meia-noite UTC (21h BRT)", () => {
