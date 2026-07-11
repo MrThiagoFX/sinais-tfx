@@ -72,6 +72,19 @@ export function computePips(asset, dir, entry, exit) {
   return Math.round((dir === "Compra" ? raw : -raw));
 }
 
+// ─── FIM DE SEMANA (mercado fechado) ───
+// O Forex fecha sexta à noite e só reabre no fim de domingo. O BTC negocia 24/7,
+// então é o único que geraria sinal no sábado/domingo — e esses NÃO valem: não
+// entram no feed nem no laudo. Regra em UTC (= "GMT"): sábado e domingo inteiros
+// são bloqueados; o próximo sinal só volta na SEGUNDA 00:00 UTC — que é a
+// "meia-noite de domingo GMT" (o instante que encerra o domingo). Sexta à noite
+// é, portanto, o último sinal da semana.
+export function isMarketClosed(date = new Date()) {
+  const d = date instanceof Date ? date : new Date(date);
+  const day = d.getUTCDay(); // 0=domingo, 6=sábado
+  return day === 6 || day === 0;
+}
+
 // Início do "dia" do mercado, em epoch ms. O mercado Forex vira o dia à
 // MEIA-NOITE UTC, que é 21:00 de Brasília — é nesse horário que o indicador
 // zera e reinicia. Por isso o "Hoje" e o boletim diário usam esse corte

@@ -4,7 +4,7 @@
 //   entry/stop/target, signal_id) e também o formato legado {asset,dir,tf,entry,sl,tp}.
 // GET → app lista sinais do usuário.
 import {
-  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, startOfForexDayMs, effectivePlan, freeTrialExpired,
+  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, startOfForexDayMs, effectivePlan, freeTrialExpired, isMarketClosed,
 } from "./_lib/business.js";
 import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
 import { notifyEligibleUsers, notifyClose } from "./_lib/push.js";
@@ -72,6 +72,15 @@ async function postSignal(req, res) {
       catch (e) { console.error("[api] push:", e?.message); push = { sent: 0, error: "falha ao notificar" }; }
     }
     return res.status(200).json({ ok: true, event, closed: data?.length || 0, result_pips: pips, status, push });
+  }
+
+  // ── Fim de semana: mercado fechado, SEM novas aberturas ──
+  // Sexta à noite é o último sinal; só volta segunda 00:00 UTC (domingo meia-noite GMT).
+  // O BTC negocia 24/7, mas esses sinais de sábado/domingo não valem — não entram no
+  // feed nem no laudo. Retorna 2xx pro EA descartar o arquivo e não ficar reenviando.
+  // (O SIGNAL_CLOSE acima NÃO é bloqueado: um sinal aberto na sexta pode fechar depois.)
+  if (isMarketClosed(new Date())) {
+    return res.status(200).json({ ok: true, skipped: "fim de semana (mercado fechado)", asset, tf });
   }
 
   // ── Abertura: grava e dispara push ──
