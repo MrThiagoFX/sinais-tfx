@@ -1,10 +1,21 @@
 // Regras de negócio centralizadas (espelham o CLAUDE.md e o App.jsx).
 // Reutilizadas por signals.js (filtro/cota/elegibilidade) e stats.js.
 
-// Ativos ATIVOS: XAUUSD e BTCUSD. US30 e NAS100 ficam aqui só como BASE de
-// comparação (histórico das 2 semanas que rodaram) — entram no breakdown/laudo,
-// mas NÃO são selecionáveis no app (frontend ASSETS = [XAUUSD, BTCUSD]).
+// Todos os ativos que o banco reconhece (constraint + histórico/laudo).
+// ATIVO hoje: somente XAUUSD (M15/M30). BTCUSD, US30 e NAS100 estão PAUSADOS —
+// continuam no breakdown/laudo como BASE de comparação, mas não geram sinal novo
+// nem são selecionáveis no app (frontend ASSETS = [XAUUSD]).
 export const ASSETS = ["XAUUSD", "BTCUSD", "US30", "NAS100"];
+
+// Ativos PAUSADOS: o histórico fica (base de comparação), mas ABERTURA nova é
+// recusada na ingestão. BTCUSD pausado em 2026-07-11 — rodar XAU e BTC juntos
+// (ambos agressivos) diluía a performance; agora mede-se o XAU isolado.
+// Para reativar um ativo, basta tirá-lo desta lista (e repor no ASSETS do App.jsx).
+export const PAUSED_ASSETS = ["BTCUSD", "US30", "NAS100"];
+export function isAssetPaused(asset) {
+  return PAUSED_ASSETS.includes(asset);
+}
+
 // M5, M15 e M30 (XAU foca M15/M30; demais M5/M15).
 export const TFS = ["M5", "M15", "M30"];
 export const DIRS = ["Compra", "Venda"];

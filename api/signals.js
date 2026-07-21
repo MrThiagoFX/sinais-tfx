@@ -4,7 +4,7 @@
 //   entry/stop/target, signal_id) e também o formato legado {asset,dir,tf,entry,sl,tp}.
 // GET → app lista sinais do usuário.
 import {
-  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, startOfForexDayMs, effectivePlan, freeTrialExpired, isMarketClosed,
+  isEligible, dailyQuota, normalizeAsset, normalizeTf, normalizeDir, computePips, startOfForexDayMs, effectivePlan, freeTrialExpired, isMarketClosed, isAssetPaused,
 } from "./_lib/business.js";
 import { serviceClient, getUser, hasSupabase, isAdmin } from "./_lib/supabase.js";
 import { notifyEligibleUsers, notifyClose } from "./_lib/push.js";
@@ -72,6 +72,15 @@ async function postSignal(req, res) {
       catch (e) { console.error("[api] push:", e?.message); push = { sent: 0, error: "falha ao notificar" }; }
     }
     return res.status(200).json({ ok: true, event, closed: data?.length || 0, result_pips: pips, status, push });
+  }
+
+  // ── Ativo pausado: sem novas aberturas ──
+  // BTCUSD/US30/NAS100 estão pausados: o histórico deles continua no laudo como
+  // base de comparação, mas não entram sinais novos (o XAU roda sozinho para a
+  // performance ser medida isolada). Retorna 2xx pro EA descartar o arquivo.
+  // (Vem DEPOIS do SIGNAL_CLOSE: uma posição já aberta ainda pode fechar normal.)
+  if (isAssetPaused(asset)) {
+    return res.status(200).json({ ok: true, skipped: "ativo pausado", asset });
   }
 
   // ── Fim de semana: mercado fechado, SEM novas aberturas ──

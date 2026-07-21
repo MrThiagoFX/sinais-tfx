@@ -337,10 +337,13 @@ const Scroll = ({ children, style = {} }) => (
 /* ════════════════════════════════════════════════════════════
    DADOS + REGRAS
 ════════════════════════════════════════════════════════════ */
-const ASSETS = ["XAUUSD", "BTCUSD"];
+// Ativo ATIVO hoje: só XAUUSD (M15/M30). BTCUSD foi PAUSADO em 11/07/2026 —
+// rodar os dois juntos (ambos agressivos) diluía a performance. O histórico do
+// BTC (e de US30/NAS100) continua aparecendo no laudo como base de comparação.
+const ASSETS = ["XAUUSD"];
 const ASSET_NAMES = {
   XAUUSD: "Ouro / Dólar", BTCUSD: "Bitcoin / Dólar",
-  US30: "Dow Jones 30", NAS100: "Nasdaq 100", // legado: histórico antigo ainda exibe
+  US30: "Dow Jones 30", NAS100: "Nasdaq 100", // pausados: histórico ainda exibe
 };
 // Planos premium (acesso completo) e planos "estilo anual" (M1 + dia todo).
 // aluno e influencer são categorias internas (só o admin cadastra).
@@ -352,7 +355,8 @@ const isAnualLikePlan = (p) => ANUAL_LIKE.includes(p);
 // Timeframes do produto: M5, M15 e M30. Cada ativo oferece os seus.
 const TIMEFRAMES = ["M5", "M15", "M30"];
 // Timeframes disponíveis POR ATIVO (espelha o que o indicador gera na VPS):
-//   XAUUSD → M15/M30 · BTCUSD → M5/M15 · (US30 legado → M5/M15).
+//   XAUUSD → M15/M30 (único ativo). BTCUSD/US30/NAS100 = pausados, ficam aqui
+//   só para renderizar o histórico deles corretamente.
 const ASSET_TF_OPTIONS = { XAUUSD: ["M15", "M30"], BTCUSD: ["M5", "M15"], US30: ["M5", "M15"], NAS100: ["M5", "M15"] };
 const tfOptionsForAsset = (asset) => ASSET_TF_OPTIONS[asset] || ["M5", "M15"];
 const tfOptionsForPlan = () => ["M5", "M15"]; // legado (não usar p/ ativo)
@@ -1687,8 +1691,6 @@ const Filters = ({ t, onNav, onBack, onToggleTheme, selectedAssets, plan, tfPerA
 const MOCK_BREAKDOWN = [
   { asset: "XAUUSD", tf: "M15", assertividade: 72, pips: 240, total: 34 },
   { asset: "XAUUSD", tf: "M30", assertividade: 78, pips: 320, total: 28 },
-  { asset: "BTCUSD", tf: "M5",  assertividade: 61, pips: 90,  total: 30 },
-  { asset: "BTCUSD", tf: "M15", assertividade: 69, pips: 180, total: 24 },
 ];
 
 const TimeframePerf = ({ t, onNav, onBack, onToggleTheme, selectedAssets, tfPerAsset, plan, breakdown, locked, nextChange, onPick, showMock }) => {
@@ -2359,7 +2361,7 @@ const NotifCenter = ({ t, onNav, onBack, onToggleTheme, onOpenSignal, live }) =>
 // Central de ajuda / FAQ — conteúdo estático com perguntas expansíveis.
 const FAQ_ITEMS = [
   { q: "O que é o Infinity Signals?",
-    a: "É uma ferramenta que detecta oportunidades operacionais (sinais) no MetaTrader com indicadores técnicos e te avisa em tempo real — para XAUUSD (ouro), US30 e BTCUSD (Bitcoin), nos tempos gráficos M5, M15 e M30. São estudos operacionais de caráter informativo, não recomendação de investimento." },
+    a: "É uma ferramenta que detecta oportunidades operacionais (sinais) no MetaTrader com indicadores técnicos e te avisa em tempo real — atualmente em XAUUSD (ouro), nos tempos gráficos M15 e M30. São estudos operacionais de caráter informativo, não recomendação de investimento." },
   { q: "Como eu recebo os sinais?",
     a: "Por notificação (push) assim que o sinal é detectado, e na tela Sinais/Início do app. Ative as notificações em Perfil → Ajustes de notificação e permita o envio quando o app pedir." },
   { q: "O que significa \"Em andamento\"?",
@@ -3236,9 +3238,9 @@ export default function App() {
   const [screen, setScreen] = useState("splash");
   const [signal, setSignal] = useState(null);
   const [plan, setPlan] = useState("anual");
-  const [selectedAssets, setSelectedAssets] = useState(["XAUUSD", "BTCUSD"]);
+  const [selectedAssets, setSelectedAssets] = useState(["XAUUSD"]);
   const [tfPerAsset, setTfPerAsset] = useState({
-    XAUUSD: ["M15"], BTCUSD: ["M5"],
+    XAUUSD: ["M15", "M30"],
   });
   const [schedule, setSchedule] = useState({ start: "08:00", end: "18:00", allDay: false });
   // Viewport real (largura + altura). Recalcula no resize e ao girar a tela,
